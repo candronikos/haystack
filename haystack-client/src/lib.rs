@@ -11,6 +11,8 @@ use nom::{
     InputLength
 };
 
+use futures::future::{Abortable, AbortHandle};
+
 use scram;
 use url;
 use base64;
@@ -21,6 +23,12 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::cell::RefCell;
 use std::cell::Cell;
+use std::sync::Mutex;
+
+use tokio::sync::mpsc;
+
+pub mod ops;
+use ops::{HaystackOp,HaystackResponse};
 
 enum GridFormat {
     Zinc,
@@ -38,17 +46,18 @@ pub enum Error<'a> {
     SCRAMState(scram::Error),
     SCRAMDecode(base64::DecodeError),
     SCRAMBytesToStr(std::str::Utf8Error),
+    HaystackErr,
+    PoisonedLock(&'a str)
 }
 
-pub struct HSession {
+struct HSession {
     uri: url::Url,
     grid_format: GridFormat,
     username: String,
     password: String,
-    auth_info: RefCell<Option<HashMap<String,String>>>,
-    // project: Option<String>,
-    _authenticated: Cell<bool>,
-    _http_client: RefCell<Option<reqwest::blocking::Client>>,
+    auth_info: Mutex<RefCell<Option<HashMap<String,String>>>>,
+    _authenticated: Mutex<Cell<bool>>,
+    _http_client: Mutex<RefCell<Option<reqwest::Client>>>,
 }
 
 #[derive(Debug)]
@@ -56,34 +65,51 @@ pub enum Grid {
     Raw(String)
 }
 
-impl <'a>HSession {
-    fn new(uri: &str, username: &str, password: &str/*, project: Option<String>*/) -> Result<Self,Error<'a>> {
-        Ok(Self {
-            uri: url::Url::parse(uri).map_err( |e| Error::URI(e))?,
+fn new_hs_session<'a>(uri: String, username: String, password: String, buffer: Option<usize>) -> Result<(AbortHandle,mpsc::Sender<HaystackOp>),Error<'a>> {
+    let (tx, mut rx) = mpsc::channel::<HaystackOp>(buffer.unwrap_or(100));
+
+    let uri_member = url::Url::parse(&uri).map_err( |e| Error::URI(e))?;
+
+    let (abort_handle, abort_registration) = AbortHandle::new_pair();
+    let future = Abortable::new(async move {
+        let obj = HSession {
+            uri: uri_member,
             grid_format: GridFormat::Zinc,
             username: username.to_owned(),
             password: password.to_owned(),
-            auth_info: RefCell::new(None),
-            _authenticated: Cell::new(false),
-            _http_client: RefCell::new(None),
-        })
+            auth_info: Mutex::new(RefCell::new(None)),
+            _authenticated: Mutex::new(Cell::new(false)),
+            _http_client: Mutex::new(RefCell::new(None)),
+            // tx: tx,
+            // rx: Mutex::new(RefCell::new(rx))
+        };
+        while let Some(op) = rx.recv().await {
+            let result = (&obj)._request(op.priv_method(),op.priv_op(),op.priv_body()).await;
+            if let Ok(res) = result {
+                let sent_resp_res = op.resp_tx.send(HaystackResponse::Raw(res));
+                if let Err(e) = sent_resp_res {
+                    panic!("Handling failed requests to channel not supported!");
+                }
+            } else if let Err(e) = result {
+                panic!("Handling failed requests not supported!");
+            }
+        }
+    }, abort_registration);
+
+    tokio::spawn(future);
+
+    Ok((abort_handle,tx))
+}
+
+impl <'a>HSession {
+    // fn new(uri: &str, username: &str, password: &str, buffer: Option<usize>/*, project: Option<String>*/) -> Result<Self,Error<'a>> {
+    fn new(uri: String, username: String, password: String, buffer: Option<usize>) -> Result<(AbortHandle,mpsc::Sender<HaystackOp>),Error<'a>> {
+        new_hs_session(uri, username, password, buffer)
     }
 
-    fn about(&self) -> Result<Grid,Error> {
-        self._request("GET","about",None)
-    }
-
-    fn ops(&self) -> Result<Grid,Error> {
-        self._request("GET","ops",None)
-    }
-
-    fn formats(&self) -> Result<Grid,Error> {
-        self._request("GET","formats",None)
-    }
-
-    fn _request(&self, method:&str, op:&str, body:Option<&str>) -> Result<Grid,Error> {
-        if !self._authenticated.get() {
-            let () = self._blocking_authenticate()?;
+    async fn _request(&self, method:String, op:String, body:Option<String>) -> Result<String,Error<'a>> {
+        if !self._authenticated.lock().or_else(|e| Err(Error::PoisonedLock("_authenticated")))?.get() {
+            let () = self._authenticate().await?;
         }
 
         let mut bearer_string = String::new();
@@ -91,19 +117,19 @@ impl <'a>HSession {
         fmt::write(&mut bearer_string,format_args!(
             "BEARER authToken={}",
             // (*taken_auth_info).as_ref()
-            (*self.auth_info.borrow()).as_ref()
+            (*self.auth_info.lock().or_else(|e| Err(Error::PoisonedLock("auth_info")))?.borrow()).as_ref()
                 .ok_or(Error::MSG("No \"authInfo\" available. This should never happen"))?
                 .get("authToken").ok_or(Error::MSG("\"authToken\" missing from server response"))?
         )).map_err( |e| Error::FMT(e))?;
 
-        let req = (*self._http_client.borrow()).as_ref()
+        let req = (*self._http_client.lock().or_else(|e| Err(Error::PoisonedLock("_http_client")))?.borrow()).as_ref()
             .ok_or(Error::MSG("Attempting request without initialising HTTP client"))?
-            .request(reqwest::Method::from_str(method).map_err( |_| Error::MSG("Invalid method"))?,self.uri.clone().join(op).map_err( |e| Error::URI(e))?)
+            .request(reqwest::Method::from_str(method.as_str()).map_err( |_| Error::MSG("Invalid method"))?,self.uri.clone().join(op.as_str()).map_err( |e| Error::URI(e))?)
             .header("Authorization", bearer_string.as_str());
 
-        let req = match method {
+        let req = match method.as_str() {
             "PUT" | "POST" | "PATCH" => req.body(
-                reqwest::blocking::Body::from(
+                reqwest::Body::from(
                 body.ok_or(Error::MSG("Request body not provided for POST, PUT or PATCH request"))?
                 .to_owned()
                 )
@@ -111,13 +137,14 @@ impl <'a>HSession {
             _ => req
         };
 
-        let resp = req.send().map_err( |e| Error::RQW(e) )?;
+        let resp = req.send().await.map_err( |e| Error::RQW(e) )?;
 
-        Ok(Grid::Raw(resp.text().map_err( |e| Error::RQW(e) )?))
+        // Ok(Grid::Raw(resp.text().await.map_err( |e| Error::RQW(e) )?))
+        Ok(resp.text().await.map_err( |e| Error::RQW(e) )?)
     }
 
-    fn _blocking_authenticate(&self) -> Result<(),Error<'a>> {
-        let client = reqwest::blocking::Client::new();
+    async fn _authenticate(&self) -> Result<(),Error<'a>> {
+        let client = reqwest::Client::new();
 
         let mut uname_b64 = String::new();
         fmt::write(&mut uname_b64,format_args!(
@@ -127,7 +154,7 @@ impl <'a>HSession {
 
         let res = client.get(self.uri.clone().join("about").map_err( |e| Error::URI(e))?)
             .header("Authorization", uname_b64.as_str())
-            .send().map_err( |e| Error::RQW(e) )?;
+            .send().await.map_err( |e| Error::RQW(e) )?;
 
         let www_auth_header = res.headers().get("www-authenticate")
             .ok_or(Error::MSG("Server response missing \"www-authenticate\""))?;
@@ -170,7 +197,7 @@ impl <'a>HSession {
 
         let res = client.get(self.uri.clone().join("about").map_err( |e| Error::URI(e))?)
             .header("Authorization", data.as_str())
-            .send().map_err( |e| Error::RQW(e) )?;
+            .send().await.map_err( |e| Error::RQW(e) )?;
 
         let www_auth_header = res.headers().get("www-authenticate")
             .ok_or(Error::MSG("Server response missing \"www-authenticate\""))?;
@@ -212,7 +239,7 @@ impl <'a>HSession {
 
         let res = client.get(self.uri.clone().join("about").map_err( |e| Error::URI(e))?)
             .header("Authorization", data.as_str())
-            .send().map_err( |e| Error::RQW(e) )?;
+            .send().await.map_err( |e| Error::RQW(e) )?;
 
         let authentication_info = (&res.headers()).get("authentication-info")
             .ok_or(Error::MSG("Server response missing \"authentication-info\""))?;
@@ -242,8 +269,8 @@ impl <'a>HSession {
         let () = state.handle_server_final(data_temp_1)
             .map_err( |e| Error::SCRAMState(e) )?;
 
-        *self.auth_info.borrow_mut() = Some(authentication_info_map);
-        *self._http_client.borrow_mut() = Some(client);
+        *self.auth_info.lock().or_else(|e| Err(Error::PoisonedLock("auth_info")))?.borrow_mut() = Some(authentication_info_map);
+        *self._http_client.lock().or_else(|e| Err(Error::PoisonedLock("_http_client")))?.borrow_mut() = Some(client);
         Ok(())
     }
 }
@@ -260,35 +287,66 @@ pub fn eof<I: InputLength + Copy, E: ParseError<I>>(input: I) -> IResult<I, I, E
 mod tests {
     use super::*;
 
-    #[test]
-    fn it_works()
+    #[tokio::test]
+    async fn about()
     {
-        let hs_session = HSession::new("http://localhost:8080/api/demo/","user","user",/*Some("demo".to_string())*/).unwrap();
-        let auth_res = hs_session._blocking_authenticate();
-        println!("{:?}",auth_res);
+        let (op,resp) = HaystackOp::about();
+        let (abort_handle, mut session_tx) = HSession::new(
+            "http://localhost:8080/api/demo/".to_owned(),
+            "user".to_owned(),
+            "user".to_owned(),
+            None
+        ).unwrap();
+
+        let res = session_tx.send(op).await;
+
+        if let Err(e) = res {
+            panic!("Failed to send request");
+        }
+
+        let response = resp.await.unwrap();
+        println!("{:?}",response);
     }
 
-    #[test]
-    fn about()
+    #[tokio::test]
+    async fn ops()
     {
-        let hs_session = HSession::new("http://localhost:8080/api/demo/","user","user",/*Some("demo".to_string())*/).unwrap();
-        let Grid::Raw(res) = hs_session.about().unwrap();
-        println!("{}",res);
+        let (op,resp) = HaystackOp::ops();
+        let (abort_handle, mut session_tx) = HSession::new(
+            "http://localhost:8080/api/demo/".to_owned(),
+            "user".to_owned(),
+            "user".to_owned(),
+            None
+        ).unwrap();
+
+        let res = session_tx.send(op).await;
+
+        if let Err(e) = res {
+            panic!("Failed to send request");
+        }
+
+        let response = resp.await.unwrap();
+        println!("{:?}",response);
     }
 
-    #[test]
-    fn ops()
+    #[tokio::test]
+    async fn formats()
     {
-        let hs_session = HSession::new("http://localhost:8080/api/demo/","user","user",/*Some("demo".to_string())*/).unwrap();
-        let Grid::Raw(res) = hs_session.ops().unwrap();
-        println!("{}",res);
-    }
+        let (op,resp) = HaystackOp::formats();
+        let (abort_handle, mut session_tx) = HSession::new(
+            "http://localhost:8080/api/demo/".to_owned(),
+            "user".to_owned(),
+            "user".to_owned(),
+            None
+        ).unwrap();
 
-    #[test]
-    fn formats()
-    {
-        let hs_session = HSession::new("http://localhost:8080/api/demo/","user","user",/*Some("demo".to_string())*/).unwrap();
-        let Grid::Raw(res) = hs_session.formats().unwrap();
-        println!("{}",res);
+        let res = session_tx.send(op).await;
+
+        if let Err(e) = res {
+            panic!("Failed to send request");
+        }
+
+        let response = resp.await.unwrap();
+        println!("{:?}",response);
     }
 }

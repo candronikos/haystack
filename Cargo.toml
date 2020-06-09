@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "haystack-types",
     "haystack-db",
     "haystack-client",
 ]

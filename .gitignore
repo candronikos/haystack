@@ -11,3 +11,7 @@
 
 # Docker container config
 /.devcontainer/
+
+# VS Code files and directories
+.vscode
+*.code-workspace

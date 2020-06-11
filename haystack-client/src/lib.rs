@@ -136,6 +136,11 @@ impl <'a>HSession {
             _ => req
         };
 
+        let req = match self.grid_format {
+            GridFormat::Zinc => req.header("Content-Type","text/zinc"),
+            GridFormat::Json => req.header("Content-Type","application/json"),
+        };
+
         let resp = req.send().await.map_err( |e| Error::RQW(e) )?;
 
         // Ok(Grid::Raw(resp.text().await.map_err( |e| Error::RQW(e) )?))
@@ -332,6 +337,69 @@ mod tests {
     async fn formats()
     {
         let (op,resp) = HaystackOp::formats();
+        let (abort_handle, mut session_tx) = HSession::new(
+            "http://localhost:8080/api/demo/".to_owned(),
+            "user".to_owned(),
+            "user".to_owned(),
+            None
+        ).unwrap();
+
+        let res = session_tx.send(op).await;
+
+        if let Err(e) = res {
+            panic!("Failed to send request");
+        }
+
+        let response = resp.await.unwrap();
+        println!("{:?}",response);
+    }
+
+    #[tokio::test]
+    async fn read()
+    {
+        let (op,resp) = HaystackOp::read("point and his and temp".to_owned(), Some(10)).unwrap();
+        let (abort_handle, mut session_tx) = HSession::new(
+            "http://localhost:8080/api/demo/".to_owned(),
+            "user".to_owned(),
+            "user".to_owned(),
+            None
+        ).unwrap();
+
+        let res = session_tx.send(op).await;
+
+        if let Err(e) = res {
+            panic!("Failed to send request");
+        }
+
+        let response = resp.await.unwrap();
+        println!("{:?}",response);
+    }
+
+    #[tokio::test]
+    async fn nav_root()
+    {
+        let (op,resp) = HaystackOp::nav(None).unwrap();
+        let (abort_handle, mut session_tx) = HSession::new(
+            "http://localhost:8080/api/demo/".to_owned(),
+            "user".to_owned(),
+            "user".to_owned(),
+            None
+        ).unwrap();
+
+        let res = session_tx.send(op).await;
+
+        if let Err(e) = res {
+            panic!("Failed to send request");
+        }
+
+        let response = resp.await.unwrap();
+        println!("{:?}",response);
+    }
+
+    #[tokio::test]
+    async fn nav_site()
+    {
+        let (op,resp) = HaystackOp::nav(Some("`equip:/Carytown`".to_owned())).unwrap();
         let (abort_handle, mut session_tx) = HSession::new(
             "http://localhost:8080/api/demo/".to_owned(),
             "user".to_owned(),

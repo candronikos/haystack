@@ -1,5 +1,4 @@
-use std::fmt;
-
+use std::fmt::{self,Write};
 use tokio::sync::oneshot;
 
 #[derive(Debug)]
@@ -62,6 +61,66 @@ impl HaystackOp {
         };
 
         (op, resp_rx)
+    }
+
+    pub fn read<'a>(filter: String, limit: Option<usize>) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
+        let (resp_tx, resp_rx) = oneshot::channel();
+
+        let mut grid = String::new();
+        write!(grid,"ver:\"3.0\"\nfilter,limit\n")
+            .or(Err("Failed to write OP body"))?;
+        match limit {
+            Some(lim) => write!(grid,"\"{}\",{}\n",filter,lim),
+            None => write!(grid,"\"{}\",\n",filter)
+        }.or(Err("Failed to write OP body"))?;
+
+        let op = Self {
+            op: String::from("read"),
+            method: String::from("POST"),
+            body: Some(grid),
+            resp_tx
+        };
+
+        Ok((op, resp_rx))
+    }
+
+    pub fn read_by_ids<'a>(ids: String) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
+        let (resp_tx, resp_rx) = oneshot::channel();
+
+        let mut grid = String::new();
+        write!(grid,"ver:\"3.0\"\nid\n{}\n",ids)
+            .or(Err("Failed to write OP body"))?;
+
+        let op = Self {
+            op: String::from("read"),
+            method: String::from("POST"),
+            body: Some(grid),
+            resp_tx
+        };
+
+        Ok((op, resp_rx))
+    }
+
+    pub fn nav<'a>(nav: Option<String>) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
+        let (resp_tx, resp_rx) = oneshot::channel();
+
+        let mut grid = String::new();
+        write!(grid,"ver:\"3.0\"\nnavId\n")
+            .or(Err("Failed to write OP body"))?;
+
+        match nav {
+            Some(n) => write!(grid,"{}\n",n),
+            None => Ok(())
+        }.or(Err("Failed to write OP body"))?;
+
+        let op = Self {
+            op: String::from("nav"),
+            method: String::from("POST"),
+            body: Some(grid),
+            resp_tx
+        };
+
+        Ok((op, resp_rx))
     }
 }
 

@@ -75,8 +75,8 @@ fn new_hs_session<'a>(uri: String, username: String, password: String, buffer: O
         let obj = HSession {
             uri: uri_member,
             grid_format: GridFormat::Zinc,
-            username: username.to_owned(),
-            password: password.to_owned(),
+            username: username,
+            password: password,
             auth_info: Mutex::new(RefCell::new(None)),
             _authenticated: Mutex::new(Cell::new(false)),
             _http_client: Mutex::new(RefCell::new(None)),
@@ -131,7 +131,6 @@ impl <'a>HSession {
             "PUT" | "POST" | "PATCH" => req.body(
                 reqwest::Body::from(
                 body.ok_or(Error::MSG("Request body not provided for POST, PUT or PATCH request"))?
-                .to_owned()
                 )
             ),
             _ => req

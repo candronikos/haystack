@@ -12,7 +12,7 @@ const THIS_TYPE: HType = HType::Uri;
 impl HVal for HUri {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         buf.push('`');
-        buf.push_str(&self.0.to_string());
+        buf.push_str(self.0.as_str());
         buf.push('`');
         Ok(())
     }

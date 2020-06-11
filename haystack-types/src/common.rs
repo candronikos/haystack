@@ -1,5 +1,6 @@
 use std::fmt::{self,Display,Formatter};
 
+#[derive(Debug)]
 pub enum Txt<'a> {
     Const(&'a str),
     Owned(String)

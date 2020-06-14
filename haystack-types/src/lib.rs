@@ -46,6 +46,9 @@ pub use h_datetime::DateTime;
 mod h_coord;
 pub use h_coord::Coord;
 
+mod h_grid;
+pub use h_grid::Grid;
+
 #[cfg(test)]
 mod tests {
     #[test]

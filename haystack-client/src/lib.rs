@@ -21,9 +21,6 @@ use std::str;
 
 use std::collections::HashMap;
 use std::str::FromStr;
-use std::cell::RefCell;
-use std::cell::Cell;
-use std::sync::Mutex;
 
 use tokio::sync::mpsc;
 
@@ -55,9 +52,9 @@ struct HSession {
     grid_format: GridFormat,
     username: String,
     password: String,
-    auth_info: Mutex<RefCell<Option<HashMap<String,String>>>>,
-    _authenticated: Mutex<Cell<bool>>,
-    _http_client: Mutex<RefCell<Option<reqwest::Client>>>,
+    auth_info: Option<String>,
+    _authenticated: bool,
+    _http_client: Option<reqwest::Client>,
 }
 
 #[derive(Debug)]
@@ -72,26 +69,33 @@ fn new_hs_session<'a>(uri: String, username: String, password: String, buffer: O
 
     let (abort_handle, abort_registration) = AbortHandle::new_pair();
     let future = Abortable::new(async move {
-        let obj = HSession {
+        let mut obj = HSession {
             uri: uri_member,
             grid_format: GridFormat::Zinc,
             username: username,
             password: password,
-            auth_info: Mutex::new(RefCell::new(None)),
-            _authenticated: Mutex::new(Cell::new(false)),
-            _http_client: Mutex::new(RefCell::new(None)),
-            // tx: tx,
-            // rx: Mutex::new(RefCell::new(rx))
+            auth_info: None,
+            _authenticated: false,
+            _http_client: None,
         };
         while let Some(op) = rx.recv().await {
-            let result = (&obj)._request(op.priv_method(),op.priv_op(),op.priv_body()).await;
+            println!("\nCLIENT PTR: {:p}",&obj);
+            println!("REQUEST:{:?}",op);
+            println!("ISAUTHENTICATED: {:?}",obj._authenticated);
+            if !obj._authenticated {
+                let () = obj._authenticate().await.unwrap();
+            }
+            let result = (&mut obj)._request(op.priv_method(),op.priv_op(),op.priv_body()).await;
+            println!("RESULT: {:?}\n",result);
             if let Ok(res) = result {
                 let sent_resp_res = op.resp_tx.send(HaystackResponse::Raw(res));
                 if let Err(e) = sent_resp_res {
-                    panic!("Handling failed requests to channel not supported!");
+                    // println!("FAILED RESPONSE: {:?}\n",e);
+                    // panic!("Handling failed requests to channel not supported!");
                 }
             } else if let Err(e) = result {
-                panic!("Handling failed requests not supported!");
+                // println!("FAILED ERROR: {:?}\n",e);
+                // panic!("Handling failed requests not supported!");
             }
         }
     }, abort_registration);
@@ -107,25 +111,18 @@ impl <'a>HSession {
         new_hs_session(uri, username, password, buffer)
     }
 
-    async fn _request(&self, method:String, op:String, body:Option<String>) -> Result<String,Error<'a>> {
-        if !self._authenticated.lock().or_else(|e| Err(Error::PoisonedLock("_authenticated")))?.get() {
-            let () = self._authenticate().await?;
+    async fn _request(&mut self, method:String, op:String, body:Option<String>) -> Result<String,Error<'a>> {
+        let bearer_string: String;
+        {
+            bearer_string = self.auth_info.as_ref()
+                .ok_or(Error::MSG("No \"authInfo\" available. This should never happen"))?
+                .clone();
         }
 
-        let mut bearer_string = String::new();
-        // let taken_auth_info = self.auth_info.borrow();
-        fmt::write(&mut bearer_string,format_args!(
-            "BEARER authToken={}",
-            // (*taken_auth_info).as_ref()
-            (*self.auth_info.lock().or_else(|e| Err(Error::PoisonedLock("auth_info")))?.borrow()).as_ref()
-                .ok_or(Error::MSG("No \"authInfo\" available. This should never happen"))?
-                .get("authToken").ok_or(Error::MSG("\"authToken\" missing from server response"))?
-        )).map_err( |e| Error::FMT(e))?;
-
-        let req = (*self._http_client.lock().or_else(|e| Err(Error::PoisonedLock("_http_client")))?.borrow()).as_ref()
+        let req = self._http_client.as_ref()
             .ok_or(Error::MSG("Attempting request without initialising HTTP client"))?
             .request(reqwest::Method::from_str(method.as_str()).map_err( |_| Error::MSG("Invalid method"))?,self.uri.clone().join(op.as_str()).map_err( |e| Error::URI(e))?)
-            .header("Authorization", bearer_string.as_str());
+            .header("Authorization", bearer_string);
 
         let req = match method.as_str() {
             "PUT" | "POST" | "PATCH" => req.body(
@@ -143,11 +140,10 @@ impl <'a>HSession {
 
         let resp = req.send().await.map_err( |e| Error::RQW(e) )?;
 
-        // Ok(Grid::Raw(resp.text().await.map_err( |e| Error::RQW(e) )?))
         Ok(resp.text().await.map_err( |e| Error::RQW(e) )?)
     }
 
-    async fn _authenticate(&self) -> Result<(),Error<'a>> {
+    async fn _authenticate(&mut self) -> Result<(),Error<'a>> {
         let client = reqwest::Client::new();
 
         let mut uname_b64 = String::new();
@@ -163,7 +159,7 @@ impl <'a>HSession {
         let www_auth_header = res.headers().get("www-authenticate")
             .ok_or(Error::MSG("Server response missing \"www-authenticate\""))?;
 
-        let input = www_auth_header.to_str().unwrap();
+        let input = www_auth_header.to_str().map_err( |e| Error::MSG("http::header::value::ToStrError") )?;
 
         let (input,_): (&str, &str) = terminated(
             alt((tag("SCRAM"),tag("scram"))),space1
@@ -273,8 +269,16 @@ impl <'a>HSession {
         let () = state.handle_server_final(data_temp_1)
             .map_err( |e| Error::SCRAMState(e) )?;
 
-        *self.auth_info.lock().or_else(|e| Err(Error::PoisonedLock("auth_info")))?.borrow_mut() = Some(authentication_info_map);
-        *self._http_client.lock().or_else(|e| Err(Error::PoisonedLock("_http_client")))?.borrow_mut() = Some(client);
+        let mut bearer_string = String::new();
+        fmt::write(&mut bearer_string,format_args!(
+            "BEARER authToken={}",
+            authentication_info_map.get("authToken")
+            .ok_or(Error::MSG("\"authToken\" missing from server response"))?
+        )).map_err( |e| Error::FMT(e) )?;
+
+        self.auth_info = Some(bearer_string);
+        self._http_client = Some(client);
+        self._authenticated = true;
         Ok(())
     }
 }
@@ -289,131 +293,139 @@ pub fn eof<I: InputLength + Copy, E: ParseError<I>>(input: I) -> IResult<I, I, E
 
 #[cfg(test)]
 mod tests {
+    use rstest::*;
+    use std::sync::Arc;
+    use futures::lock::Mutex;
+
     use super::*;
 
+    #[fixture]
+    fn client() -> Arc<Mutex<(AbortHandle,mpsc::Sender<ops::HaystackOp>)>> {
+        let (abort_handle,addr) = HSession::new(
+            "http://localhost:8080/api/demo/".to_owned(),
+            "user".to_owned(),
+            "user".to_owned(),
+            None
+        ).unwrap();
+        Arc::new(Mutex::new((abort_handle, addr)))
+    }
+
+    #[rstest]
     #[tokio::test]
-    async fn about()
-    {
+    async fn about(client: Arc<Mutex<(AbortHandle,mpsc::Sender<ops::HaystackOp>)>>) {
         let (op,resp) = HaystackOp::about();
-        let (abort_handle, mut session_tx) = HSession::new(
-            "http://localhost:8080/api/demo/".to_owned(),
-            "user".to_owned(),
-            "user".to_owned(),
-            None
-        ).unwrap();
-
-        let res = session_tx.send(op).await;
+        let res = client.lock().await.1.send(op).await;
 
         if let Err(e) = res {
             panic!("Failed to send request");
         }
 
-        let response = resp.await.unwrap();
-        println!("{:?}",response);
+        if let Err(e) = resp.await {
+            panic!("Failed to receive response");
+        }
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn ops()
-    {
+    async fn ops(client: Arc<Mutex<(AbortHandle,mpsc::Sender<ops::HaystackOp>)>>) {
         let (op,resp) = HaystackOp::ops();
-        let (abort_handle, mut session_tx) = HSession::new(
-            "http://localhost:8080/api/demo/".to_owned(),
-            "user".to_owned(),
-            "user".to_owned(),
-            None
-        ).unwrap();
-
-        let res = session_tx.send(op).await;
+        let res = client.lock().await.1.send(op).await;
 
         if let Err(e) = res {
             panic!("Failed to send request");
         }
 
-        let response = resp.await.unwrap();
-        println!("{:?}",response);
+        if let Err(e) = resp.await {
+            panic!("Failed to receive response");
+        }
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn formats()
-    {
+    async fn formats(client: Arc<Mutex<(AbortHandle,mpsc::Sender<ops::HaystackOp>)>>) {
         let (op,resp) = HaystackOp::formats();
-        let (abort_handle, mut session_tx) = HSession::new(
-            "http://localhost:8080/api/demo/".to_owned(),
-            "user".to_owned(),
-            "user".to_owned(),
-            None
-        ).unwrap();
-
-        let res = session_tx.send(op).await;
+        let res = client.lock().await.1.send(op).await;
 
         if let Err(e) = res {
             panic!("Failed to send request");
         }
 
-        let response = resp.await.unwrap();
-        println!("{:?}",response);
+        if let Err(e) = resp.await {
+            panic!("Failed to receive response");
+        }
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn read()
-    {
+    async fn read(client: Arc<Mutex<(AbortHandle,mpsc::Sender<ops::HaystackOp>)>>) {
         let (op,resp) = HaystackOp::read("point and his and temp".to_owned(), Some(10)).unwrap();
-        let (abort_handle, mut session_tx) = HSession::new(
-            "http://localhost:8080/api/demo/".to_owned(),
-            "user".to_owned(),
-            "user".to_owned(),
-            None
-        ).unwrap();
-
-        let res = session_tx.send(op).await;
+        let res = client.lock().await.1.send(op).await;
 
         if let Err(e) = res {
             panic!("Failed to send request");
         }
 
-        let response = resp.await.unwrap();
-        println!("{:?}",response);
+        if let Err(e) = resp.await {
+            panic!("Failed to receive response");
+        }
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn nav_root()
-    {
+    async fn nav_root(client: Arc<Mutex<(AbortHandle,mpsc::Sender<ops::HaystackOp>)>>) {
         let (op,resp) = HaystackOp::nav(None).unwrap();
-        let (abort_handle, mut session_tx) = HSession::new(
-            "http://localhost:8080/api/demo/".to_owned(),
-            "user".to_owned(),
-            "user".to_owned(),
-            None
-        ).unwrap();
-
-        let res = session_tx.send(op).await;
+        let res = client.lock().await.1.send(op).await;
 
         if let Err(e) = res {
             panic!("Failed to send request");
         }
 
-        let response = resp.await.unwrap();
-        println!("{:?}",response);
+        if let Err(e) = resp.await {
+            panic!("Failed to receive response");
+        }
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn nav_site()
-    {
+    async fn nav_site(client: Arc<Mutex<(AbortHandle,mpsc::Sender<ops::HaystackOp>)>>) {
         let (op,resp) = HaystackOp::nav(Some("`equip:/Carytown`".to_owned())).unwrap();
-        let (abort_handle, mut session_tx) = HSession::new(
+        let res = client.lock().await.1.send(op).await;
+
+        if let Err(e) = res {
+            panic!("Failed to send request");
+        }
+
+        if let Err(e) = resp.await {
+            panic!("Failed to receive response");
+        }
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn reuse_with_multi_op(client: Arc<Mutex<(AbortHandle,mpsc::Sender<ops::HaystackOp>)>>) {
+        let (_,mut session_tx) = HSession::new(
             "http://localhost:8080/api/demo/".to_owned(),
             "user".to_owned(),
             "user".to_owned(),
             None
         ).unwrap();
 
-        let res = session_tx.send(op).await;
+        let (op,resp) = HaystackOp::nav(Some("`equip:/Carytown`".to_owned())).unwrap();
+        let res = client.lock().await.1.send(op).await;
 
         if let Err(e) = res {
             panic!("Failed to send request");
         }
 
         let response = resp.await.unwrap();
-        println!("{:?}",response);
+
+        let (op,resp) = HaystackOp::about();
+        let res = client.lock().await.1.send(op).await;
+
+        if let Err(e) = res {
+            panic!("Failed to send request");
+        }
+
+        let response = resp.await.unwrap();
     }
 }

@@ -140,6 +140,25 @@ impl HaystackOp {
 
         Ok((op, resp_rx))
     }
+
+    pub fn his_write<'a>(his: String) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
+        // TODO: Implement test
+        let (resp_tx, resp_rx) = oneshot::channel();
+
+        let mut grid = String::new();
+        write!(grid,"{}",his)
+            .or(Err("Failed to write OP body"))?;
+        println!("{}",grid);
+
+        let op = Self {
+            op: String::from("hisWrite"),
+            method: String::from("POST"),
+            body: Some(grid),
+            resp_tx
+        };
+
+        Ok((op, resp_rx))
+    }
 }
 
 #[derive(Debug)]

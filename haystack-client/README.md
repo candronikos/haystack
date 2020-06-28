@@ -14,5 +14,5 @@ Rust implementation of an async haystack client library.
 - [ ] WatchPoll
 - [ ] PointWrite
 - [*] HisRead
-- [ ] HisWrite
+- [*] HisWrite
 - [ ] Invoke Action

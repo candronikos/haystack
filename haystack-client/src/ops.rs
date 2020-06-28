@@ -122,6 +122,24 @@ impl HaystackOp {
 
         Ok((op, resp_rx))
     }
+
+    pub fn his_read<'a>(id: String, date_range: String) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
+        let (resp_tx, resp_rx) = oneshot::channel();
+
+        let mut grid = String::new();
+        write!(grid,"ver:\"3.0\"\nid,range\n{},{}",id,date_range)
+            .or(Err("Failed to write OP body"))?;
+        println!("{}",grid);
+
+        let op = Self {
+            op: String::from("hisRead"),
+            method: String::from("POST"),
+            body: Some(grid),
+            resp_tx
+        };
+
+        Ok((op, resp_rx))
+    }
 }
 
 #[derive(Debug)]

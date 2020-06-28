@@ -403,13 +403,6 @@ mod tests {
     #[rstest]
     #[tokio::test]
     async fn reuse_with_multi_op(client: Arc<Mutex<(AbortHandle,mpsc::Sender<ops::HaystackOp>)>>) {
-        let (_,mut session_tx) = HSession::new(
-            "http://localhost:8080/api/demo/".to_owned(),
-            "user".to_owned(),
-            "user".to_owned(),
-            None
-        ).unwrap();
-
         let (op,resp) = HaystackOp::nav(Some("`equip:/Carytown`".to_owned())).unwrap();
         let res = client.lock().await.1.send(op).await;
 
@@ -420,6 +413,19 @@ mod tests {
         let response = resp.await.unwrap();
 
         let (op,resp) = HaystackOp::about();
+        let res = client.lock().await.1.send(op).await;
+
+        if let Err(e) = res {
+            panic!("Failed to send request");
+        }
+
+        let response = resp.await.unwrap();
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn his_read(client: Arc<Mutex<(AbortHandle,mpsc::Sender<ops::HaystackOp>)>>) {
+        let (op,resp) = HaystackOp::his_read("@p:demo:r:26464231-bea9f430".to_owned(),"\"2019-01-01\"".to_owned()).unwrap();
         let res = client.lock().await.1.send(op).await;
 
         if let Err(e) = res {

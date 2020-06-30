@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies.tokio]
 version = "0.2.21"
-features = ["macros"]
+features = ["macros","sync"]
 
 [dependencies]
 futures = "0.3"
@@ -19,4 +19,5 @@ base64 = "0.12.1"
 reqwest = { version = "0.10", features = ["blocking"] }
 
 [dev-dependencies]
-rstest = "0.6.4"
+rstest = { git = "https://github.com/la10736/rstest" }
+lazy_static = "1.4.0"

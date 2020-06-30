@@ -88,14 +88,15 @@ fn new_hs_session<'a>(uri: String, username: String, password: String, buffer: O
             let result = (&mut obj)._request(op.priv_method(),op.priv_op(),op.priv_body()).await;
             println!("RESULT: {:?}\n",result);
             if let Ok(res) = result {
+                if op.resp_tx.is_closed() {
+                    panic!("Sender for Response CLOSED. Won't be able to send");
+                }
                 let sent_resp_res = op.resp_tx.send(HaystackResponse::Raw(res));
                 if let Err(e) = sent_resp_res {
-                    // println!("FAILED RESPONSE: {:?}\n",e);
-                    // panic!("Handling failed requests to channel not supported!");
+                    panic!("Handling failed requests to channel not supported!");
                 }
             } else if let Err(e) = result {
-                // println!("FAILED ERROR: {:?}\n",e);
-                // panic!("Handling failed requests not supported!");
+                panic!("Handling failed requests not supported!");
             }
         }
     }, abort_registration);
@@ -294,27 +295,32 @@ pub fn eof<I: InputLength + Copy, E: ParseError<I>>(input: I) -> IResult<I, I, E
 #[cfg(test)]
 mod tests {
     use rstest::*;
-    use std::sync::Arc;
-    use futures::lock::Mutex;
+    use futures::lock::{Mutex,MutexLockFuture};
+    use lazy_static::lazy_static;
+    use std::ops::DerefMut;
 
     use super::*;
 
     #[fixture]
-    fn client() -> Arc<Mutex<(AbortHandle,mpsc::Sender<ops::HaystackOp>)>> {
-        let (abort_handle,addr) = HSession::new(
-            "http://localhost:8080/api/demo/".to_owned(),
-            "user".to_owned(),
-            "user".to_owned(),
-            None
-        ).unwrap();
-        Arc::new(Mutex::new((abort_handle, addr)))
+    fn client() -> MutexLockFuture<'static, (AbortHandle,mpsc::Sender<ops::HaystackOp>)> {
+        lazy_static! {
+            static ref CLIENT: Mutex<(AbortHandle,mpsc::Sender<ops::HaystackOp>)> = Mutex::new(HSession::new(
+                "http://localhost:8080/api/demo/".to_owned(),
+                "user".to_owned(),
+                "user".to_owned(),
+                None
+            ).unwrap());
+        }
+        CLIENT.lock()
     }
 
     #[rstest]
     #[tokio::test]
-    async fn about(client: Arc<Mutex<(AbortHandle,mpsc::Sender<ops::HaystackOp>)>>) {
+    async fn about<D, F>(client: F)
+        where F: std::future::Future<Output = D>,
+            D: DerefMut<Target = (AbortHandle,mpsc::Sender<ops::HaystackOp>)> {
         let (op,resp) = HaystackOp::about();
-        let res = client.lock().await.1.send(op).await;
+        let res = client.await.1.send(op).await;
 
         if let Err(e) = res {
             panic!("Failed to send request");
@@ -327,9 +333,11 @@ mod tests {
 
     #[rstest]
     #[tokio::test]
-    async fn ops(client: Arc<Mutex<(AbortHandle,mpsc::Sender<ops::HaystackOp>)>>) {
-        let (op,resp) = HaystackOp::ops();
-        let res = client.lock().await.1.send(op).await;
+    async fn ops<D, F>(client: F)
+        where F: std::future::Future<Output = D>,
+            D: DerefMut<Target = (AbortHandle,mpsc::Sender<ops::HaystackOp>)> {
+        let (op,mut resp) = HaystackOp::ops();
+        let res = client.await.1.send(op).await;
 
         if let Err(e) = res {
             panic!("Failed to send request");
@@ -342,9 +350,11 @@ mod tests {
 
     #[rstest]
     #[tokio::test]
-    async fn formats(client: Arc<Mutex<(AbortHandle,mpsc::Sender<ops::HaystackOp>)>>) {
-        let (op,resp) = HaystackOp::formats();
-        let res = client.lock().await.1.send(op).await;
+    async fn formats<D, F>(client: F)
+        where F: std::future::Future<Output = D>,
+            D: DerefMut<Target = (AbortHandle,mpsc::Sender<ops::HaystackOp>)> {
+        let (op,mut resp) = HaystackOp::formats();
+        let res = client.await.1.send(op).await;
 
         if let Err(e) = res {
             panic!("Failed to send request");
@@ -357,9 +367,11 @@ mod tests {
 
     #[rstest]
     #[tokio::test]
-    async fn read(client: Arc<Mutex<(AbortHandle,mpsc::Sender<ops::HaystackOp>)>>) {
-        let (op,resp) = HaystackOp::read("point and his and temp".to_owned(), Some(10)).unwrap();
-        let res = client.lock().await.1.send(op).await;
+    async fn read<D, F>(client: F)
+        where F: std::future::Future<Output = D>,
+            D: DerefMut<Target = (AbortHandle,mpsc::Sender<ops::HaystackOp>)> {
+        let (op,mut resp) = HaystackOp::read("point and his and temp".to_owned(), Some(10)).unwrap();
+        let res = client.await.1.send(op).await;
 
         if let Err(e) = res {
             panic!("Failed to send request");
@@ -372,9 +384,11 @@ mod tests {
 
     #[rstest]
     #[tokio::test]
-    async fn nav_root(client: Arc<Mutex<(AbortHandle,mpsc::Sender<ops::HaystackOp>)>>) {
+    async fn nav_root<D, F>(client: F)
+        where F: std::future::Future<Output = D>,
+            D: DerefMut<Target = (AbortHandle,mpsc::Sender<ops::HaystackOp>)> {
         let (op,resp) = HaystackOp::nav(None).unwrap();
-        let res = client.lock().await.1.send(op).await;
+        let res = client.await.1.send(op).await;
 
         if let Err(e) = res {
             panic!("Failed to send request");
@@ -387,9 +401,11 @@ mod tests {
 
     #[rstest]
     #[tokio::test]
-    async fn nav_site(client: Arc<Mutex<(AbortHandle,mpsc::Sender<ops::HaystackOp>)>>) {
+    async fn nav_site<D, F>(client: F)
+        where F: std::future::Future<Output = D>,
+            D: DerefMut<Target = (AbortHandle,mpsc::Sender<ops::HaystackOp>)> {
         let (op,resp) = HaystackOp::nav(Some("`equip:/Carytown`".to_owned())).unwrap();
-        let res = client.lock().await.1.send(op).await;
+        let res = client.await.1.send(op).await;
 
         if let Err(e) = res {
             panic!("Failed to send request");
@@ -402,9 +418,11 @@ mod tests {
 
     #[rstest]
     #[tokio::test]
-    async fn reuse_with_multi_op(client: Arc<Mutex<(AbortHandle,mpsc::Sender<ops::HaystackOp>)>>) {
+    async fn reuse_with_multi_op<D, F>(mut client: F)
+        where F: std::future::Future<Output = D> + std::marker::Unpin,
+            D: DerefMut<Target = (AbortHandle,mpsc::Sender<ops::HaystackOp>)> {
         let (op,resp) = HaystackOp::nav(Some("`equip:/Carytown`".to_owned())).unwrap();
-        let res = client.lock().await.1.send(op).await;
+        let res = (&mut client).await.1.send(op).await;
 
         if let Err(e) = res {
             panic!("Failed to send request");
@@ -413,7 +431,7 @@ mod tests {
         let response = resp.await.unwrap();
 
         let (op,resp) = HaystackOp::about();
-        let res = client.lock().await.1.send(op).await;
+        let res = (&mut client).await.1.send(op).await;
 
         if let Err(e) = res {
             panic!("Failed to send request");
@@ -424,9 +442,11 @@ mod tests {
 
     #[rstest]
     #[tokio::test]
-    async fn his_read(client: Arc<Mutex<(AbortHandle,mpsc::Sender<ops::HaystackOp>)>>) {
+    async fn his_read<D, F>(client: F)
+        where F: std::future::Future<Output = D>,
+            D: DerefMut<Target = (AbortHandle,mpsc::Sender<ops::HaystackOp>)> {
         let (op,resp) = HaystackOp::his_read("@p:demo:r:26464231-bea9f430".to_owned(),"\"2019-01-01\"".to_owned()).unwrap();
-        let res = client.lock().await.1.send(op).await;
+        let res = client.await.1.send(op).await;
 
         if let Err(e) = res {
             panic!("Failed to send request");

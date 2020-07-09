@@ -454,4 +454,41 @@ mod tests {
 
         let response = resp.await.unwrap();
     }
+
+    #[tokio::test]
+    async fn spawn_multiple_tasks_in_new_session() {
+        use futures::join;
+        let (abort_handle,addr) = HSession::new(
+            "http://localhost:8080/api/demo/".to_owned(),
+            "user".to_owned(),
+            "user".to_owned(),
+            None
+        ).unwrap();
+
+        let (nav_op,nav_resp) = HaystackOp::nav(None).unwrap();
+        let (formats_op,formats_resp) = HaystackOp::formats();
+        let (about_op,about_resp) = HaystackOp::about();
+
+        let mut nav_addr = addr.clone();
+        let mut formats_addr = addr.clone();
+        let mut about_addr = addr.clone();
+
+        let (nav_res,formats_res,about_res) = join!(
+            nav_addr.send(nav_op),
+            formats_addr.send(formats_op),
+            about_addr.send(about_op),
+        );
+
+        if nav_res.is_err() || formats_res.is_err() || about_res.is_err() {
+            panic!("One or more requests failed 1")
+        }
+
+        let (nav_res,formats_res,about_res) = join!(nav_resp, formats_resp, about_resp);
+
+        if nav_res.is_err() || formats_res.is_err() || about_res.is_err() {
+            panic!("One or more requests failed 2")
+        }
+
+        abort_handle.abort()
+    }
 }

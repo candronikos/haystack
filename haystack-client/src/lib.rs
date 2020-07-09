@@ -27,6 +27,7 @@ use tokio::sync::mpsc;
 pub mod ops;
 use ops::{HaystackOp,HaystackResponse};
 
+#[derive(Clone)]
 enum GridFormat {
     Zinc,
     Json,
@@ -85,19 +86,29 @@ fn new_hs_session<'a>(uri: String, username: String, password: String, buffer: O
             if !obj._authenticated {
                 let () = obj._authenticate().await.unwrap();
             }
-            let result = (&mut obj)._request(op.priv_method(),op.priv_op(),op.priv_body()).await;
-            println!("RESULT: {:?}\n",result);
-            if let Ok(res) = result {
-                if op.resp_tx.is_closed() {
-                    panic!("Sender for Response CLOSED. Won't be able to send");
+
+            let ctx = HTTPContext {
+                client: obj._http_client.as_ref().unwrap().clone(),
+                auth_info: obj.auth_info.as_ref().unwrap().clone(),
+                uri: obj.uri.clone(),
+                grid_format: obj.grid_format.clone(),
+            };
+
+            tokio::spawn(async move {
+                let result = HSession::_request(ctx,op.priv_method(),op.priv_op(),op.priv_body()).await;
+                println!("RESULT: {:?}\n",result);
+                if let Ok(res) = result {
+                    if op.resp_tx.is_closed() {
+                        panic!("Sender for Response CLOSED. Won't be able to send");
+                    }
+                    let sent_resp_res = op.resp_tx.send(HaystackResponse::Raw(res));
+                    if let Err(e) = sent_resp_res {
+                        panic!("Handling failed requests to channel not supported!");
+                    }
+                } else if let Err(e) = result {
+                    panic!("Handling failed requests not supported!");
                 }
-                let sent_resp_res = op.resp_tx.send(HaystackResponse::Raw(res));
-                if let Err(e) = sent_resp_res {
-                    panic!("Handling failed requests to channel not supported!");
-                }
-            } else if let Err(e) = result {
-                panic!("Handling failed requests not supported!");
-            }
+            });
         }
     }, abort_registration);
 
@@ -106,24 +117,23 @@ fn new_hs_session<'a>(uri: String, username: String, password: String, buffer: O
     Ok((abort_handle,tx))
 }
 
+struct HTTPContext {
+    client: reqwest::Client,
+    auth_info: String,
+    uri: url::Url,
+    grid_format: GridFormat,
+}
+
 impl <'a>HSession {
     // fn new(uri: &str, username: &str, password: &str, buffer: Option<usize>/*, project: Option<String>*/) -> Result<Self,Error<'a>> {
     fn new(uri: String, username: String, password: String, buffer: Option<usize>) -> Result<(AbortHandle,mpsc::Sender<HaystackOp>),Error<'a>> {
         new_hs_session(uri, username, password, buffer)
     }
 
-    async fn _request(&mut self, method:String, op:String, body:Option<String>) -> Result<String,Error<'a>> {
-        let bearer_string: String;
-        {
-            bearer_string = self.auth_info.as_ref()
-                .ok_or(Error::MSG("No \"authInfo\" available. This should never happen"))?
-                .clone();
-        }
-
-        let req = self._http_client.as_ref()
-            .ok_or(Error::MSG("Attempting request without initialising HTTP client"))?
-            .request(reqwest::Method::from_str(method.as_str()).map_err( |_| Error::MSG("Invalid method"))?,self.uri.clone().join(op.as_str()).map_err( |e| Error::URI(e))?)
-            .header("Authorization", bearer_string);
+    async fn _request(ctx: HTTPContext, method:String, op:String, body:Option<String>) -> Result<String,Error<'a>> {
+        let req = ctx.client
+            .request(reqwest::Method::from_str(method.as_str()).map_err( |_| Error::MSG("Invalid method"))?,ctx.uri.clone().join(op.as_str()).map_err( |e| Error::URI(e))?)
+            .header("Authorization", ctx.auth_info);
 
         let req = match method.as_str() {
             "PUT" | "POST" | "PATCH" => req.body(
@@ -134,7 +144,7 @@ impl <'a>HSession {
             _ => req
         };
 
-        let req = match self.grid_format {
+        let req = match ctx.grid_format {
             GridFormat::Zinc => req.header("Content-Type","text/zinc"),
             GridFormat::Json => req.header("Content-Type","application/json"),
         };

@@ -336,7 +336,7 @@ mod tests {
     async fn ops<D, F>(client: F)
         where F: std::future::Future<Output = D>,
             D: DerefMut<Target = (AbortHandle,mpsc::Sender<ops::HaystackOp>)> {
-        let (op,mut resp) = HaystackOp::ops();
+        let (op,resp) = HaystackOp::ops();
         let res = client.await.1.send(op).await;
 
         if let Err(e) = res {
@@ -353,7 +353,7 @@ mod tests {
     async fn formats<D, F>(client: F)
         where F: std::future::Future<Output = D>,
             D: DerefMut<Target = (AbortHandle,mpsc::Sender<ops::HaystackOp>)> {
-        let (op,mut resp) = HaystackOp::formats();
+        let (op,resp) = HaystackOp::formats();
         let res = client.await.1.send(op).await;
 
         if let Err(e) = res {
@@ -370,7 +370,7 @@ mod tests {
     async fn read<D, F>(client: F)
         where F: std::future::Future<Output = D>,
             D: DerefMut<Target = (AbortHandle,mpsc::Sender<ops::HaystackOp>)> {
-        let (op,mut resp) = HaystackOp::read("point and his and temp".to_owned(), Some(10)).unwrap();
+        let (op,resp) = HaystackOp::read("point and his and temp".to_owned(), Some(10)).unwrap();
         let res = client.await.1.send(op).await;
 
         if let Err(e) = res {

@@ -2,15 +2,17 @@ use crate::{HVal,HType};
 use std::fmt::{self,Write};
 
 use std::collections::HashMap;
-pub struct HCol<'a> {
-    name: &'a str,
-    meta: HashMap<&'a str, Box<dyn HVal>>
+
+#[derive(Debug)]
+pub struct HCol {
+    pub name: String,
+    meta: HashMap<String, Box<dyn HVal>>
 }
 
-pub type Col<'a> = HCol<'a>;
+pub type Col = HCol;
 
-impl <'a>HCol<'a> {
-    pub fn new(name: &'a str, meta: Option<HashMap<&'a str, Box<dyn HVal>>>) -> Self {
+impl HCol {
+    pub fn new(name: String, meta: Option<HashMap<String, Box<dyn HVal>>>) -> Self {
         Self {
             name,
             meta: meta.unwrap_or(HashMap::new())
@@ -18,25 +20,25 @@ impl <'a>HCol<'a> {
     }
 }
 
-impl <'a>HCol<'a> {
-    pub fn name(&self) -> &str {
-        self.name
+impl HCol {
+    // pub fn name<'a>(&'a self) -> &'a str {
+    //     &self.name
+    // }
+
+    pub fn get(&self, key: String) -> Option<&Box<dyn HVal>> {
+        self.meta.get(&key)
     }
 
-    pub fn get(&self, key: &'a str) -> Option<&Box<dyn HVal>> {
-        self.meta.get(key)
+    pub fn has(&self, key: String) -> bool {
+        self.meta.contains_key(&key)
     }
 
-    pub fn has(&self, key: &'a str) -> bool {
-        self.meta.contains_key(key)
-    }
-
-    pub fn add_meta(&mut self, meta: HashMap<&'a str, Box<dyn HVal>>) {
+    pub fn add_meta(&mut self, meta: HashMap<String, Box<dyn HVal>>) {
         self.meta.extend(meta)
     }
 
-    pub fn to_zinc(&self, buf: &mut String) ->  fmt::Result {
-        write!(buf, "{}", self.name())?;
+    pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
+        write!(buf, "{}", self.name)?;
 
         if !self.meta.is_empty() {
             write!(buf, " ")?;

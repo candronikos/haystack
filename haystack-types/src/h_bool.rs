@@ -1,7 +1,9 @@
 use crate::{HVal,HType};
 use crate::common::Txt;
 use std::fmt::{self,Write};
-pub struct HBool(bool);
+
+#[derive(PartialEq,Debug,Clone)]
+pub struct HBool(pub bool);
 
 pub type Bool = HBool;
 

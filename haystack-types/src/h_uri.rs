@@ -1,13 +1,21 @@
 use crate::{HVal,HType};
 use std::fmt::{self,Write};
 
-use url::Url;
+use url::{Url,ParseError as UrlParseError};
 
+#[derive(Debug,PartialEq)]
 pub struct HUri(Url);
 
 pub type Uri = HUri;
 
 const THIS_TYPE: HType = HType::Uri;
+
+impl HUri {
+    pub fn new(input: &str) -> Result<HUri, UrlParseError> {
+        let url = Url::parse(input)?;
+        Ok(HUri(url))
+    }
+}
 
 impl HVal for HUri {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {

@@ -9,3 +9,6 @@ edition = "2018"
 [dependencies]
 url = "2.1.1"
 chrono = "0.4.11"
+chrono-tz = "0.5.3"
+nom = "6.1.2"
+num = "0.4"

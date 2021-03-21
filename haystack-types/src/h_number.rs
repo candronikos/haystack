@@ -1,19 +1,27 @@
 use crate::{HVal,HType};
-use crate::common::{Txt};
 use std::fmt::{self,Write,Display,Formatter};
+use num::Float;
 
-pub struct HUnit<'a>(Txt<'a>);
+#[derive(PartialEq,Debug)]
+pub struct HUnit(String);
 
-pub struct HNumber<'a,T: Display> {
+#[derive(PartialEq,)]
+pub struct HNumber<T: Display> {
     val: T,
-    unit: Option<HUnit<'a>>
+    unit: Option<HUnit>
 }
 
-pub type Number<'a,T> = HNumber<'a,T>;
+pub type Number<T> = HNumber<T>;
 
 const THIS_TYPE: HType = HType::Number;
 
-impl <'a,T: Display>HVal for HNumber<'a,T> {
+impl <T: Float + Display>Number<T> {
+    pub fn new(num: T, unit: Option<HUnit>) -> Self {
+        HNumber { val: num, unit }
+    }
+}
+
+impl <T: Display>HVal for HNumber<T> {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         match &self.unit {
             Some(unit) =>  write!(buf,"{}{}",self.val,unit),
@@ -29,7 +37,7 @@ impl <'a,T: Display>HVal for HNumber<'a,T> {
     fn haystack_type(&self) -> HType { THIS_TYPE }
 }
 
-impl <'a>Display for HUnit<'a> {
+impl Display for HUnit {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }

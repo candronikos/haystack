@@ -1,6 +1,19 @@
+use nom::multi::many1;
+use nom::bytes::complete::{take_while1};
+use nom::character::complete::alphanumeric1;
+use nom::combinator::recognize;
+use nom::sequence::tuple;
+use nom::bytes::complete::take;
+use nom::combinator::verify;
+use nom::bytes::complete::tag;
+use nom::branch::alt;
+use num::Float;
+use core::str::FromStr;
 use std::fmt::{self,Display,Formatter};
+use crate::h_val::HVal;
+use nom::IResult;
 
-#[derive(Debug)]
+#[derive(Debug,PartialEq)]
 pub enum Txt<'a> {
     Const(&'a str),
     Owned(String)
@@ -60,8 +73,32 @@ pub fn escape_str(c: char, buf: &mut String) -> fmt::Result {
     Ok(())
 }
 
+// TODO: Check if '"' and '`' need to be ignored for both or only one of URIs and Strings
+pub fn unicode_char(c: char) -> bool {
+    c >= 0x20 as char && c != '\\' && c != '"'
+}
+
+pub fn id(input: &str) -> IResult<&str,&str> {
+    let lower = |c: char| { c>='a' && c<='z' };
+    recognize(tuple((
+        take_while1(lower),
+        many1(alt((alphanumeric1,tag("_"))))
+    )))(input)
+}
+
+pub fn u_esc_char(input: &str) -> IResult<&str,&str> {
+    recognize(tuple((
+        tag("\\u"),
+        verify(take(4usize),|s: &str| s.chars().all(|c| char::is_digit(c,16)))
+    )))(input)
+}
+
 pub trait ZincWriter {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result;
+}
+
+pub trait ZincReader {
+    fn parse<T: 'static + Float + Display + FromStr>(buf: &'static str) -> IResult<&str, Box<dyn HVal>>;
 }
 
 pub trait JsonWriter {

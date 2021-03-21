@@ -1,6 +1,8 @@
 use crate::{HVal,HType};
 use crate::common::Txt;
 use std::fmt::{self,Write};
+
+#[derive(PartialEq,Debug)]
 pub struct HRemove;
 
 pub const REMOVE: HRemove = HRemove {};

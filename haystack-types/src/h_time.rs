@@ -4,6 +4,7 @@ use std::fmt::{self,Write};
 use chrono::naive::NaiveTime;
 use chrono::Timelike;
 
+#[derive(Debug,PartialEq)]
 pub struct HTime {
     inner: NaiveTime,
 }
@@ -11,6 +12,12 @@ pub struct HTime {
 pub type Time = HTime;
 
 const THIS_TYPE: HType = HType::Time;
+
+impl HTime {
+    pub fn new(hour: u32, minute: u32, second: u32, nano: u32) -> Self {
+        Self { inner: NaiveTime::from_hms_nano(hour, minute, second, nano) }
+    }
+}
 
 impl HVal for HTime {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {

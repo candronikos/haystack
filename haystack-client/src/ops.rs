@@ -167,7 +167,7 @@ pub enum HaystackResponse {
 }
 
 impl HaystackResponse {
-    fn get_raw(self) -> String {
+    pub fn get_raw(self) -> String {
         let HaystackResponse::Raw(body) = self;
         body
     }

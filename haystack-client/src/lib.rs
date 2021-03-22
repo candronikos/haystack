@@ -48,7 +48,7 @@ pub enum Error<'a> {
     PoisonedLock(&'a str)
 }
 
-struct HSession {
+pub struct HSession {
     uri: url::Url,
     grid_format: GridFormat,
     username: String,
@@ -80,9 +80,9 @@ fn new_hs_session<'a>(uri: String, username: String, password: String, buffer: O
             _http_client: None,
         };
         while let Some(op) = rx.recv().await {
-            println!("\nCLIENT PTR: {:p}",&obj);
-            println!("REQUEST:{:?}",op);
-            println!("ISAUTHENTICATED: {:?}",obj._authenticated);
+            // println!("\nCLIENT PTR: {:p}",&obj);
+            // println!("REQUEST:{:?}",op);
+            // println!("ISAUTHENTICATED: {:?}",obj._authenticated);
             if !obj._authenticated {
                 let () = obj._authenticate().await.unwrap();
             }
@@ -96,7 +96,7 @@ fn new_hs_session<'a>(uri: String, username: String, password: String, buffer: O
 
             tokio::spawn(async move {
                 let result = HSession::_request(ctx,op.priv_method(),op.priv_op(),op.priv_body()).await;
-                println!("RESULT: {:?}\n",result);
+                // println!("RESULT: {:?}\n",result);
                 if let Ok(res) = result {
                     if op.resp_tx.is_closed() {
                         panic!("Sender for Response CLOSED. Won't be able to send");
@@ -125,8 +125,7 @@ struct HTTPContext {
 }
 
 impl <'a>HSession {
-    // fn new(uri: &str, username: &str, password: &str, buffer: Option<usize>/*, project: Option<String>*/) -> Result<Self,Error<'a>> {
-    fn new(uri: String, username: String, password: String, buffer: Option<usize>) -> Result<(AbortHandle,mpsc::Sender<HaystackOp>),Error<'a>> {
+    pub fn new(uri: String, username: String, password: String, buffer: Option<usize>) -> Result<(AbortHandle,mpsc::Sender<HaystackOp>),Error<'a>> {
         new_hs_session(uri, username, password, buffer)
     }
 
@@ -315,7 +314,7 @@ mod tests {
     fn client() -> future::Ready<Box<mpsc::Sender<ops::HaystackOp>>> {
         lazy_static! {
             static ref CLIENT: (AbortHandle,mpsc::Sender<ops::HaystackOp>) = HSession::new(
-                "http://localhost:8080/api/demo/".to_owned(),
+                "http://host.docker.internal:8080/api/demo/".to_owned(),
                 "user".to_owned(),
                 "user".to_owned(),
                 None
@@ -470,7 +469,7 @@ mod tests {
     async fn spawn_multiple_tasks_in_new_session() {
         use futures::join;
         let (abort_handle,addr) = HSession::new(
-            "http://localhost:8080/api/demo/".to_owned(),
+            "http://host.docker.internal:8080/api/demo/".to_owned(),
             "user".to_owned(),
             "user".to_owned(),
             None

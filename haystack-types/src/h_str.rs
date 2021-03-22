@@ -1,14 +1,15 @@
 use crate::{HVal,HType};
-use crate::common::{Txt,escape_str};
+use crate::common::{escape_str};
 use std::fmt::{self,Write};
 
-pub struct HStr<'a>(Txt<'a>);
+#[derive(Debug,PartialEq)]
+pub struct HStr(pub String);
 
-pub type Str<'a> = HStr<'a>;
+pub type Str = HStr;
 
 const THIS_TYPE: HType = HType::Str;
 
-impl <'a>HVal for Str<'a> {
+impl HVal for HStr {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         buf.push('\"');
         self.0.chars().try_for_each(|c| { escape_str(c,buf) })?;

@@ -47,12 +47,12 @@ mod h_coord;
 pub use h_coord::Coord;
 
 mod h_grid;
-pub use h_grid::Grid;
+pub use h_grid::{Grid,HCol,HRow};
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
+mod h_dict;
+pub use h_dict::Dict;
+
+mod h_list;
+pub use h_list::List;
+
+mod io;

@@ -4,6 +4,7 @@ use std::fmt::{self,Write};
 use chrono::naive::NaiveDate;
 use chrono::Datelike;
 
+#[derive(Debug,PartialEq)]
 pub struct HDate {
     inner: NaiveDate,
 }
@@ -11,6 +12,12 @@ pub struct HDate {
 pub type Date = HDate;
 
 const THIS_TYPE: HType = HType::Date;
+
+impl HDate {
+    pub fn new(year: i32, month: u32, day: u32) -> Self {
+        Self { inner: NaiveDate::from_ymd(year, month, day) }
+    }
+}
 
 impl HVal for HDate {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {

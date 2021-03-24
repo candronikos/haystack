@@ -123,13 +123,52 @@ impl HaystackOp {
         Ok((op, resp_rx))
     }
 
+    pub fn watch_sub<'a>(dis: Option<String>, id: Option<String>, lease: Option<String>, ids: Option<Vec<String>>) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
+        let (resp_tx, resp_rx) = oneshot::channel();
+
+        if dis.is_none() && id.is_none() {
+            Err("If ID is omitted, a display name must be provided")?;
+        }
+
+        let mut grid = String::new();
+
+        write!(grid,"ver:\"3.0\"").or(Err("Failed to write OP body"))?;
+
+        if let Some(s) = id {
+            write!(grid," watchId:\"{}\"",s).or(Err("Failed to write watchId"))?;
+        }
+
+        if let Some(s) = dis {
+            write!(grid," watchDis:\"{}\"",s).or(Err("Failed to write watchDis"))?;
+        }
+
+        if let Some(s) = lease {
+            write!(grid," lease:{}",s).or(Err("Failed to write watch lease"))?;
+        }
+
+        if let Some(s) = ids {
+            write!(grid,"\nid\n").or(Err("Failed to write OP body"))?;
+            let s = s.clone().into_iter();
+            write!(grid,"\n{}",s.collect::<Vec<String>>().join("\n"))
+                .or(Err("Failed to write watch ids"))?;
+        }
+
+        let op = Self {
+            op: String::from("watchSub"),
+            method: String::from("POST"),
+            body: Some(grid),
+            resp_tx
+        };
+
+        Ok((op, resp_rx))
+    }
+
     pub fn his_read<'a>(id: String, date_range: String) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
         let (resp_tx, resp_rx) = oneshot::channel();
 
         let mut grid = String::new();
         write!(grid,"ver:\"3.0\"\nid,range\n{},{}",id,date_range)
             .or(Err("Failed to write OP body"))?;
-        println!("{}",grid);
 
         let op = Self {
             op: String::from("hisRead"),
@@ -148,7 +187,6 @@ impl HaystackOp {
         let mut grid = String::new();
         write!(grid,"{}",his)
             .or(Err("Failed to write OP body"))?;
-        println!("{}",grid);
 
         let op = Self {
             op: String::from("hisWrite"),

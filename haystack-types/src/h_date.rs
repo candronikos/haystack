@@ -1,3 +1,6 @@
+use std::str::FromStr;
+use core::fmt::Display;
+use num::Float;
 use crate::{HVal,HType};
 use std::fmt::{self,Write};
 
@@ -19,14 +22,20 @@ impl HDate {
     }
 }
 
-impl HVal for HDate {
+impl <'a,T:'a + Float + Display + FromStr>HVal<'a,T> for HDate {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        write!(buf,"{:0>4}-{:0>2}-{:0>2}",self.inner.year(),
-        self.inner.month(),self.inner.day())
+        write!(buf,"{:0>4}-{:0>2}-{:0>2}",
+            self.inner.year(),
+            self.inner.month(),
+            self.inner.day())
     }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         write!(buf,"d:")?;
-        self.to_zinc(buf)
+        let it: &dyn HVal<T> = self;
+        it.to_zinc(buf)
     }
     fn haystack_type(&self) -> HType { THIS_TYPE }
+
+    set_trait_eq_method!(get_date_val,'a,T);
+    set_get_method!(get_date_val, HDate);
 }

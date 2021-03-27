@@ -1,6 +1,8 @@
+use num::Float;
 use crate::{HVal,HType};
 use crate::common::Txt;
-use std::fmt::{self,Write};
+use std::fmt::{self,Write,Display};
+use std::str::FromStr;
 
 #[derive(PartialEq,Debug,Clone)]
 pub struct HBool(pub bool);
@@ -15,7 +17,7 @@ const JSON_FALSE: Txt = Txt::Const("false");
 
 const THIS_TYPE: HType = HType::Bool;
 
-impl HVal for HBool {
+impl <'a,T:'a + Float + Display + FromStr>HVal<'a,T> for HBool {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         match self.0 {
             true => write!(buf,"{}",ZINC_TRUE),
@@ -29,4 +31,7 @@ impl HVal for HBool {
         }
     }
     fn haystack_type(&self) -> HType { THIS_TYPE }
+
+    set_trait_eq_method!(get_bool_val,'a,T);
+    set_get_method!(get_bool_val, HBool);
 }

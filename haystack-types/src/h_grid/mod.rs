@@ -1,5 +1,7 @@
+use num::Float;
 use crate::{HVal,HType};
-use std::fmt::{self,Write};
+use std::fmt::{self,Write,Display};
+use std::str::FromStr;
 
 use std::collections::HashMap;
 
@@ -9,14 +11,14 @@ pub use h_col::{Col,HCol};
 pub mod h_row;
 pub use h_row::{Row,HRow};
 
-pub struct HGrid {
-    meta: HashMap<String, Box<dyn HVal>>,
+pub struct HGrid<'a,T> {
+    meta: HashMap<String, Box<dyn HVal<'a,T> + 'a>>,
     col_index: HashMap<String, usize>,
-    cols: Vec<Col>,
-    rows: Vec<Row>,
+    cols: Vec<Col<'a,T>>,
+    rows: Vec<Row<'a,T>>,
 }
 
-pub type Grid = HGrid;
+pub type Grid<'a,T> = HGrid<'a,T>;
 
 #[derive(Debug)]
 pub enum HGridErr {
@@ -26,8 +28,8 @@ pub enum HGridErr {
 
 const THIS_TYPE: HType = HType::Grid;
 
-impl HGrid {
-    pub fn new(g_columns: Option<Vec<HCol>>, grid_rows: &mut Vec<HashMap<&str, Box<dyn HVal>>>) -> Grid {
+impl <'a,T:'a + Float + Display + FromStr>HGrid<'a,T> {
+    pub fn new(g_columns: Option<Vec<HCol<'a,T>>>, grid_rows: &mut Vec<HashMap<&str, Box<dyn HVal<'a,T>>>>) -> Grid<'a,T> {
         let meta = HashMap::with_capacity(0);
         let mut col_index: HashMap<String, _> = HashMap::new();
         let mut cols = Vec::new();
@@ -54,7 +56,7 @@ impl HGrid {
                 }
             }
 
-            let row: Vec<Option<Box<dyn HVal>>> = grid.cols.iter().map(|c| r.remove(c.name.as_str())).collect();
+            let row: Vec<Option<Box<dyn HVal<T>>>> = grid.cols.iter().map(|c| r.remove(c.name.as_str())).collect();
             Row::new(row)
         }).collect();
 
@@ -62,44 +64,41 @@ impl HGrid {
         grid
     }
 
-    pub fn from_row_vec(columns: Vec<HCol>, mut grid_rows: Vec<Vec<Option<Box<dyn HVal>>>>) -> Grid {
+    pub fn from_row_vec(columns: Vec<(String,Option<HashMap<String,Box<dyn HVal<'a,T> + 'a>>>)>, mut grid_rows: Vec<Vec<Option<Box<dyn HVal<'a,T> + 'a>>>>) -> Grid<'a,T> {
         let meta = HashMap::with_capacity(0);
         let mut col_index: HashMap<String, _> = HashMap::new();
         let mut cols = Vec::new();
 
-        for c in columns.iter() {
-            if !col_index.contains_key(c.name.as_str()) {
+        for (name,meta) in columns.into_iter() {
+            if !col_index.contains_key(name.as_str()) {
                 let len = col_index.len();
-                col_index.insert(c.name.as_str().to_string(),len);
-                cols.push(Col::new(c.name.as_str().to_string(), None));
+                col_index.insert(name.to_owned(),len);
+                cols.push(Col::new(name.to_owned(), meta));
             } else {
                 panic!("Attempting to read grid with multiple columns of the same name")
             }
         }
 
-        let mut grid = HGrid { meta, col_index, cols, rows:Vec::new() };
-
-        let rows = grid_rows.drain(..).map(|r| {
+        let rows = grid_rows.into_iter().map(|r| {
             Row::new(r)
         }).collect();
 
-        grid.rows = rows;
-        grid
+        HGrid { meta, col_index, cols, rows }
     }
 
-    pub fn add_meta(mut self, meta: HashMap<String, Box<dyn HVal>>) -> Result<Self,HGridErr> {
+    pub fn add_meta(mut self, meta: HashMap<String, Box<dyn HVal<'a,T> + 'a>>) -> Result<HGrid<'a,T>,HGridErr> {
         self.meta.extend(meta);
         Ok(self)
     }
 
-    pub fn add_col_meta(mut self, col: &str, meta: HashMap<String, Box<dyn HVal>>) -> Result<Self,HGridErr> {
+    pub fn add_col_meta(mut self, col: &str, meta: HashMap<String, Box<dyn HVal<'a,T> + 'a>>) -> Result<Self,HGridErr> {
         let idx = self.col_index.get(col).ok_or(HGridErr::NotFound)?;
         self.cols.get_mut(*idx).ok_or(HGridErr::NotFound)?
             .add_meta(meta);
         Ok(self)
     }
 
-    pub fn get(&self, key: usize) -> Result<&Row,HGridErr> {
+    pub fn get(&self, key: usize) -> Result<&'a Row<T>,HGridErr> {
         self.rows.get(key).ok_or(HGridErr::IndexErr)
     }
 
@@ -108,7 +107,7 @@ impl HGrid {
     }
 }
 
-impl HVal for HGrid {
+impl <'a,T:'a + Float + Display + FromStr>HVal<'a,T> for HGrid<'a,T> {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         write!(buf,"ver:\"3.0\" ")?;
         if !self.meta.is_empty() {
@@ -145,6 +144,9 @@ impl HVal for HGrid {
         unimplemented!();
     }
     fn haystack_type(&self) -> HType { THIS_TYPE }
+
+    fn _eq(&self, other: &dyn HVal<'a,T>) -> bool { false }
+    set_get_method!(get_grid_val, HGrid<'a,T>);
 }
 
 #[cfg(test)]
@@ -154,20 +156,20 @@ mod tests {
 
     #[test]
     fn print_grid() {
-        let mut grid_meta: HashMap<String,Box<dyn HVal>> = HashMap::new();
+        let mut grid_meta: HashMap<String,Box<dyn HVal<f64>>> = HashMap::new();
         grid_meta.insert("meta1".to_string(), Box::new(MARKER));
         grid_meta.insert("meta2".to_string(), Box::new(REMOVE));
 
-        let mut col_meta: HashMap<String,Box<dyn HVal>> = HashMap::new();
+        let mut col_meta: HashMap<String,Box<dyn HVal<f64>>> = HashMap::new();
         col_meta.insert("cmeta1".to_string(), Box::new(MARKER));
         col_meta.insert("cmeta2".to_string(), Box::new(REMOVE));
         col_meta.insert("cmeta3".to_string(), Box::new(MARKER));
 
-        let mut row_1: HashMap<&str,Box<dyn HVal>> = HashMap::new();
+        let mut row_1: HashMap<&str,Box<dyn HVal<f64>>> = HashMap::new();
         row_1.insert("col1", Box::new(MARKER));
         row_1.insert("col2", Box::new(MARKER));
 
-        let mut row_2: HashMap<&str,Box<dyn HVal>> = HashMap::new();
+        let mut row_2: HashMap<&str,Box<dyn HVal<f64>>> = HashMap::new();
         row_2.insert("col1", Box::new(REMOVE));
         row_2.insert("col3", Box::new(REMOVE));
 

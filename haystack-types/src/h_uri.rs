@@ -1,3 +1,6 @@
+use core::str::FromStr;
+use core::fmt::Display;
+use num::Float;
 use crate::{HVal,HType};
 use std::fmt::{self,Write};
 
@@ -17,7 +20,7 @@ impl HUri {
     }
 }
 
-impl HVal for HUri {
+impl <'a,T:'a + Float + Display + FromStr>HVal<'a,T> for HUri {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         buf.push('`');
         buf.push_str(self.0.as_str());
@@ -29,4 +32,7 @@ impl HVal for HUri {
         Ok(())
     }
     fn haystack_type(&self) -> HType { THIS_TYPE }
+
+    set_trait_eq_method!(get_uri_val,'a,T);
+    set_get_method!(get_uri_val, HUri);
 }

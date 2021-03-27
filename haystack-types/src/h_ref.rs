@@ -1,16 +1,26 @@
+use num::Float;
 use crate::{HVal,HType};
-use std::fmt::{self,Write};
-use crate::common::{Txt,escape_str};
-pub struct HRef<'a> {
-    id: Txt<'a>,
-    dis: Option<Txt<'a>>,
+use std::fmt::{self,Write,Display};
+use std::str::FromStr;
+use crate::common::escape_str;
+
+#[derive(PartialEq)]
+pub struct HRef {
+    id: String,
+    dis: Option<String>,
 }
 
-pub type Ref<'a> = HRef<'a>;
+pub type Ref = HRef;
 
 const THIS_TYPE: HType = HType::Ref;
 
-impl <'a>HVal for HRef<'a> {
+impl HRef {
+    pub fn new(id: String, dis: Option<String>) -> HRef {
+        HRef { id, dis }
+    }
+}
+
+impl <'a,T:'a + Float + Display + FromStr>HVal<'a,T> for HRef {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         write!(buf,"@{}",self.id)?;
         match &self.dis {
@@ -34,4 +44,7 @@ impl <'a>HVal for HRef<'a> {
         }
     }
     fn haystack_type(&self) -> HType { THIS_TYPE }
+
+    set_trait_eq_method!(get_ref_val,'a,T);
+    set_get_method!(get_ref_val, HRef);
 }

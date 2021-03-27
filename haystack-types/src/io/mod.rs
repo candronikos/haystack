@@ -1,7 +1,7 @@
 use nom::{IResult,Parser};
 use nom::bytes::complete::{tag,take,take_while,take_while1};
 use nom::branch::alt;
-use nom::multi::{separated_list1,many0};
+use nom::multi::separated_list1;
 use nom::combinator::{map,opt,verify,recognize,success,value,iterator};
 use nom::character::complete::{digit1,char as nom_char,space1};
 use nom::character::{is_digit,is_alphanumeric};
@@ -9,11 +9,11 @@ use nom::sequence::{tuple,preceded,terminated,separated_pair};
 use nom::number::complete::double;
 use nom::error::{Error, ErrorKind};
 
-use crate::{HVal, h_bool::HBool, h_null::HNull, h_na::HNA,
-    h_marker::HMarker, h_remove::HRemove, h_number::HNumber,
+use crate::{HVal, h_bool::HBool, h_null::HNull, h_na::HNA, h_marker::HMarker,
+    h_remove::HRemove, h_number::{HNumber,HUnit}, h_ref::HRef,
     h_date::HDate, h_datetime::{HDateTime,HOffset}, h_time::HTime,
     h_coord::HCoord, h_str::HStr, h_uri::HUri, h_dict::HDict,
-    h_list::HList, h_grid::{HCol,HGrid}};
+    h_list::HList, h_grid::HGrid};
 
 use crate::common::*;
 
@@ -27,36 +27,36 @@ use nom::sequence::delimited;
 use nom::combinator::map_res;
 use super::*;
 
-    macro_rules! into_hval {
-        ( $num_type: ty ) => {
-            | hval | { Box::new(hval) as Box<dyn HVal> }
+    macro_rules! into_box {
+        ( $fn: expr, $num_type: ty, $lt: lifetime ) => {
+            map($fn,| hval | { Box::new(hval) as Box<dyn HVal<$lt,$num_type> + $lt> })
         }
     }
 
     pub mod zinc {
         use super::*;
 
-        pub fn literal<'a,NumTrait: 'static + Float + Display + FromStr>(input: &'static str) -> IResult<&str, Box<dyn HVal>> {
+        pub fn literal<'a, 'b, NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str, Box<dyn HVal<'a,NumTrait> + 'a>> {
             alt((
-                map(null, into_hval!(NumTrait)),
-                map(marker, into_hval!(NumTrait)),
-                map(remove, into_hval!(NumTrait)),
-                map(na, into_hval!(NumTrait)),
-                map(boolean, into_hval!(NumTrait)),
-                // map(reference, into_hval!(NumTrait)),
-                map(string, into_hval!(NumTrait)),
-                map(uri, into_hval!(NumTrait)),
-                map(number::<NumTrait>, into_hval!(NumTrait)),
-                map(datetime, into_hval!(NumTrait)),
-                map(date, into_hval!(NumTrait)),
-                map(time, into_hval!(NumTrait)),
-                map(coord::<NumTrait>, into_hval!(NumTrait)),
+                into_box!(null,NumTrait,'a),
+                into_box!(marker,NumTrait,'a),
+                into_box!(remove,NumTrait,'a),
+                into_box!(na,NumTrait,'a),
+                into_box!(boolean,NumTrait,'a),
+                into_box!(reference, NumTrait,'a),
+                into_box!(string,NumTrait,'a),
+                into_box!(uri,NumTrait,'a),
+                into_box!(datetime,NumTrait,'a),
+                into_box!(date,NumTrait,'a),
+                into_box!(time,NumTrait,'a),
+                into_box!(number,NumTrait,'a),
+                into_box!(coord,NumTrait,'a),
                 // TODO: Implement tests for collection types
-                map(dict::<NumTrait>, into_hval!(NumTrait)),
-                map(list::<NumTrait>, into_hval!(NumTrait)),
-                map(delimited(tag("<<"),grid::<NumTrait>,tag(">>")), into_hval!(NumTrait)),
-                // ref, def, ??symbol?? ARE SYMBOLS VALID IN ZINC?
-            )).parse(input)
+                into_box!(dict,NumTrait,'a),
+                into_box!(list,NumTrait,'a),
+                into_box!(delimited(tag("<<"),grid::<NumTrait>,tag(">>")),NumTrait,'a),
+                // TODO: Implement symbol type
+            ))(input)
         }
 
         pub fn boolean(input: &str) -> IResult<&str, HBool> {
@@ -68,22 +68,22 @@ use super::*;
 
         pub fn null(input: &str) -> IResult<&str, HNull> {
             use crate::h_null::NULL;
-            map(tag("N"), |_s: &str| { NULL }).parse(input)
+            map(tag("N"), |_s: &str| { NULL })(input)
         }
 
         pub fn na(input: &str) -> IResult<&str, HNA> {
             use crate::h_na::NA;
-            map(tag("NA"), |_s: &str| { NA }).parse(input)
+            map(tag("NA"), |_s: &str| { NA })(input)
         }
 
         pub fn marker(input: &str) -> IResult<&str, HMarker> {
             use crate::h_marker::MARKER;
-            map(tag("M"), |_s: &str| { MARKER }).parse(input)
+            map(tag("M"), |_s: &str| { MARKER })(input)
         }
 
         pub fn remove(input: &str) -> IResult<&str, HRemove> {
             use crate::h_remove::REMOVE;
-            map(tag("R"), |_s: &str| { REMOVE }).parse(input)
+            map(tag("R"), |_s: &str| { REMOVE })(input)
         }
 
         pub fn string(input: &str) -> IResult<&str, HStr> {
@@ -96,8 +96,8 @@ use super::*;
                 value("\t", tag("\\t")),
                 value("\"", tag("\\\"")),
                 value("\\", tag("\\\\")),
-                tag("$"),
-                take_while1(unicode_char),
+                value("$", tag("\\$")),
+                take_while1(unicode_char('"')),
             )));
 
             let string_literal = it.fold(String::new(),|mut acc, input| { acc.push_str(input); acc });
@@ -122,7 +122,7 @@ use super::*;
                 value("=", tag("\\=")),
                 value(";", tag("\\;")),
                 value("\\", tag("\\\\")),
-                take_while1(unicode_char),
+                take_while1(unicode_char('`')),
             )));
 
             let url_literal = it.fold(String::new(),|mut acc, input| { acc.push_str(input); acc });
@@ -132,6 +132,33 @@ use super::*;
             let uri_res = HUri::new(&url_literal);
             let uri = uri_res.or(Err(nom::Err::Error(Error{ input: input, code: ErrorKind::Digit })))?;
             Ok((input,uri))
+        }
+
+        pub fn ref_chars_body<I>(prefix:char) -> impl FnMut(I) -> IResult<I,I>
+        where
+            I: nom::InputLength +
+                nom::InputTake +
+                nom::InputIter +
+                nom::Slice<std::ops::RangeFrom<usize>> +
+                nom::InputTakeAtPosition<Item = char> +
+                Clone,
+            <I as nom::InputIter>::Item: nom::AsChar,
+        {
+            let f = |c:char| {
+                c.is_ascii_alphanumeric() || match c {
+                    '_' | ':' | '-' | '.' | '~' => true,
+                    _ => false
+                }
+            };
+            preceded(nom::character::complete::char(prefix), take_while1(f))
+        }
+
+        fn reference(input: &str) -> IResult<&str, HRef> {
+            let (input,(ref_str,dis_str)) = tuple((
+                ref_chars_body('@'),
+                opt(preceded(tag(" "), string)),
+            ))(input)?;
+            Ok((input,HRef::new(ref_str.to_owned(), dis_str.map(|s| s.into_string()))))
         }
 
         fn get_2_digits(input: &str) -> IResult<&str, &str> {
@@ -147,10 +174,13 @@ use super::*;
         }
 
         fn get_named_tz(input: &str) -> IResult<&str, &str> {
-            take_while(|c: char| is_alphanumeric(c as u8) || c == '/' || c== '-' || c== '_' || c== '+')(input)
+            recognize(tuple((
+                take_while1(|c: char| c.is_ascii_uppercase()),
+                take_while(|c: char| is_alphanumeric(c as u8) || c == '/' || c== '-' || c== '_' || c== '+')
+            )))(input)
         }
 
-        fn tz(input: &str) -> IResult<&str, (chrono_tz::Tz, HOffset)> {
+        fn timezone(input: &str) -> IResult<&str, (String, HOffset)> {
             use chrono_tz::{Tz, UTC};
             use chrono::offset::FixedOffset;
 
@@ -160,17 +190,21 @@ use super::*;
                 tuple((tag("Z"), success(""))),
             ))(input)?;
 
-            let timezone: (chrono_tz::Tz, HOffset) = match first {
+            // TODO: Implement with TZ instead of String
+            let timezone: (String, HOffset) = match first {
                 "Z" => match second {
-                    "" => (UTC, HOffset::Utc),
+                    // "" => (UTC, HOffset::Utc),
+                    "" => ("UTC".to_owned(), HOffset::Utc),
                     _ => {
-                        let t = Tz::from_str(second).unwrap();
-                        (t, HOffset::Variable(chrono::Duration::minutes(1 * 60 + 1)))
+                        // let t = Tz::from_str(second).unwrap();
+                        // (t, HOffset::Variable(chrono::Duration::minutes(1 * 60 + 1)))
+                        (second.to_owned(), HOffset::Variable(chrono::Duration::minutes(1 * 60 + 1)))
                     }
                 },
                 _ => {
                     let (_,(sign,hours,minutes)) = get_offset(first)?;
-                    (Tz::from_str(second).unwrap(), HOffset::Fixed(FixedOffset::east(sign * (hours as i32 * 3600 + minutes as i32 * 60))))
+                    // (Tz::from_str(second).unwrap(), HOffset::Fixed(FixedOffset::east(sign * (hours as i32 * 3600 + minutes as i32 * 60))))
+                    (second.to_owned(), HOffset::Fixed(FixedOffset::east(sign * (hours as i32 * 3600 + minutes as i32 * 60))))
                 }
             };
 
@@ -180,19 +214,28 @@ use super::*;
         pub fn datetime(input: &str) -> IResult<&str, HDateTime> {
             let start = input;
             let (input, (yr, mo, day, hr, min, sec, nano, tz)) = tuple((
-                terminated(map(take(4usize), |s| i32::from_str_radix(s,10).unwrap()),tag("-")),
-                terminated(map(take(2usize), |s| u32::from_str_radix(s,10).unwrap()),tag("-")),
-                terminated(map(take(2usize), |s| u32::from_str_radix(s,10).unwrap()),tag("T")),
-                terminated(map(take(2usize), |s| u32::from_str_radix(s,10).unwrap()),tag(":")),
-                terminated(map(take(2usize), |s| u32::from_str_radix(s,10).unwrap()),tag(":")),
-                map(take(2usize), |s| u32::from_str_radix(s,10).unwrap()),
-                opt(preceded(tag("."),map(digit1, |s| u32::from_str_radix(s,10).unwrap()))),
-                tz
+                terminated(map(take(4usize), |s| i32::from_str_radix(s,10)),tag("-")),
+                terminated(map(take(2usize), |s| u32::from_str_radix(s,10)),tag("-")),
+                terminated(map(take(2usize), |s| u32::from_str_radix(s,10)),tag("T")),
+                terminated(map(take(2usize), |s| u32::from_str_radix(s,10)),tag(":")),
+                terminated(map(take(2usize), |s| u32::from_str_radix(s,10)),tag(":")),
+                map(take(2usize), |s| u32::from_str_radix(s,10)),
+                opt(preceded(tag("."),map(digit1, |s| u32::from_str_radix(s,10)))),
+                timezone
             ))(start)?;
+
+            let yr = yr.or(Err(nom::Err::Error(Error{ input: start, code: ErrorKind::Digit })))?;
+            let mo = mo.or(Err(nom::Err::Error(Error{ input: start, code: ErrorKind::Digit })))?;
+            let day = day.or(Err(nom::Err::Error(Error{ input: start, code: ErrorKind::Digit })))?;
+            let hr = hr.or(Err(nom::Err::Error(Error{ input: start, code: ErrorKind::Digit })))?;
+            let min = min.or(Err(nom::Err::Error(Error{ input: start, code: ErrorKind::Digit })))?;
+            let sec = sec.or(Err(nom::Err::Error(Error{ input: start, code: ErrorKind::Digit })))?;
 
             Ok((input, HDateTime::new(
                 yr, mo, day, hr, min, sec,
-                if let Some(nano) = nano { nano } else { 0 },
+                if let Some(nano) = nano {
+                    nano.or(Err(nom::Err::Error(Error{ input: start, code: ErrorKind::Digit })))?
+                } else { 0 },
                 tz
             )))
         }
@@ -207,31 +250,33 @@ use super::*;
             Ok((input,HCoord::new(lat,long)))
         }
 
-        fn tags<'a,NumTrait: 'static + Float + Display + FromStr>(input: &'static str) -> IResult<&str,Option<HashMap<String,Box<dyn HVal + 'a>>>> {
-            let (input,res) = opt(separated_list1(tag("\x20"),alt((
-                map(id,|i| (i.to_owned(),Box::new(crate::h_marker::MARKER) as Box<dyn HVal>)),
-                map(separated_pair(id,tag(":"),literal::<NumTrait>), |(i,v)| (i.to_owned(),v)),
-            ))))(input)?;
+        fn tags<'a,'b,NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str,Option<HashMap<String,Box<dyn HVal<'a,NumTrait> + 'a>>>> {
+            let (input,res_opt) = opt(separated_list1(
+                tag(" "),
+                tuple((id, opt(preceded(tag(":"), literal::<NumTrait>))))
+            ))(input)?;
 
-            let res = match res {
-                Some(v) => {
-                    let mut map: HashMap<String, Box<dyn HVal>> = HashMap::new();
-                    v.into_iter().for_each(|(k,v)| { map.insert(k.to_owned(), v).unwrap(); () });
-                    Some(map)
-                },
-                None => None
-            };
+            let mut map: HashMap<String, Box<dyn HVal<'a,NumTrait> + 'a>> = HashMap::new();
+            let map_opt: Option<_>;
+            if let Some(res) = res_opt {
+                res.into_iter().for_each(|(k,v)| {
+                    map.insert(k.to_owned(), v.unwrap_or(Box::new(crate::h_marker::MARKER) as Box<dyn HVal<'a,NumTrait>>));
+                });
+                map_opt = Some(map);
+            } else {
+                map_opt = None;
+            }
 
-            Ok((input,res))
+            Ok((input,map_opt))
         }
 
-        fn tags_list<'a,NumTrait: 'static + Float + Display + FromStr>(input: &'static str) -> IResult<&'a str,Option<Vec<Box<dyn HVal>>>> {
+        fn tags_list<'a,'b,NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str,Option<Vec<Box<dyn HVal<'a,NumTrait> + 'a>>>> {
             let (input,res) = opt(separated_list1(tag(","),literal::<NumTrait>))(input)?;
 
             Ok((input,res))
         }
 
-        pub fn dict<'a, NumTrait: 'static + Float + Display + FromStr>(input: &'static str) -> IResult<&str, HDict> {
+        pub fn dict<'a, 'b, NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str, HDict<'a,NumTrait>> {
             let (input,opt_dict) = delimited(tag("{"),tags::<NumTrait>,tag("}"))(input)?;
 
             let dict = match opt_dict {
@@ -242,7 +287,7 @@ use super::*;
             Ok((input,HDict::from_map(dict)))
         }
 
-        pub fn list<NumTrait: 'static + Float + Display + FromStr>(input: &'static str) -> IResult<&str, HList> {
+        pub fn list<'a, 'b, NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str, HList<'a,NumTrait>> {
             let (input,opt_vec) = delimited(tag("["),tags_list::<NumTrait>,tag("]"))(input)?;
 
             let vec = match opt_vec {
@@ -253,7 +298,7 @@ use super::*;
             Ok((input,HList::from_vec(vec)))
         }
 
-        pub fn grid_meta<NumTrait: 'static + Float + Display + FromStr>(input: &'static str) -> IResult<&str, HashMap<String,Box<dyn HVal>>> {
+        pub fn grid_meta<'a, 'b, NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str, HashMap<String,Box<dyn HVal<'a,NumTrait> + 'a>>> {
             let (input,opt_dict) = tags::<NumTrait>(input)?;
 
             let dict = match opt_dict {
@@ -264,23 +309,24 @@ use super::*;
             Ok((input,dict))
         }
 
-        pub fn cols<NumTrait: 'static + Float + Display + FromStr>(input: &'static str) -> IResult<&str, Vec<HCol>> {
-            let (input,columns) = separated_list1(tag(","), separated_pair(id, space1, tags::<NumTrait>))(input)?;
-            let columns = columns.into_iter().map(|(id,meta)| HCol::new(id.to_string(),meta));
-            Ok((input,columns.collect()))
+        pub fn cols<'a, 'b, NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str, Vec<(String,Option<HashMap<String,Box<dyn HVal<'a,NumTrait> + 'a>>>)>> {
+            let (input,columns): (_,Vec<(_, Option<HashMap<_,Box<dyn HVal<'a,NumTrait>>>>)>) = separated_list1(tag(","), separated_pair(id, space1, tags::<NumTrait>))(input)?;
+            let columns = columns.into_iter().map(|(id,meta)| (id.to_owned(),meta));
+            let columns = columns.collect();
+            Ok((input,columns))
         }
 
-        pub fn grid<NumTrait: 'static + Float + Display + FromStr>(input: &'static str) -> IResult<&str, HGrid> {
-            let (input,version) = delimited(tag("ver:"), recognize(double), space1)(input)?;
+        pub fn grid<'a, 'b, NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str, HGrid<'a,NumTrait>> {
+            let (input,version) = delimited(tag("ver:\""), recognize(double), tag("\""))(input)?;
 
             // Grid Meta
-            let (input,meta) = terminated(grid_meta::<NumTrait>, tag("\n"))(input)?;
+            let (input,meta) = delimited(space1, grid_meta::<NumTrait>, tag("\n"))(input)?;
 
             // Cols
             let (input,columns) = terminated(cols::<NumTrait>, tag("\n"))(input)?;
 
             // Rows
-            let (input,rows) = many0(separated_list1(tag(","),opt(literal::<NumTrait>)))(input)?;
+            let (input,rows) = separated_list1(tag("\n"), separated_list1(tag(","),opt(literal::<NumTrait>)))(input)?;
 
             let grid = HGrid::from_row_vec(columns,rows)
                 .add_meta(meta).unwrap();
@@ -291,11 +337,30 @@ use super::*;
         #[cfg(test)]
         mod tests {
             use super::*;
+            use crate::HCast;
 
             #[test]
             fn parse_unicode_char() {
-                let hello: IResult<&str,&str> = take_while(unicode_char)("Hello\n\r\t\"\\");
+                let hello: IResult<&str,&str> = take_while(unicode_char('"'))("Hello\n\r\t\"\\");
                 assert_eq!(hello,Ok(("\n\r\t\"\\","Hello")));
+            }
+
+            #[test]
+            fn parse_tags() {
+                let input = "dis:\"Fri 31-Jul-2020\" view:\"chart\" title:\"Line\" chartNoScroll chartLegend:\"hide\" hisStart:2020-07-31T00:00:00-04:00 New_York hisEnd:2020-08-01T00:00:00-04:00 New_York hisLimit:10000";
+
+                let res = tags::<f64>(input);
+                if let Ok(e) = res {
+                    let mut buf = String::new();
+                    let temp1 = &e.1.unwrap();
+                    let v = temp1.get("dis").unwrap();
+                    v.to_zinc(&mut buf).unwrap();
+                    println!("FIELD\n{:?}",buf);
+                    let rhs = Box::new(HStr("Fri 31-Jul-2020".to_owned())) as Box<dyn HVal<f64>>;
+                    assert_eq!(v,&rhs)
+                } else {
+                    panic!("Failed to parse separated list")
+                }
             }
 
             #[test]
@@ -331,13 +396,50 @@ use super::*;
 
             #[test]
             fn parse_datetime() {
-                let tz_obj = (chrono_tz::Tz::from_str("America/Los_Angeles").unwrap(), HOffset::Fixed(chrono::offset::FixedOffset::east(-1 * 8 * 3600)));
+                // TODO: Implement with Haystack Timezones so they're valid with the `chrono` library
+                // let tz_obj = (chrono_tz::Tz::from_str("America/Los_Angeles").unwrap(), HOffset::Fixed(chrono::offset::FixedOffset::east(-1 * 8 * 3600)));
+                let tz_obj = ("America/Los_Angeles".to_owned(), HOffset::Fixed(chrono::offset::FixedOffset::east(-1 * 8 * 3600)));
                 assert_eq!(datetime("2010-11-28T07:23:02.773-08:00 America/Los_Angeles").unwrap(),("",HDateTime::new(2010,11,28,7,23,2,773,tz_obj)));
             }
 
             #[test]
             fn parse_coord() {
                 assert_eq!(coord("C(1.5,-9)").unwrap(),("",HCoord::new(1.5,-9f64)));
+            }
+
+            macro_rules! assert_literal {
+                ( $val: literal, $get: ident, $rhs: expr ) => {
+                    let v = literal::<f64>($val).unwrap();
+                    let lhs = v.1.$get();
+                    assert_eq!(lhs,Some(&$rhs));
+                }
+            }
+
+            #[test]
+            fn coerce_na2hval() {
+                use crate::h_na::NA;
+                let v = literal::<f64>("NA").unwrap();
+                let lhs = v.1.get_na();
+                assert_eq!(lhs,Some(&NA))
+            }
+
+            #[test]
+            fn coerce_hval() {
+                use crate::h_null::NULL;
+                use crate::h_marker::MARKER;
+                use crate::h_remove::REMOVE;
+                use crate::h_bool::HBool;
+                use crate::h_str::HStr;
+                use crate::h_uri::HUri;
+
+                assert_literal!("N",get_null,NULL);
+                assert_literal!("M",get_marker,MARKER);
+                assert_literal!("R",get_remove,REMOVE);
+                assert_literal!("T",get_bool,HBool(true));
+                assert_literal!("F",get_bool,HBool(false));
+                assert_literal!(r#""Hello\nSmidgen\"""#,get_string,HStr("Hello\nSmidgen\"".to_owned()));
+                assert_literal!("`http://www.google.com`",get_uri,HUri::new("http://www.google.com").unwrap());
+                assert_literal!("1.5kWh",get_number,HNumber::new(1.5f64,Some(HUnit::new("kWh".to_owned()))));
             }
         }
     }
@@ -362,9 +464,22 @@ use super::*;
         ))(input)
     }
 
-    pub fn number<'a, T: 'a + Float + Display + FromStr>(start: &str) -> IResult<&str, HNumber<T>> {
+    pub fn is_unit(c: char) -> bool {
+        c.is_ascii_alphabetic() || c>=(128 as char) || match c {
+            '%' | '_' | '/' | '$' => true,
+            _ => false
+        }
+    }
+
+    pub fn unit(input: &str) -> IResult<&str, HUnit> {
+        let (input,unit_str) = take_while1(is_unit)(input)?;
+        Ok((input,HUnit::new(unit_str.to_owned())))
+    }
+
+    pub fn number<'a, T: 'a + Float + Display + FromStr>(input: &str) -> IResult<&str, HNumber<T>> {
         use std::slice;
 
+        let start = input;
         let (input, is_positive) = map(opt(tag("-")),|d| d.is_none())(start)?;
         let (input, integer) = digits(input)?;
         let (input, decimals) = opt(preceded(tag("."),digits))(input)?;
@@ -390,8 +505,9 @@ use super::*;
                 code: nom::error::ErrorKind::Float }));
         }
 
-        Ok((input, HNumber::new(number_ty, None)))
-        // TODO: Extract units
+        let (input, unit_opt) = opt(unit)(input)?;
+
+        Ok((input, HNumber::new(number_ty, unit_opt)))
     }
 
     pub fn date(input: &str) -> IResult<&str, HDate> {
@@ -431,6 +547,11 @@ use super::*;
     #[cfg(test)]
     mod tests {
         use super::*;
+
+        #[test]
+        fn parse_id() {
+            assert_eq!(id("asdasd1223_").unwrap(),("","asdasd1223_"));
+        }
 
         #[test]
         fn parse_date() {

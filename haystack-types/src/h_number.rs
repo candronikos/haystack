@@ -1,11 +1,18 @@
 use crate::{HVal,HType};
 use std::fmt::{self,Write,Display,Formatter};
 use num::Float;
+use std::str::FromStr;
 
 #[derive(PartialEq,Debug)]
 pub struct HUnit(String);
 
-#[derive(PartialEq,)]
+impl HUnit {
+    pub fn new(unit: String) -> HUnit {
+        HUnit(unit)
+    }
+}
+
+#[derive(PartialEq,Debug)]
 pub struct HNumber<T: Display> {
     val: T,
     unit: Option<HUnit>
@@ -21,7 +28,7 @@ impl <T: Float + Display>Number<T> {
     }
 }
 
-impl <T: Display>HVal for HNumber<T> {
+impl <'a, T: 'a + Float + Display + FromStr>HVal<'a,T> for HNumber<T> {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         match &self.unit {
             Some(unit) =>  write!(buf,"{}{}",self.val,unit),
@@ -35,6 +42,9 @@ impl <T: Display>HVal for HNumber<T> {
         }
     }
     fn haystack_type(&self) -> HType { THIS_TYPE }
+
+    set_trait_eq_method!(get_number_val,'a,T);
+    set_get_method!(get_number_val, HNumber<T>);
 }
 
 impl Display for HUnit {

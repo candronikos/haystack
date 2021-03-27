@@ -1,18 +1,19 @@
+use num::Float;
 use crate::{HVal,HType};
-use std::fmt::{self,Write};
+use std::fmt::{self,Write,Display};
+use std::str::FromStr;
 
 use std::collections::HashMap;
 
-#[derive(Debug)]
-pub struct HCol {
+pub struct HCol<'a,T> {
     pub name: String,
-    meta: HashMap<String, Box<dyn HVal>>
+    meta: HashMap<String, Box<dyn HVal<'a,T> + 'a>>
 }
 
-pub type Col = HCol;
+pub type Col<'a,T> = HCol<'a,T>;
 
-impl HCol {
-    pub fn new(name: String, meta: Option<HashMap<String, Box<dyn HVal>>>) -> Self {
+impl <'a,T:'a + Float + Display + FromStr>HCol<'a,T> {
+    pub fn new(name: String, meta: Option<HashMap<String, Box<dyn HVal<'a,T> + 'a>>>) -> Self {
         Self {
             name,
             meta: meta.unwrap_or(HashMap::new())
@@ -20,12 +21,12 @@ impl HCol {
     }
 }
 
-impl HCol {
+impl <'a,T:'a + Float + Display + FromStr>HCol<'a,T> {
     // pub fn name<'a>(&'a self) -> &'a str {
     //     &self.name
     // }
 
-    pub fn get(&self, key: String) -> Option<&Box<dyn HVal>> {
+    pub fn get(&self, key: String) -> Option<&Box<dyn HVal<'a,T> + 'a>> {
         self.meta.get(&key)
     }
 
@@ -33,7 +34,7 @@ impl HCol {
         self.meta.contains_key(&key)
     }
 
-    pub fn add_meta(&mut self, meta: HashMap<String, Box<dyn HVal>>) {
+    pub fn add_meta(&mut self, meta: HashMap<String, Box<dyn HVal<'a,T> + 'a>>) {
         self.meta.extend(meta)
     }
 

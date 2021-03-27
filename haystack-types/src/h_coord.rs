@@ -1,5 +1,7 @@
+use num::Float;
 use crate::{HVal,HType};
 use std::fmt::{self,Display,Write};
+use core::str::FromStr;
 
 #[derive(PartialEq,Debug)]
 pub struct HCoord<T> {
@@ -17,7 +19,7 @@ impl <T>HCoord<T> {
     }
 }
 
-impl <T: Display>HVal for HCoord<T> {
+impl <'a,T: 'a + Float + Display + FromStr>HVal<'a,T> for HCoord<T> {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         write!(buf,"C({},{})",self.lat,self.long)
     }
@@ -25,4 +27,7 @@ impl <T: Display>HVal for HCoord<T> {
         write!(buf,"c:{},{}",self.lat,self.long)
     }
     fn haystack_type(&self) -> HType { THIS_TYPE }
+
+    set_trait_eq_method!(get_coord_val,'a,T);
+    set_get_method!(get_coord_val, HCoord<T>);
 }

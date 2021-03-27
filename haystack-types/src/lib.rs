@@ -2,10 +2,14 @@ mod err;
 pub use err::HError;
 
 mod common;
-pub use common::Txt;
+pub use common::{Txt,ZincReader,ZincWriter};
 
+#[macro_use]
 mod h_val;
 pub use h_val::{HVal,HType};
+
+mod cast;
+pub use cast::*;
 
 mod h_null;
 pub use h_null::NULL;

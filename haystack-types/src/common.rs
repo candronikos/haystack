@@ -1,10 +1,8 @@
-use nom::multi::many1;
-use nom::bytes::complete::{take_while1};
+use nom::multi::many0;
+use nom::bytes::complete::take_while1;
 use nom::character::complete::alphanumeric1;
 use nom::combinator::recognize;
 use nom::sequence::tuple;
-use nom::bytes::complete::take;
-use nom::combinator::verify;
 use nom::bytes::complete::tag;
 use nom::branch::alt;
 use num::Float;
@@ -73,38 +71,30 @@ pub fn escape_str(c: char, buf: &mut String) -> fmt::Result {
     Ok(())
 }
 
-// TODO: Check if '"' and '`' need to be ignored for both or only one of URIs and Strings
-pub fn unicode_char(c: char) -> bool {
-    c >= 0x20 as char && c != '\\' && c != '"'
+pub fn unicode_char(ex: char) -> impl Fn(char) -> bool {
+    move |c| c >= 0x20 as char && c != '\\' && c != ex
 }
 
 pub fn id(input: &str) -> IResult<&str,&str> {
     let lower = |c: char| { c>='a' && c<='z' };
     recognize(tuple((
         take_while1(lower),
-        many1(alt((alphanumeric1,tag("_"))))
+        many0(alt((alphanumeric1,tag("_"))))
     )))(input)
 }
 
-pub fn u_esc_char(input: &str) -> IResult<&str,&str> {
-    recognize(tuple((
-        tag("\\u"),
-        verify(take(4usize),|s: &str| s.chars().all(|c| char::is_digit(c,16)))
-    )))(input)
-}
-
-pub trait ZincWriter {
+pub trait ZincWriter<'a> {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result;
 }
 
-pub trait ZincReader {
-    fn parse<T: 'static + Float + Display + FromStr>(buf: &'static str) -> IResult<&str, Box<dyn HVal>>;
+pub trait ZincReader<'a,'b,T: 'a + Float + Display + FromStr> {
+    fn parse(buf: &'b str) -> IResult<&'b str, Box<dyn HVal<'a,T> + 'a>>;
 }
 
-pub trait JsonWriter {
+pub trait JsonWriter<'a> {
     fn to_json(&self, buf: &mut String) -> fmt::Result;
 }
 
-pub trait TrioWriter {
+pub trait TrioWriter<'a> {
     fn to_trio(&self, buf: &mut String) -> fmt::Result;
 }

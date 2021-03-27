@@ -1,6 +1,8 @@
+use num::Float;
 use crate::{HVal,HType};
 use crate::common::{Txt};
-use std::fmt::{self,Write};
+use std::fmt::{self,Write,Display};
+use std::str::FromStr;
 
 #[derive(PartialEq,Debug)]
 pub struct HMarker;
@@ -12,7 +14,7 @@ const JSON: Txt = Txt::Const("m:");
 
 const THIS_TYPE: HType = HType::Marker;
 
-impl HVal for HMarker {
+impl <'a,T:'a + Float + Display + FromStr>HVal<'a,T> for HMarker {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         write!(buf,"{}",ZINC)
     }
@@ -20,4 +22,7 @@ impl HVal for HMarker {
         write!(buf,"{}",JSON)
     }
     fn haystack_type(&self) -> HType { THIS_TYPE }
+
+    set_trait_eq_method!(get_marker_val,'a,T);
+    set_get_method!(get_marker_val, HMarker);
 }

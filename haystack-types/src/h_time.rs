@@ -1,5 +1,7 @@
+use num::Float;
 use crate::{HVal,HType};
-use std::fmt::{self,Write};
+use std::fmt::{self,Write,Display};
+use std::str::FromStr;
 
 use chrono::naive::NaiveTime;
 use chrono::Timelike;
@@ -19,7 +21,7 @@ impl HTime {
     }
 }
 
-impl HVal for HTime {
+impl <'a,T:'a + Float + Display + FromStr>HVal<'a,T> for HTime {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         write!(buf,"{:0>2}:{:0>2}:{:0>2}.{}",self.inner.hour(),self.inner.minute(),
         self.inner.second(),self.inner.nanosecond())?;
@@ -27,7 +29,11 @@ impl HVal for HTime {
     }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         write!(buf,"h:")?;
-        self.to_zinc(buf)
+        let it: &dyn HVal<T> = self;
+        it.to_zinc(buf)
     }
     fn haystack_type(&self) -> HType { THIS_TYPE }
+
+    set_trait_eq_method!(get_time_val,'a,T);
+    set_get_method!(get_time_val, HTime);
 }

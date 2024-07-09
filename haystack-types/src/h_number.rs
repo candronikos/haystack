@@ -26,6 +26,10 @@ impl <T: Float + Display>Number<T> {
     pub fn new(num: T, unit: Option<HUnit>) -> Self {
         HNumber { val: num, unit }
     }
+
+    pub fn val(&self) -> T {
+        self.val
+    }
 }
 
 impl <'a, T: 'a + Float + Display + FromStr>HVal<'a,T> for HNumber<T> {

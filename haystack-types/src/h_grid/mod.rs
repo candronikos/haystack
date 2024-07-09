@@ -1,3 +1,6 @@
+use core::slice::SliceIndex;
+use core::ops::Index;
+use std::slice::Iter;
 use num::Float;
 use crate::{HVal,HType};
 use std::fmt::{self,Write,Display};
@@ -28,7 +31,7 @@ pub enum HGridErr {
 
 const THIS_TYPE: HType = HType::Grid;
 
-impl <'a,T:'a + Float + Display + FromStr>HGrid<'a,T> {
+impl <'g,'a:'g,T:'a + Float + Display + FromStr>HGrid<'a,T> {
     pub fn new(g_columns: Option<Vec<HCol<'a,T>>>, grid_rows: &mut Vec<HashMap<&str, Box<dyn HVal<'a,T>>>>) -> Grid<'a,T> {
         let meta = HashMap::with_capacity(0);
         let mut col_index: HashMap<String, _> = HashMap::new();
@@ -98,14 +101,77 @@ impl <'a,T:'a + Float + Display + FromStr>HGrid<'a,T> {
         Ok(self)
     }
 
-    pub fn get(&self, key: usize) -> Result<&'a Row<T>,HGridErr> {
+    pub fn get(self: &'g Self, key: usize) -> Result<&Row<'a,T>,HGridErr> {
         self.rows.get(key).ok_or(HGridErr::IndexErr)
+    }
+
+    pub fn first(self: &'g Self) -> Result<&Row<'a,T>,HGridErr> {
+        self.rows.get(0).ok_or(HGridErr::IndexErr)
+    }
+
+    pub fn last(self: &'g Self) -> Result<&Row<'a,T>,HGridErr> {
+        let length = self.rows.len();
+        self.rows.get(length-1).ok_or(HGridErr::IndexErr)
     }
 
     pub fn has(&self, key: &str) -> bool {
         self.col_index.contains_key(key)
     }
+
+    pub fn meta(&'g self) -> &'g HashMap<String, Box<(dyn HVal<'a, T> + 'a)>> {
+        &self.meta
+    }
+
+    pub fn iter_cols(&'g self) -> Iter<'_, HCol<'a, T>> {
+        self.cols.iter()
+    }
+
+    // pub fn iter(&'g self) -> &HRow<'a,T> {
+    pub fn iter(&'g self) -> Iter<'_, HRow<'a, T>> {
+        // pub fn iter(&self) -> Box<dyn Iterator<Item=&HRow<'_,T>> + '_> {
+        // HGridIter { index:0, grid:self }
+        self.rows.iter()
+    }
 }
+
+/*
+impl <'a,T,I>Index<I> for HGrid<'a,T>
+where
+    I: SliceIndex<[HRow<'a, T>]>,
+{
+    type Output = &'a I::Output;
+    // type Output = <I as SliceIndex<[HRow<'a,T>]>>::Output;
+
+    fn index(&self, index: I) -> Self::Output {
+        &self.rows[index]
+    }
+}
+*/
+
+// impl <'g,'a:'g,T:'a + Float + Display + FromStr>IntoIterator for &'g HGrid<'a,T> {
+//     // type Item = &'a HRow<'a,T>;
+//     type Item = &'a HRow<'a,T>;
+//     type IntoIter = HGridIter<'g,'a,T>;
+
+//     fn into_iter(self) -> Self::IntoIter {
+//         HGridIter { index:0, grid:self }
+//     }
+// }
+
+// pub struct HGridIter<'g,'a,T> {
+//     index: usize,
+//     grid: &'g HGrid<'a,T>,
+// }
+
+// impl <'g,'a:'g,T:'a + Float + Display + FromStr>Iterator for HGridIter<'g,'a,T> {
+//     type Item = &'a HRow<'a,T>;
+
+//     fn next(&mut self) -> Option<Self::Item> {
+//         let grid: &'g HGrid<'a, T> = self.grid;
+//         let ret = grid.get(self.index).ok()?;
+//         Some(ret)
+//     }
+// }
 
 impl <'a,T:'a + Float + Display + FromStr>HVal<'a,T> for HGrid<'a,T> {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {

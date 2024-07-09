@@ -15,3 +15,5 @@
 # VS Code files and directories
 .vscode
 *.code-workspace
+
+haystack-render

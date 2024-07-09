@@ -329,11 +329,10 @@ mod tests {
         where F: std::future::Future<Output = D>,
             D: DerefMut<Target = mpsc::Sender<ops::HaystackOp>> {
         let (op,resp) = HaystackOp::about();
-        let res = client.await.send(op).await;
 
-        if let Err(e) = res {
-            panic!("Failed to send request");
-        }
+        let client_res = client.await;
+        let permit = client_res.reserve().await.unwrap();
+        let res = permit.send(op);
 
         if let Err(e) = resp.await {
             panic!("Failed to receive response");
@@ -346,11 +345,10 @@ mod tests {
     	where F: std::future::Future<Output = D>,
         	D: DerefMut<Target = mpsc::Sender<ops::HaystackOp>> {
         let (op,resp) = HaystackOp::ops();
-        let res = client.await.send(op).await;
 
-        if let Err(e) = res {
-            panic!("Failed to send request");
-        }
+        let client_res = client.await;
+        let permit = client_res.reserve().await.unwrap();
+        let res = permit.send(op);
 
         if let Err(e) = resp.await {
             panic!("Failed to receive response");
@@ -363,11 +361,10 @@ mod tests {
    		where F: std::future::Future<Output = D>,
         	D: DerefMut<Target = mpsc::Sender<ops::HaystackOp>> {
         let (op,resp) = HaystackOp::formats();
-        let res = client.await.send(op).await;
 
-        if let Err(e) = res {
-            panic!("Failed to send request");
-        }
+        let client_res = client.await;
+        let permit = client_res.reserve().await.unwrap();
+        let res = permit.send(op);
 
         if let Err(e) = resp.await {
             panic!("Failed to receive response");
@@ -380,11 +377,10 @@ mod tests {
     	where F: std::future::Future<Output = D>,
         	D: DerefMut<Target = mpsc::Sender<ops::HaystackOp>> {
         let (op,resp) = HaystackOp::read("point and his and temp".to_owned(), Some(10)).unwrap();
-        let res = client.await.send(op).await;
 
-        if let Err(e) = res {
-            panic!("Failed to send request");
-        }
+        let client_res = client.await;
+        let permit = client_res.reserve().await.unwrap();
+        let res = permit.send(op);
 
         if let Err(e) = resp.await {
             panic!("Failed to receive response");
@@ -397,11 +393,10 @@ mod tests {
     	where F: std::future::Future<Output = D>,
         	D: DerefMut<Target = mpsc::Sender<ops::HaystackOp>> {
         let (op,resp) = HaystackOp::nav(None).unwrap();
-        let res = client.await.send(op).await;
 
-        if let Err(e) = res {
-            panic!("Failed to send request");
-        }
+        let client_res = client.await;
+        let permit = client_res.reserve().await.unwrap();
+        let res = permit.send(op);
 
         if let Err(e) = resp.await {
             panic!("Failed to receive response");
@@ -414,11 +409,10 @@ mod tests {
     	where F: std::future::Future<Output = D>,
        		D: DerefMut<Target = mpsc::Sender<ops::HaystackOp>> {
         let (op,resp) = HaystackOp::nav(Some("`equip:/Carytown`".to_owned())).unwrap();
-        let res = client.await.send(op).await;
 
-        if let Err(e) = res {
-            panic!("Failed to send request");
-        }
+        let client_res = client.await;
+        let permit = client_res.reserve().await.unwrap();
+        let res = permit.send(op);
 
         if let Err(e) = resp.await {
             panic!("Failed to receive response");
@@ -428,24 +422,19 @@ mod tests {
     #[rstest]
     #[tokio::test]
     async fn reuse_with_multi_op<D, F>(client: F)
-    	where F: std::future::Future<Output = D>,
+    	where F: std::future::Future<Output = D> + Clone,
         	D: DerefMut<Target = mpsc::Sender<ops::HaystackOp>> {
         let (op,resp) = HaystackOp::nav(Some("`equip:/Carytown`".to_owned())).unwrap();
-        let client_ref = &mut client.await;
-        let res = client_ref.send(op).await;
-
-        if let Err(e) = res {
-            panic!("Failed to send request");
-        }
+        let client_res = client.clone().await;
+        let permit = client_res.reserve().await.unwrap();
+        let res = permit.send(op);
 
         let response = resp.await.unwrap();
 
         let (op,resp) = HaystackOp::about();
-        let res = client_ref.send(op).await;
-
-        if let Err(e) = res {
-            panic!("Failed to send request");
-        }
+        let client_res = client.await;
+        let permit = client_res.reserve().await.unwrap();
+        let res = permit.send(op);
 
         let response = resp.await.unwrap();
     }
@@ -456,11 +445,10 @@ mod tests {
     	where F: std::future::Future<Output = D>,
         	D: DerefMut<Target = mpsc::Sender<ops::HaystackOp>> {
         let (op,resp) = HaystackOp::his_read("@p:demo:r:26464231-bea9f430".to_owned(),"\"2019-01-01\"".to_owned()).unwrap();
-        let res = client.await.send(op).await;
 
-        if let Err(e) = res {
-            panic!("Failed to send request");
-        }
+        let client_res = client.await;
+        let permit = client_res.reserve().await.unwrap();
+        let res = permit.send(op);
 
         let response = resp.await.unwrap();
     }

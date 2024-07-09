@@ -1,5 +1,5 @@
 use num::Float;
-use crate::{HVal,HType};
+use crate::{HCast,HVal,HType};
 use std::fmt::{self,Write,Display};
 use std::str::FromStr;
 
@@ -36,6 +36,29 @@ impl <'a,T:'a + Float + Display + FromStr>HCol<'a,T> {
 
     pub fn add_meta(&mut self, meta: HashMap<String, Box<dyn HVal<'a,T> + 'a>>) {
         self.meta.extend(meta)
+    }
+
+    pub fn dis(&self) -> String {
+        let meta = &self.meta;
+        if let Some(s) = meta.get("dis") {
+            s.get_string().unwrap().as_str().to_owned()
+        } else if let Some(s) = meta.get("disMacro") {
+            todo!()
+        } else if let Some(s) = meta.get("disKey") {
+            todo!()
+        } else if let Some(s) = meta.get("name") {
+            s.get_string().unwrap().as_str().to_owned()
+        } else if let Some(s) = meta.get("tag") {
+            s.get_string().unwrap().as_str().to_owned()
+        } else if let Some(s) = meta.get("id") {
+            todo!()
+        } else {
+            "!default".to_owned()
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {

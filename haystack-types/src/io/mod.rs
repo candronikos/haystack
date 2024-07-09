@@ -326,7 +326,9 @@ use super::*;
             let (input,columns) = terminated(cols::<NumTrait>, tag("\n"))(input)?;
 
             // Rows
-            let (input,rows) = separated_list1(tag("\n"), separated_list1(tag(","),opt(literal::<NumTrait>)))(input)?;
+            let row_width = columns.len();
+            let (input,rows) = separated_list1(tag("\n"),
+                verify(separated_list1(tag(","),opt(literal::<NumTrait>)),|v: &Vec<Option<Box<dyn HVal<NumTrait>>>>| v.len()==row_width))(input)?;
 
             let grid = HGrid::from_row_vec(columns,rows)
                 .add_meta(meta).unwrap();

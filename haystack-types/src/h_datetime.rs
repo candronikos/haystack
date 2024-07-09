@@ -33,6 +33,10 @@ impl HDateTime {
 
         Self { inner, tz }
     }
+
+    pub fn val(&self) -> DT {
+        self.inner
+    }
 }
 
 impl <'a,T:'a + Float + Display + FromStr>HVal<'a,T> for HDateTime {

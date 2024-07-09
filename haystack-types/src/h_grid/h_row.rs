@@ -15,7 +15,7 @@ impl <'a,T:'a + Float + Display + FromStr>HRow<'a,T> {
         Self { inner }
     }
 
-    pub fn get(&self, parent: &'a HGrid<T>, key: &str) -> &Option<Box<dyn HVal<'a,T> + 'a>> {
+    pub fn get(&self, parent: &HGrid<T>, key: &str) -> &Option<Box<dyn HVal<'a,T> + 'a>> {
         let idx = parent.col_index.get(key);
         let res = match idx {
             Some(idx) => match self.inner.get(*idx) {

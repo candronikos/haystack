@@ -16,6 +16,9 @@ impl HStr {
         let HStr(s) = self;
         s
     }
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 impl <'a,T:'a + Float + Display + FromStr>HVal<'a,T> for HStr {

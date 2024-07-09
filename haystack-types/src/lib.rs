@@ -51,7 +51,7 @@ mod h_coord;
 pub use h_coord::Coord;
 
 mod h_grid;
-pub use h_grid::{Grid,HCol,HRow};
+pub use h_grid::{HGrid,HCol,HRow};
 
 mod h_dict;
 pub use h_dict::Dict;

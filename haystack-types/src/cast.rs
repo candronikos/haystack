@@ -21,6 +21,7 @@ pub trait HCast<'a,FT,T>
     fn get_string(&self) -> Option<&HStr>;
     fn get_uri(&self) -> Option<&HUri>;
     fn get_number(&self) -> Option<&HNumber<FT>>;
+    fn get_datetime(&self) -> Option<&HDateTime>;
 }
 
 impl <'a,FT,T>HCast<'a,FT,T> for Box<T>
@@ -36,4 +37,5 @@ impl <'a,FT,T>HCast<'a,FT,T> for Box<T>
     fn get_string(&self) -> Option<&HStr> { self.get_string_val() }
     fn get_uri(&self) -> Option<&HUri> { self.get_uri_val() }
     fn get_number(&self) -> Option<&HNumber<FT>> { self.get_number_val() }
+    fn get_datetime(&self) -> Option<&HDateTime> { self.get_datetime_val() }
 }

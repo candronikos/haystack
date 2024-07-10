@@ -24,8 +24,5 @@ impl <'a,T:'a + Float + Display + FromStr>HVal<'a,T> for HNA {
     fn haystack_type(&self) -> HType { THIS_TYPE }
 
     set_trait_eq_method!(get_na_val,'a,T);
-    // fn $name(&self) -> Option<&$tt> { None }
-    fn get_na_val(&self) -> Option<&HNA> {
-        Some(&NA)
-    }
+    set_get_method!(get_na_val, HNA);
 }

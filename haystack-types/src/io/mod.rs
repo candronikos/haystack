@@ -38,10 +38,10 @@ use super::*;
 
         pub fn literal<'a, 'b, NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str, Box<dyn HVal<'a,NumTrait> + 'a>> {
             alt((
+                into_box!(na,NumTrait,'a),
                 into_box!(null,NumTrait,'a),
                 into_box!(marker,NumTrait,'a),
                 into_box!(remove,NumTrait,'a),
-                into_box!(na,NumTrait,'a),
                 into_box!(boolean,NumTrait,'a),
                 into_box!(reference, NumTrait,'a),
                 into_box!(string,NumTrait,'a),
@@ -409,6 +409,14 @@ use super::*;
                 assert_eq!(coord("C(1.5,-9)").unwrap(),("",HCoord::new(1.5,-9f64)));
             }
 
+            #[test]
+            fn coerce_na2hval() {
+                use crate::h_na::NA;
+                let v = literal::<f64>("NA").unwrap();
+                let lhs = v.1.get_na();
+                assert_eq!(lhs,Some(&NA))
+            }
+
             macro_rules! assert_literal {
                 ( $val: literal, $get: ident, $rhs: expr ) => {
                     let v = literal::<f64>($val).unwrap();
@@ -418,19 +426,12 @@ use super::*;
             }
 
             #[test]
-            fn coerce_na2hval() {
-                use crate::h_na::NA;
-                let v = literal::<f64>("NA").unwrap();
-                let lhs = v.1.get_na();
-                assert_eq!(lhs,Some(&NA))
-            }
-
-            #[test]
             fn coerce_hval() {
                 use crate::h_null::NULL;
                 use crate::h_marker::MARKER;
                 use crate::h_remove::REMOVE;
                 use crate::h_bool::HBool;
+                use crate::h_na::NA;
                 use crate::h_str::HStr;
                 use crate::h_uri::HUri;
 
@@ -439,6 +440,7 @@ use super::*;
                 assert_literal!("R",get_remove,REMOVE);
                 assert_literal!("T",get_bool,HBool(true));
                 assert_literal!("F",get_bool,HBool(false));
+                assert_literal!("NA",get_na,NA);
                 assert_literal!(r#""Hello\nSmidgen\"""#,get_string,HStr("Hello\nSmidgen\"".to_owned()));
                 assert_literal!("`http://www.google.com`",get_uri,HUri::new("http://www.google.com").unwrap());
                 assert_literal!("1.5kWh",get_number,HNumber::new(1.5f64,Some(HUnit::new("kWh".to_owned()))));

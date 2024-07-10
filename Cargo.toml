@@ -7,3 +7,5 @@ members = [
     "haystack-cli",
     "haystack-render",
 ]
+
+resolver = "2"

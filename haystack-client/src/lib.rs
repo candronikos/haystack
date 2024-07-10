@@ -80,9 +80,6 @@ fn new_hs_session<'a>(uri: String, username: String, password: String, buffer: O
             _http_client: None,
         };
         while let Some(op) = rx.recv().await {
-            // println!("\nCLIENT PTR: {:p}",&obj);
-            // println!("REQUEST:{:?}",op);
-            // println!("ISAUTHENTICATED: {:?}",obj._authenticated);
             if !obj._authenticated {
                 let () = obj._authenticate().await.unwrap();
             }

@@ -5,7 +5,6 @@ members = [
     "haystack-db",
     "haystack-client",
     "haystack-cli",
-    "haystack-render",
 ]
 
 resolver = "2"

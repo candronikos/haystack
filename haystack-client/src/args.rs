@@ -23,6 +23,19 @@ fn cmd_generic(op:&OP) -> Command {
     cmd
 }
 
+fn cmd_nav(op:&OP) -> Command {
+    let mut cmd = cmd_generic(op);
+    cmd = cmd
+        .arg(Arg::new("nav")
+            .value_name("navId")
+            .index(1)
+            .required(false)
+            //.value_parser(value_parser!(String))
+            //.num_args(0..1)
+            .help("The node in the navigation tree to query"));
+    cmd
+}
+
 fn cmd_read(op:&OP) -> Command {
     let mut cmd = cmd_generic(op);
     cmd = cmd
@@ -214,7 +227,7 @@ const OPS: &[OP<'static>; 26] = &[
         no_side_effects:true,
         nodoc:false,
         type_name:"null",
-        cmd: Some(&cmd_generic) },
+        cmd: Some(&cmd_nav) },
     OP {
         def:"op:ops",
         doc:"Query the op defs in the current namespace. See `docHaystack::Ops#ops` chapter.",

@@ -241,7 +241,7 @@ impl <'a>HaystackOpTxRx {
         Ok((op, resp_rx))
     }
 
-    pub fn nav(nav: Option<String>) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
+    pub fn nav(nav: Option<&str>) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
         let (resp_tx, resp_rx) = oneshot::channel();
 
         let mut grid = String::new();

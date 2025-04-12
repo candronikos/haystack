@@ -202,13 +202,15 @@ async fn main() -> AnyResult<(),Error> {
         ("about", _) => HaystackOpTxRx::about(),
         ("ops", _) => HaystackOpTxRx::ops(),
         ("filetypes", _) => HaystackOpTxRx::filetypes(),
+        ("nav", sub_m) => {
+            let nav_id = sub_m.get_one::<String>("nav")
+                .map(|s| s.as_str());
+            HaystackOpTxRx::nav(nav_id)
+                .or_else(|e| {
+                    Err(anyhow::anyhow!("Failed to create nav op: {:?}", e))
+                })?
+        },
         ("read", sub_m) => {
-            // let filter = sub_m.get_one::<String>("filter")
-            //     .ok_or_else(|| anyhow::anyhow!("Read op must have filter"))?;
-            // HaystackOpTxRx::read(FStr::Str(filter.as_str()), None)
-            //     .or_else(|e| {
-            //         Err(anyhow::anyhow!("Failed to create read op: {:?}", e))
-            //     })?
             if let Some(filter) = sub_m.get_one::<String>("filter") {
                 HaystackOpTxRx::read(FStr::Str(filter.as_str()), sub_m.get_one::<usize>("limit").map(|v| *v))
                     .or_else(|e| {

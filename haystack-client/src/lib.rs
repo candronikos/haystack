@@ -510,7 +510,7 @@ mod tests {
     async fn nav_site<D, F>(client: F)
     	where F: std::future::Future<Output = D>,
        		D: DerefMut<Target = mpsc::Sender<ops::HaystackOpTxRx>> {
-        let (op,resp) = HaystackOpTxRx::nav(Some("`equip:/Carytown`".to_owned())).unwrap();
+        let (op,resp) = HaystackOpTxRx::nav(Some("`equip:/Carytown`")).unwrap();
 
         let client_res = client.await;
         let permit = client_res.reserve().await.or_else(|e| Err(anyhow!("Failed to reserve permit: {}",e))).unwrap();
@@ -526,7 +526,7 @@ mod tests {
     async fn reuse_with_multi_op<D, F>(client: F)
     	where F: std::future::Future<Output = D> + Clone,
         	D: DerefMut<Target = mpsc::Sender<ops::HaystackOpTxRx>> {
-        let (op,resp) = HaystackOpTxRx::nav(Some("`equip:/Carytown`".to_owned())).unwrap();
+        let (op,resp) = HaystackOpTxRx::nav(Some("`equip:/Carytown`")).unwrap();
         let client_res = client.clone().await;
         let permit = client_res.reserve().await.or_else(|e| Err(anyhow!("Failed to reserve permit: {}",e))).unwrap();
         let res = permit.send(op);

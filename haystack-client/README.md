@@ -1,5 +1,5 @@
 # Haystack Client
-Rust implementation of an async haystack client library.
+Rust implementation of an async haystack client library and CLI tool.
 
 ## Implemented Ops
 - [x] About
@@ -7,8 +7,7 @@ Rust implementation of an async haystack client library.
 - [ ] Defs
 - [ ] Libs
 - [x] Ops
-- [ ] Filetypes
-- [x] Formats
+- [x] Filetypes
 - [x] Read
     - [x] By filter
     - [x] By id

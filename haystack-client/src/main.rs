@@ -199,16 +199,29 @@ async fn main() -> AnyResult<(),Error> {
     })?;
 
     let (op, resp) = match matches.subcommand().ok_or_else(|| anyhow::anyhow!("No subcommand provided"))? {
-        ("about", sub_m) => HaystackOpTxRx::about(),
-        ("ops", sub_m) => HaystackOpTxRx::ops(),
-        ("filetypes", sub_m) => HaystackOpTxRx::filetypes(),
+        ("about", _) => HaystackOpTxRx::about(),
+        ("ops", _) => HaystackOpTxRx::ops(),
+        ("filetypes", _) => HaystackOpTxRx::filetypes(),
         ("read", sub_m) => {
-            let filter = sub_m.get_one::<String>("filter")
-                .ok_or_else(|| anyhow::anyhow!("Read op must have filter"))?;
-            HaystackOpTxRx::read(FStr::Str(filter.as_str()), None)
-                .or_else(|e| {
-                    Err(anyhow::anyhow!("Failed to create read op: {:?}", e))
-                })?
+            // let filter = sub_m.get_one::<String>("filter")
+            //     .ok_or_else(|| anyhow::anyhow!("Read op must have filter"))?;
+            // HaystackOpTxRx::read(FStr::Str(filter.as_str()), None)
+            //     .or_else(|e| {
+            //         Err(anyhow::anyhow!("Failed to create read op: {:?}", e))
+            //     })?
+            if let Some(filter) = sub_m.get_one::<String>("filter") {
+                HaystackOpTxRx::read(FStr::Str(filter.as_str()), sub_m.get_one::<usize>("limit").map(|v| *v))
+                    .or_else(|e| {
+                        Err(anyhow::anyhow!("Failed to create read op: {:?}", e))
+                    })?
+            } else if let Some(ids) = sub_m.get_many::<String>("ids") {
+                HaystackOpTxRx::read_by_ids(ids.map(|s| s.as_str()))
+                    .or_else(|e| {
+                        Err(anyhow::anyhow!("Failed to create read op: {:?}", e))
+                    })?
+            } else {
+                Err(anyhow::anyhow!("Read op must have filter or ids"))?
+            }
         },
         // ("readIds", sub_m) => {
         //     let ids_opt = sub_m.get_many::<String>("ids");

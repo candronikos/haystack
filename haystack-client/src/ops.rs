@@ -1,5 +1,6 @@
-use std::fmt::{self,Write};
-use anyhow::{Context,Error,Result};
+use std::{fmt::{self,Write}, str::SplitWhitespace};
+
+use anyhow::{anyhow, Context, Error, Result};
 
 use tokio::sync::oneshot;
 
@@ -14,6 +15,13 @@ impl FStr<'_> {
         match self {
             FStr::Str(s) => s,
             FStr::String(s) => s.as_str(),
+        }
+    }
+
+    pub fn split(&self) -> SplitWhitespace<'_> {
+        match self {
+            FStr::Str(s) => s.split_whitespace(),
+            FStr::String(s) => s.split_whitespace(),
         }
     }
 }
@@ -207,13 +215,22 @@ impl <'a>HaystackOpTxRx {
     }
 
     // TODO: Implment with real [HRefs]
-    pub fn read_by_ids(ids: FStr) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
+    pub fn read_by_ids<'b, I>(ids: I) -> Result<(Self,oneshot::Receiver<HaystackResponse>)>
+    where
+        I: IntoIterator<Item = &'b str>,
+    {
         let (resp_tx, resp_rx) = oneshot::channel();
 
-        let mut grid = String::new();
-        write!(grid,"ver:\"3.0\"\nid\n{}\n",ids)
-            .or(Err("Failed to write OP body"))?;
+        let mut grid: String = String::new();
+        write!(grid,"ver:\"3.0\"\nid\n")
+            .or(Err(anyhow!("Failed to write OP body")))?;
 
+        for id in ids {
+            write!(grid,"{}\n",id)
+                .or(Err(anyhow!("Failed to write OP body")))?;
+        }
+        
+        println!("grid: {}", grid);
         let op = Self {
             op: FStr::Str("read"),
             method: FStr::Str("POST"),

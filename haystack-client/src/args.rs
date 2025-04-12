@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand, Command, Arg, ArgAction};
+use clap::{Arg, ArgAction, ArgGroup, Command, Parser, Subcommand};
 use url::{Url, Host};
 
 /*
@@ -27,15 +27,28 @@ fn cmd_read(op:&OP) -> Command {
     let mut cmd = cmd_generic(op);
     cmd = cmd
         .arg(Arg::new("filter")
+            .long("filter")
             .action(ArgAction::Set)
-            .required(true)
             .num_args(1)
+            .conflicts_with("ids")
             .help("The filter to apply to the read operation"))
         .arg(Arg::new("limit")
             .long("limit")
             .action(ArgAction::Set)
+            .value_parser(value_parser!(usize))
             .num_args(1)
-            .help("The limit to apply to the read operation"));
+            .conflicts_with("ids")
+            .help("The limit to apply to the read operation"))
+        .arg(Arg::new("ids")
+            .long("ids")
+            .action(ArgAction::Append)
+            .num_args(1..)
+            //.conflicts_with("filter")
+            .conflicts_with_all(["filter", "limit"])
+            .help("The ids to read"))
+        .group(ArgGroup::new("read")
+            .args(["filter", "ids"])
+            .required(true));
     cmd
 }
 

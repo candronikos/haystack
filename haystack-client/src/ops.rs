@@ -1,37 +1,157 @@
 use std::fmt::{self,Write};
+use anyhow::{Context,Error,Result};
+
 use tokio::sync::oneshot;
 
 #[derive(Debug)]
-pub struct HaystackOp {
-    op: String,
-    method: String,
-    body: Option<String>,
+pub enum FStr<'a> {
+    Str(&'a str),
+    String(String)
+}
+
+impl FStr<'_> {
+    pub fn as_str(&self) -> &str {
+        match self {
+            FStr::Str(s) => s,
+            FStr::String(s) => s.as_str(),
+        }
+    }
+}
+
+impl <'a>std::clone::Clone for FStr<'a> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Str(arg0) => Self::Str(arg0.clone()),
+            Self::String(arg0) => Self::String(arg0.clone()),
+        }
+    }
+}
+
+impl <'a>From<String> for FStr<'a> {
+    fn from(value: String) -> Self {
+        FStr::String(value)
+    }
+}
+
+impl <'a>From<&'a str> for FStr<'a> {
+    fn from(value: &'a str) -> Self {
+        FStr::Str(value)
+    }
+}
+
+impl <'a>fmt::Display for FStr<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FStr::Str(a) => write!(f, "{}", a),
+            FStr::String(a) => write!(f, "{}", a)
+        }
+    }
+}
+
+pub enum Haystack {
+    About,
+    Close,
+    Defs,
+    Filetypes,
+    HisRead,
+    HisWrite,
+    InvokeAction,
+    Libs,
+    Nav,
+    Ops,
+    PointWrite,
+    Read,
+    WatchPoll,
+    WatchSub,
+    WatchUnsub
+}
+
+const RAW_EMPTY_GRID: FStr = FStr::Str("ver:\"3.0\"\nempty");
+
+impl Haystack {
+    // fn rest(&self) -> RestOp {
+    //     match self {
+    //         Self::About => Self::about(),
+    //         Self::Ops => Self::ops(),
+    //         Self::Close => Self::close(),
+    //         _ => panic!("Operation not supported")
+    //     }
+    // }
+
+    pub fn about() -> RestOp {
+        RestOp { op:"about".into(), method:"GET".into(), body:None }
+    }
+
+    pub fn ops() -> RestOp {
+        RestOp { op:"ops".into(), method:"GET".into(), body:None }
+    }
+
+    pub fn close() -> RestOp {
+        RestOp { op:"close".into(), method:"POST".into(), body:Some(RAW_EMPTY_GRID) }
+    }
+
+    pub fn formats() -> RestOp {
+        RestOp { op:"formats".into(), method:"GET".into(), body:None }
+    }
+
+    pub fn read(filter: FStr, limit: Option<usize>) -> Result<RestOp,Error> {
+        let mut grid = String::new();
+        write!(grid,"ver:\"3.0\"\nfilter,limit\n")?;
+        match limit {
+            Some(lim) => write!(grid,"\"{}\",{}\n",filter,lim),
+            None => write!(grid,"\"{}\",\n",filter)
+        }?;
+
+        Ok(RestOp { op:"read".into(), method:"POST".into(), body:Some(grid.into()) })
+    }
+}
+
+pub struct RestOp {
+    op: FStr<'static>,
+    method: FStr<'static>,
+    body: Option<FStr<'static>>,
+}
+
+#[derive(Debug)]
+pub struct HaystackOpTxRx {
+    op: FStr<'static>,
+    method: FStr<'static>,
+    body: Option<FStr<'static>>,
     pub resp_tx: oneshot::Sender<HaystackResponse>
 }
 
-impl HaystackOp {
-    pub fn new(op: String, method:String, body:Option<String>) -> (Self,oneshot::Receiver<HaystackResponse>) {
+/* impl <'a>std::clone::Clone for HaystackOp<'a> {
+    fn clone(&self) -> Self {
+        Self { op: self.op.clone(), method: self.method.clone(), body: self.body.clone(), resp_tx: self.resp_tx }
+    }
+} */
+
+impl <'a>HaystackOpTxRx {
+    pub fn new(op:FStr<'static>, method:FStr<'static>, body:Option<FStr<'static>>) -> (Self,oneshot::Receiver<HaystackResponse>) {
         let (resp_tx, resp_rx) = oneshot::channel();
         (Self { op, method, body, resp_tx }, resp_rx)
     }
 
-    pub fn priv_op(&self) -> String {
+    pub fn priv_op(&'a self) -> FStr {
         self.op.clone()
     }
 
-    pub fn priv_method(&self) -> String {
+    pub fn priv_method(&'a self) -> FStr {
         self.method.clone()
     }
 
-    pub fn priv_body(&self) -> Option<String> {
-        self.body.clone()
+    pub fn priv_body(&'a self) -> Option<FStr> {
+        match &self.body {
+            Some(x) => Some(x.to_owned()),
+            None => return None,
+        }
     }
 
     pub fn about() -> (Self,oneshot::Receiver<HaystackResponse>) {
         let (resp_tx, resp_rx) = oneshot::channel();
         let op = Self {
-            op: String::from("about"),
-            method: String::from("GET"),
+            op: FStr::Str("about"),
+            method: FStr::Str("GET"),
             body: None,
             resp_tx
         };
@@ -42,8 +162,8 @@ impl HaystackOp {
     pub fn ops() -> (Self,oneshot::Receiver<HaystackResponse>) {
         let (resp_tx, resp_rx) = oneshot::channel();
         let op = Self {
-            op: String::from("ops"),
-            method: String::from("GET"),
+            op: FStr::Str("ops"),
+            method: FStr::Str("GET"),
             body: None,
             resp_tx
         };
@@ -51,11 +171,23 @@ impl HaystackOp {
         (op, resp_rx)
     }
 
-    pub fn formats() -> (Self,oneshot::Receiver<HaystackResponse>) {
+    pub fn close() -> (Self,oneshot::Receiver<HaystackResponse>) {
         let (resp_tx, resp_rx) = oneshot::channel();
         let op = Self {
-            op: String::from("formats"),
-            method: String::from("GET"),
+            op: FStr::Str("close"),
+            method: FStr::Str("POST"),
+            body: Some(FStr::Str("ver:\"3.0\"\nempty")),
+            resp_tx
+        };
+
+        (op, resp_rx)
+    }
+
+    pub fn filetypes() -> (Self,oneshot::Receiver<HaystackResponse>) {
+        let (resp_tx, resp_rx) = oneshot::channel();
+        let op = Self {
+            op: FStr::Str("formats"),
+            method: FStr::Str("GET"),
             body: None,
             resp_tx
         };
@@ -63,28 +195,19 @@ impl HaystackOp {
         (op, resp_rx)
     }
 
-    pub fn read<'a>(filter: String, limit: Option<usize>) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
+    pub fn read(filter: FStr, limit: Option<usize>) -> Result<(Self,oneshot::Receiver<HaystackResponse>),Error> {
         let (resp_tx, resp_rx) = oneshot::channel();
-
-        let mut grid = String::new();
-        write!(grid,"ver:\"3.0\"\nfilter,limit\n")
-            .or(Err("Failed to write OP body"))?;
-        match limit {
-            Some(lim) => write!(grid,"\"{}\",{}\n",filter,lim),
-            None => write!(grid,"\"{}\",\n",filter)
-        }.or(Err("Failed to write OP body"))?;
+        let RestOp { op, method, body} = Haystack::read(filter, limit)?;
 
         let op = Self {
-            op: String::from("read"),
-            method: String::from("POST"),
-            body: Some(grid),
-            resp_tx
+            op, method, body, resp_tx
         };
 
         Ok((op, resp_rx))
     }
 
-    pub fn read_by_ids<'a>(ids: String) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
+    // TODO: Implment with real [HRefs]
+    pub fn read_by_ids(ids: FStr) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
         let (resp_tx, resp_rx) = oneshot::channel();
 
         let mut grid = String::new();
@@ -92,16 +215,16 @@ impl HaystackOp {
             .or(Err("Failed to write OP body"))?;
 
         let op = Self {
-            op: String::from("read"),
-            method: String::from("POST"),
-            body: Some(grid),
+            op: FStr::Str("read"),
+            method: FStr::Str("POST"),
+            body: Some(FStr::String(grid)),
             resp_tx
         };
 
         Ok((op, resp_rx))
     }
 
-    pub fn nav<'a>(nav: Option<String>) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
+    pub fn nav(nav: Option<String>) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
         let (resp_tx, resp_rx) = oneshot::channel();
 
         let mut grid = String::new();
@@ -114,16 +237,16 @@ impl HaystackOp {
         }.or(Err("Failed to write OP body"))?;
 
         let op = Self {
-            op: String::from("nav"),
-            method: String::from("POST"),
-            body: Some(grid),
+            op: FStr::Str("nav"),
+            method: FStr::Str("POST"),
+            body: Some(FStr::String(grid)),
             resp_tx
         };
 
         Ok((op, resp_rx))
     }
 
-    pub fn watch_sub<'a>(dis: Option<String>, id: Option<String>, lease: Option<String>, ids: Option<Vec<String>>) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
+    pub fn watch_sub(dis: Option<String>, id: Option<String>, lease: Option<String>, ids: Option<Vec<String>>) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
         let (resp_tx, resp_rx) = oneshot::channel();
 
         if dis.is_none() && id.is_none() {
@@ -154,16 +277,16 @@ impl HaystackOp {
         }
 
         let op = Self {
-            op: String::from("watchSub"),
-            method: String::from("POST"),
-            body: Some(grid),
+            op: FStr::Str("watchSub"),
+            method: FStr::Str("POST"),
+            body: Some(FStr::String(grid)),
             resp_tx
         };
 
         Ok((op, resp_rx))
     }
 
-    pub fn his_read<'a>(id: String, date_range: String) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
+    pub fn his_read(id: String, date_range: String) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
         let (resp_tx, resp_rx) = oneshot::channel();
 
         let mut grid = String::new();
@@ -171,16 +294,16 @@ impl HaystackOp {
             .or(Err("Failed to write OP body"))?;
 
         let op = Self {
-            op: String::from("hisRead"),
-            method: String::from("POST"),
-            body: Some(grid),
+            op: FStr::Str("hisRead"),    
+            method: FStr::Str("POST"),
+            body: Some(FStr::String(grid)),
             resp_tx
         };
 
         Ok((op, resp_rx))
     }
 
-    pub fn his_write<'a>(his: String) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
+    pub fn his_write(his: String) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
         // TODO: Implement test
         let (resp_tx, resp_rx) = oneshot::channel();
 
@@ -189,9 +312,9 @@ impl HaystackOp {
             .or(Err("Failed to write OP body"))?;
 
         let op = Self {
-            op: String::from("hisWrite"),
-            method: String::from("POST"),
-            body: Some(grid),
+            op: FStr::Str("hisWrite"),
+            method: FStr::Str("POST"),
+            body: Some(FStr::String(grid)),
             resp_tx
         };
 
@@ -204,16 +327,16 @@ pub enum HaystackResponse {
     Raw(String)
 }
 
-impl HaystackResponse {
-    pub fn get_raw(self) -> String {
+impl <'a>HaystackResponse {
+    pub fn get_raw(self) -> FStr<'a> {
         let HaystackResponse::Raw(body) = self;
-        body
+        FStr::String(body)
     }
 }
 
-impl fmt::Display for HaystackResponse {
+impl <'a>fmt::Display for HaystackResponse {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let HaystackResponse::Raw(ref body) = self;
+        let HaystackResponse::Raw(body) = self;
         write!(f, "<HaystackResponse\n{}\n>",body)
     }
 }

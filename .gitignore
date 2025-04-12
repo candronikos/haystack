@@ -17,3 +17,5 @@
 *.code-workspace
 
 haystack-render
+
+haystack-config.yaml

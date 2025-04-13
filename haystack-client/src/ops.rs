@@ -303,12 +303,45 @@ impl <'a>HaystackOpTxRx {
         Ok((op, resp_rx))
     }
 
-    pub fn his_read(id: String, date_range: String) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
+    pub fn his_read(id: &str, date_range: &str) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
         let (resp_tx, resp_rx) = oneshot::channel();
 
         let mut grid = String::new();
-        write!(grid,"ver:\"3.0\"\nid,range\n{},{}",id,date_range)
+        write!(grid,"ver:\"3.0\"\nid,range\n{},\"{}\"",id,date_range)
             .or(Err("Failed to write OP body"))?;
+
+        let op = Self {
+            op: FStr::Str("hisRead"),    
+            method: FStr::Str("POST"),
+            body: Some(FStr::String(grid)),
+            resp_tx
+        };
+
+        Ok((op, resp_rx))
+    }
+
+    pub fn his_read_multi<'b, I>(ids: I, date_range: &str, timezone: Option<&str>) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str>
+    where
+        I: IntoIterator<Item = &'b str>,
+    {
+        let (resp_tx, resp_rx) = oneshot::channel();
+
+        let mut grid = String::new();
+        write!(grid,"ver:\"3.0\" range:\"{}\"",date_range)
+            .or(Err("Failed to write OP meta"))?;
+
+        if let Some(tz) = timezone {
+            write!(grid," tz:\"{}\"",tz)
+                .or(Err("Failed to write OP meta"))?;
+        }
+
+        write!(grid,"\nid\n")
+            .or(Err("Failed to write OP col names"))?;
+
+        for id in ids {
+            write!(grid,"{}\n",id)
+                .or(Err("Failed to write OP body"))?;
+        }
 
         let op = Self {
             op: FStr::Str("hisRead"),    

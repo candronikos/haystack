@@ -65,6 +65,27 @@ fn cmd_read(op:&OP) -> Command {
     cmd
 }
 
+fn cmd_his_read(op:&OP) -> Command {
+    let mut cmd = cmd_generic(op);
+    cmd = cmd
+        .arg(Arg::new("range")
+            .action(ArgAction::Set)
+            .num_args(1)
+            .required(true)
+            .help("Str encoding of a date-time range"))
+        .arg(Arg::new("ids")
+            .action(ArgAction::Append)
+            .num_args(1..)
+            .required(true)
+            .help("Ref identifier/s of historised point"))
+        .arg(Arg::new("timezone")
+            .long("timezone")
+            .action(ArgAction::Set)
+            .num_args(1)
+            .help("Timezone offset (if reading multiple points)"));
+    cmd
+}
+
 const OPS: &[OP<'static>; 26] = &[
     OP {
         def:"op:about",
@@ -173,7 +194,7 @@ const OPS: &[OP<'static>; 26] = &[
         no_side_effects:true,
         nodoc:false,
         type_name:"hx::HxHisReadOp",
-        cmd: Some(&cmd_generic) },
+        cmd: Some(&cmd_his_read) },
     OP {
         def:"op:hisWrite",
         doc:"Write historized time series data from a `his-point`. See `docHaystack::Ops#hisWrite` chapter.",

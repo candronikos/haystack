@@ -21,7 +21,7 @@ use std::path::Path;
 use dialoguer::{Confirm, Result as DialoguerResult};
 use anyhow::{anyhow, Context, Error, Result as AnyResult};
 
-use saphyr::{YamlLoader,Yaml};
+use saphyr::{LoadableYamlNode, Yaml, YamlLoader};
 
 const CONFIG_DIR_NAME: &str = "haystack";
 const CONFIG_FILE_NAME: &str = "config.yaml";
@@ -63,7 +63,7 @@ impl Settings {
     }
 
     fn update_from_yaml(&self, yaml: Vec<Yaml>) -> Result<(),Error> {
-        let conf = yaml[0].as_hash()
+        let conf = yaml[0].as_mapping()
             .ok_or_else(|| anyhow::anyhow!("Failed to get hash from config.yaml"))?;
         conf;
         Ok(())
@@ -104,10 +104,6 @@ fn get_credentials(args: &clap::ArgMatches, config: &Option<Vec<Yaml>>) -> AnyRe
                             let password = arg_pass
                                 .or(e["password"].as_str().map(|s| s.to_string()))
                                 .ok_or_else(|| anyhow::anyhow!("Password not provided"))?;
-
-                            println!("ARG: Accept invalid certs: {:?}", arg_accept_invalid_certs);
-                            println!("CONFIG: Accept invalid certs: {:?}", e["accept-invalid-certs"].as_bool());
-
                             let accept_invalid_certs = arg_accept_invalid_certs
                                 .or(e["accept-invalid-certs"].as_bool())
                                 .ok_or_else(|| anyhow::anyhow!("Should never happen. Unable to resolve for 'accept_invalid_certs'"))?;
@@ -225,28 +221,37 @@ async fn main() -> AnyResult<(),Error> {
                 Err(anyhow::anyhow!("Read op must have filter or ids"))?
             }
         },
-        // ("readIds", sub_m) => {
-        //     let ids_opt = sub_m.get_many::<String>("ids");
-        //     match ids_opt {
-        //         Some(ids) => HaystackOpTxRx::read_by_ids(ids.collect::<Vec<&str>>().join("\n")),
-        //         None => panic!("Read op must have ids")
-        //     }
-        // },
-        // Some(("read", sub_m)) => {
-        //     let filter_opt = sub_m.get_one::<String>("filter");
-        //     match filter_opt {
-        //         Some(filter) => println!("Read command with filter: {}", filter),
-        //         None => panic!("Read op must have filter")
-        //     }
-        // },
-        // Some(("readIds", sub_m)) => {
-        //     let ids_opt = sub_m.get_many::<String>("ids");
-        //     match ids_opt {
-        //         Some(ids) => println!("ReadIds command with ids: {:?}", ids.collect::<Vec<&str>>()),
-        //         None => panic!("Read op must have ids")
-        //     }
-        // },
-        _ => panic!("Doesn't match any available subcommand")
+        ("hisRead", sub_m) => {
+            let range_opt = sub_m.get_one::<String>("range");
+            let range = range_opt.map(|s| s.as_str())
+                .ok_or_else(|| anyhow::anyhow!("hisRead op must have range"))?;
+            let id_count = sub_m.get_many::<String>("ids")
+                .ok_or_else(|| anyhow::anyhow!("Failed to get ids"))?
+                .count();
+            match id_count {
+                0 => {
+                    Err(anyhow::anyhow!("hisRead op must have ids"))?
+                },
+                1 => {
+                    let id = sub_m.get_one::<String>("ids")
+                        .ok_or_else(|| anyhow::anyhow!("Failed to get id"))?;
+                    HaystackOpTxRx::his_read(id.as_str(),range)
+                        .or_else(|e| {
+                            Err(anyhow::anyhow!("Failed to create hisRead op: {:?}", e))
+                        })?
+                },
+                _ => {
+                    let ids = sub_m.get_many::<String>("ids")
+                       .ok_or_else(|| anyhow::anyhow!("Failed to get ids"))?;
+                    let timezone = sub_m.get_one::<String>("timezone").map(|s| s.as_str());
+                    HaystackOpTxRx::his_read_multi(ids.map(|s| s.as_str()), range, timezone)
+                       .or_else(|e| {
+                           Err(anyhow::anyhow!("Failed to create hisRead op: {:?}", e))
+                       })?
+                }
+            }
+        },
+        _ => return Err(anyhow::anyhow!("Doesn't match any available subcommand"))
 
     };
 

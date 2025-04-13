@@ -546,7 +546,7 @@ mod tests {
     async fn his_read<D, F>(client: F)
     	where F: std::future::Future<Output = D>,
         	D: DerefMut<Target = mpsc::Sender<ops::HaystackOpTxRx>> {
-        let (op,resp) = HaystackOpTxRx::his_read("@p:demo:r:26464231-bea9f430".to_owned(),"\"2019-01-01\"".to_owned()).unwrap();
+        let (op,resp) = HaystackOpTxRx::his_read("@p:demo:r:26464231-bea9f430","2019-01-01").unwrap();
 
         let client_res = client.await;
         let permit = client_res.reserve().await.or_else(|e| Err(anyhow!("Failed to reserve permit: {}",e))).unwrap();

@@ -141,6 +141,22 @@ fn cmd_watch_unsub(op:&OP) -> Command {
     cmd
 }
 
+fn cmd_watch_poll(op:&OP) -> Command {
+    let mut cmd = cmd_generic(op);
+    cmd = cmd
+        .arg(Arg::new("watchId")
+            .required(true)
+            .help("Str watch identifier"))
+        .arg(Arg::new("refresh")
+            .short('r')
+            .long("refresh")
+            .action(ArgAction::SetTrue)
+            .default_missing_value("true")
+            .num_args(0)
+            .help("Marker tag to request full refresh"));
+    cmd
+}
+
 const OPS: &[OP<'static>; 26] = &[
     OP {
         def:"op:about",
@@ -357,7 +373,7 @@ const OPS: &[OP<'static>; 26] = &[
         no_side_effects:false,
         nodoc:false,
         type_name:"null",
-        cmd: Some(&cmd_generic) },
+        cmd: Some(&cmd_watch_poll) },
     OP {
         def:"op:watchSub",
         doc:"Subscribe to entity data. See `docHaystack::Ops#watchSub` chapter.",

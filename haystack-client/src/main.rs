@@ -271,6 +271,16 @@ async fn main() -> AnyResult<(),Error> {
                     Err(anyhow::anyhow!("Failed to create watchUnsub op: {:?}", e))
                 })?
         },
+        ("watchPoll", sub_m) => {
+            let watch_id = sub_m.get_one::<String>("watchId").map(|s| s.as_str())
+                .ok_or_else(|| anyhow::anyhow!("watchId not provided"))?;
+            let refresh = sub_m.get_one::<bool>("refresh")
+                .map_or(false, |x| *x);
+            HaystackOpTxRx::watch_poll(watch_id, refresh)
+                .or_else(|e| {
+                    Err(anyhow::anyhow!("Failed to create watchPoll op: {:?}", e))
+                })?
+        },
         _ => {
             return Err(anyhow::anyhow!("Subcommand \"{}\" either not supported or doesn't exist", matches.subcommand().ok_or_else(|| anyhow::anyhow!("No subcommand provided"))?.0))
         }

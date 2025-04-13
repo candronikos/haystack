@@ -341,6 +341,28 @@ impl <'a>HaystackOpTxRx {
         Ok((op, resp_rx))
     }
 
+    pub fn watch_poll<'b>(watch_id: &str, refresh: bool) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
+        let (resp_tx, resp_rx) = oneshot::channel();
+        let mut grid = String::new();
+
+        write!(grid,"ver:\"3.0\" watchId:\"{}\"",watch_id).or(Err("Failed to write OP body"))?;
+        
+        if refresh {
+            write!(grid," refresh").or(Err("Failed to write watch refresh"))?;
+        }
+        
+        write!(grid,"\nempty\n").or(Err("Failed to write OP body"))?;
+
+        let op = Self {
+            op: FStr::Str("watchPoll"),
+            method: FStr::Str("POST"),
+            body: Some(FStr::String(grid)),
+            resp_tx
+        };
+
+        Ok((op, resp_rx))
+    }
+
     pub fn his_read(id: &str, date_range: &str) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
         let (resp_tx, resp_rx) = oneshot::channel();
 

@@ -14,7 +14,7 @@ Rust implementation of an async haystack client library and CLI tool.
 - [x] Nav
 - [x] WatchSub
 - [x] WatchUnsub
-- [ ] WatchPoll
+- [x] WatchPoll
 - [ ] PointWrite
 - [x] HisRead
     - [x] Single hisRead
@@ -51,4 +51,13 @@ haystack-client default watchSub -s "w-2f8e0d48-64f17e75" @p:demo:r:2f70054a-51d
 # Unsubscribing and closing a watch
 haystack-client default watchUnsub --close w-2f8e1d8b-8efac249
 haystack-client default watchUnsub @p:demo:r:2f70054a-51d71f8e
+
+# Watch Poll (with or without --refresh)
+haystack-client default watchPoll w-2f8e2739-3c4b3bde --refresh
 ```
+
+## TODO
+* Implement remaining Haystack OPs
+* Provide options that allow the user to control the structure and format of returned grid. i.e. when creating new watches, allow the user to return the `watchId` only.
+* Provide option for watches to be reopened automatically if an error grid is returned on watch OPs.
+* Treat error grids as errors

@@ -66,3 +66,4 @@ haystack-client default watchPoll w-2f8e2739-3c4b3bde --refresh
     - Support for different filetypes
         * CSV, ZINC, JSON
     - Support methods to map to point rec IDs on the server
+* Use an alternative library for SCRAM authentication

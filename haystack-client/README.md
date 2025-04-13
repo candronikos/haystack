@@ -19,9 +19,9 @@ Rust implementation of an async haystack client library and CLI tool.
 - [x] HisRead
     - [x] Single hisRead
     - [x] Batch hisRead
-- [*] HisWrite
-    - [ ] Single hisWrite
-    - [ ] Batch hisWrite
+- [*] HisWrite (Must be valid zinc str)
+    - [x] Single hisWrite
+    - [x] Batch hisWrite
 - [ ] Invoke Action
 
 ## Example CLI uses
@@ -61,3 +61,8 @@ haystack-client default watchPoll w-2f8e2739-3c4b3bde --refresh
 * Provide options that allow the user to control the structure and format of returned grid. i.e. when creating new watches, allow the user to return the `watchId` only.
 * Provide option for watches to be reopened automatically if an error grid is returned on watch OPs.
 * Treat error grids as errors
+* Provide some more advanced tooling to suport `hisWrite`
+    - Support to map data from CSV to native haystack types
+    - Support for different filetypes
+        * CSV, ZINC, JSON
+    - Support methods to map to point rec IDs on the server

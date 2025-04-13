@@ -281,6 +281,14 @@ async fn main() -> AnyResult<(),Error> {
                     Err(anyhow::anyhow!("Failed to create watchPoll op: {:?}", e))
                 })?
         },
+        ("hisWrite", sub_m) => {
+            let his = sub_m.get_one::<String>("data")
+                .ok_or_else(|| anyhow::anyhow!("His data not provided"))?;
+            HaystackOpTxRx::his_write(his.as_str())
+                .or_else(|e| {
+                    Err(anyhow::anyhow!("Failed to create hisWrite op: {:?}", e))
+                })?
+        },
         _ => {
             return Err(anyhow::anyhow!("Subcommand \"{}\" either not supported or doesn't exist", matches.subcommand().ok_or_else(|| anyhow::anyhow!("No subcommand provided"))?.0))
         }

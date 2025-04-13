@@ -157,6 +157,17 @@ fn cmd_watch_poll(op:&OP) -> Command {
     cmd
 }
 
+fn cmd_his_write(op:&OP) -> Command {
+    let mut cmd = cmd_generic(op);
+    cmd = cmd
+        .arg(Arg::new("data")
+            .index(1)
+            .action(ArgAction::Set)
+            .required(true)
+            .help("Zinc encoded history grid as described in the Haystack documentation"));
+    cmd
+}
+
 const OPS: &[OP<'static>; 26] = &[
     OP {
         def:"op:about",
@@ -274,7 +285,7 @@ const OPS: &[OP<'static>; 26] = &[
         no_side_effects:false,
         nodoc:false,
         type_name:"hx::HxHisWriteOp",
-        cmd: Some(&cmd_generic) },
+        cmd: Some(&cmd_his_write) },
     OP {
         def:"op:invokeAction",
         doc:"Invoke a user action on a target entity. See `docHaystack::Ops#invokeAction` chapter.",

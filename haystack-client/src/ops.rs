@@ -413,7 +413,7 @@ impl <'a>HaystackOpTxRx {
         Ok((op, resp_rx))
     }
 
-    pub fn his_write(his: String) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
+    pub fn his_write(his: &str) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
         // TODO: Implement test
         let (resp_tx, resp_rx) = oneshot::channel();
 

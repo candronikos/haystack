@@ -13,7 +13,7 @@ Rust implementation of an async haystack client library and CLI tool.
     - [x] By id
 - [x] Nav
 - [x] WatchSub
-- [ ] WatchUnsub
+- [x] WatchUnsub
 - [ ] WatchPoll
 - [ ] PointWrite
 - [x] HisRead
@@ -47,4 +47,8 @@ haystack-client default watchSub -c "test" @p:demo:r:2f70054a-51d71f8e
 
 ## Subscribing points to a watch
 haystack-client default watchSub -s "w-2f8e0d48-64f17e75" @p:demo:r:2f70054a-51d71f8e @p:demo:r:2f70054a-69f26216
+
+# Unsubscribing and closing a watch
+haystack-client default watchUnsub --close w-2f8e1d8b-8efac249
+haystack-client default watchUnsub @p:demo:r:2f70054a-51d71f8e
 ```

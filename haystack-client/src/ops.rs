@@ -308,6 +308,39 @@ impl <'a>HaystackOpTxRx {
         Ok((op, resp_rx))
     }
 
+    pub fn watch_unsub<'b, I>(watch_id: &str, ids: Option<I>, close: bool) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str>
+    where
+        I: IntoIterator<Item = &'b str>,
+    {
+        let (resp_tx, resp_rx) = oneshot::channel();
+
+        let mut grid = String::new();
+        write!(grid,"ver:\"3.0\" watchId:\"{}\"",watch_id)
+            .or(Err("Failed to write OP body"))?;
+
+        if close {
+            write!(grid," close").or(Err("Failed to write watch close"))?;
+        }
+        
+        write!(grid,"\nid\n").or(Err("Failed to write OP body"))?;
+
+        if let Some(s) = ids {
+            for id in s {
+                write!(grid,"{}\n",id)
+                    .or(Err("Failed to write OP body"))?;
+            }
+        }
+
+        let op = Self {
+            op: FStr::Str("watchUnsub"),
+            method: FStr::Str("POST"),
+            body: Some(FStr::String(grid)),
+            resp_tx
+        };
+
+        Ok((op, resp_rx))
+    }
+
     pub fn his_read(id: &str, date_range: &str) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
         let (resp_tx, resp_rx) = oneshot::channel();
 

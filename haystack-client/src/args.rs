@@ -121,6 +121,26 @@ fn cmd_watch_sub(op:&OP) -> Command {
     cmd
 }
 
+fn cmd_watch_unsub(op:&OP) -> Command {
+    let mut cmd = cmd_generic(op);
+    cmd = cmd
+        .arg(Arg::new("watchId")
+            .required(true)
+            .help("Str watch identifier"))
+        .arg(Arg::new("close")
+            .short('c')
+            .long("close")
+            .action(ArgAction::SetTrue)
+            .default_missing_value("true")
+            .num_args(0)
+            .help("Marker tag to close the entire watch"))
+        .arg(Arg::new("ids")
+            .action(ArgAction::Append)
+            .required(false)
+            .help("The ids to remove from the watch subscription"));
+    cmd
+}
+
 const OPS: &[OP<'static>; 26] = &[
     OP {
         def:"op:about",
@@ -355,7 +375,7 @@ const OPS: &[OP<'static>; 26] = &[
         no_side_effects:false,
         nodoc:false,
         type_name:"null",
-        cmd: Some(&cmd_generic) },
+        cmd: Some(&cmd_watch_unsub) },
 ];
 
 #[derive(Clone, Debug)]

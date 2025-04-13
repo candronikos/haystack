@@ -263,7 +263,10 @@ impl <'a>HaystackOpTxRx {
         Ok((op, resp_rx))
     }
 
-    pub fn watch_sub(dis: Option<String>, id: Option<String>, lease: Option<String>, ids: Option<Vec<String>>) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str> {
+    pub fn watch_sub<'b, I>(dis: Option<&str>, id: Option<&str>, lease: Option<&str>, ids: Option<I>) -> Result<(Self,oneshot::Receiver<HaystackResponse>),&'a str>
+    where
+        I: IntoIterator<Item = &'b str>,
+    {
         let (resp_tx, resp_rx) = oneshot::channel();
 
         if dis.is_none() && id.is_none() {
@@ -285,12 +288,14 @@ impl <'a>HaystackOpTxRx {
         if let Some(s) = lease {
             write!(grid," lease:{}",s).or(Err("Failed to write watch lease"))?;
         }
+        
+        write!(grid,"\nid\n").or(Err("Failed to write OP body"))?;
 
         if let Some(s) = ids {
-            write!(grid,"\nid\n").or(Err("Failed to write OP body"))?;
-            let s = s.clone().into_iter();
-            write!(grid,"\n{}",s.collect::<Vec<String>>().join("\n"))
-                .or(Err("Failed to write watch ids"))?;
+            for id in s {
+                write!(grid,"{}\n",id)
+                    .or(Err("Failed to write OP body"))?;
+            }
         }
 
         let op = Self {

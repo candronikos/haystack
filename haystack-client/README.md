@@ -12,7 +12,7 @@ Rust implementation of an async haystack client library and CLI tool.
     - [x] By filter
     - [x] By id
 - [x] Nav
-- [ ] WatchSub
+- [x] WatchSub
 - [ ] WatchUnsub
 - [ ] WatchPoll
 - [ ] PointWrite
@@ -41,4 +41,10 @@ haystack-client default hisRead yesterday @p:demo:r:2f70054a-87f6d1de
 # His Read (batch, could use the optional --timezone argument)
 haystack-client default hisRead yesterday @p:demo:r:2f70054a-87f6d1de @p:demo:r:2f70054a-314342cd
 
+# WatchSub
+## Can create watches with or without an id list
+haystack-client default watchSub -c "test" @p:demo:r:2f70054a-51d71f8e
+
+## Subscribing points to a watch
+haystack-client default watchSub -s "w-2f8e0d48-64f17e75" @p:demo:r:2f70054a-51d71f8e @p:demo:r:2f70054a-69f26216
 ```

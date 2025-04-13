@@ -251,8 +251,19 @@ async fn main() -> AnyResult<(),Error> {
                 }
             }
         },
-        _ => return Err(anyhow::anyhow!("Doesn't match any available subcommand"))
-
+        ("watchSub", sub_m) => {
+            let watch_dis = sub_m.get_one::<String>("create").map(|s| s.as_str());
+            let watch_id = sub_m.get_one::<String>("watchId").map(|s| s.as_str());
+            let lease = sub_m.get_one::<String>("lease").map(|s| s.as_str());
+            let ids = sub_m.get_many::<String>("ids");
+            HaystackOpTxRx::watch_sub(watch_dis, watch_id, lease, ids.map(|vr| vr.map(|s| s.as_str())))
+                .or_else(|e| {
+                    Err(anyhow::anyhow!("Failed to create watchPoll op: {:?}", e))
+                })?
+        },
+        _ => {
+            return Err(anyhow::anyhow!("Subcommand \"{}\" either not supported or doesn't exist", matches.subcommand().ok_or_else(|| anyhow::anyhow!("No subcommand provided"))?.0))
+        }
     };
 
     client.send(op).await

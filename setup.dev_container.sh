@@ -1,3 +1,3 @@
 #! /bin/bash
 
-ln -s /workspaces/haystack/haystack-config.yaml ~/.config/haystack/config.yaml
+ln -sfn /workspaces/haystack/haystack-config.yaml ~/.config/haystack/config.yaml

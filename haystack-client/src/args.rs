@@ -86,6 +86,41 @@ fn cmd_his_read(op:&OP) -> Command {
     cmd
 }
 
+fn cmd_watch_sub(op:&OP) -> Command {
+    let mut cmd = cmd_generic(op);
+    cmd = cmd
+        .arg(Arg::new("create")
+            .short('c')
+            .long("create")
+            .value_name("watchDis")
+            //.action(ArgAction::Set)
+            .num_args(1)
+            .conflicts_with("watchId")
+            .help("Debug/display string required when creating a new watch"))
+        .arg(Arg::new("watchId")
+            .short('s')
+            .long("subscribe")
+            //.action(ArgAction::Set)
+            .num_args(1)
+            .conflicts_with("create")
+            .help("Str watch identifier, which is required to add entities to existing watch. If omitted, the server must open a new watch"))
+        .arg(Arg::new("lease")
+            .short('l')
+            .long("lease")
+            .action(ArgAction::Set)
+            .num_args(1)
+            .required(false)
+            .help("Lease time in seconds"))
+        .group(ArgGroup::new("read")
+            .args(["create", "watchId"])
+            .required(true))
+        .arg(Arg::new("ids")
+            .action(ArgAction::Append)
+            .required(false)
+            .help("The ids to add to the watch subscription"));
+    cmd
+}
+
 const OPS: &[OP<'static>; 26] = &[
     OP {
         def:"op:about",
@@ -311,7 +346,7 @@ const OPS: &[OP<'static>; 26] = &[
         no_side_effects:false,
         nodoc:false,
         type_name:"null",
-        cmd: Some(&cmd_generic) },
+        cmd: Some(&cmd_watch_sub) },
     OP {
         def:"op:watchUnsub",
         doc:"Unsubscribe to entity data. See `docHaystack::Ops#watchUnsub` chapter.",

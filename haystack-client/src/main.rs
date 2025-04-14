@@ -27,7 +27,7 @@ const CONFIG_DIR_NAME: &str = "haystack";
 const CONFIG_FILE_NAME: &str = "config.yaml";
 
 mod args;
-use args::{cli, Destination};
+use args::{cli, get_haystack_op, repl, send_haystack_op, Destination};
 
 #[derive(Debug)]
 struct ConnInfo {
@@ -140,7 +140,7 @@ fn get_credentials(args: &clap::ArgMatches, config: &Option<Vec<Yaml>>) -> AnyRe
 }
 
 #[tokio::main]
-async fn main() -> AnyResult<(),Error> {
+async fn main() -> AnyResult<()> {
     let matches = cli().get_matches();
     // TODO: Handle situations where config_dir doesn't find a directory
     let user_config_dir = config_dir().context("Config directory error")?;
@@ -183,7 +183,7 @@ async fn main() -> AnyResult<(),Error> {
     }
     let conn_info = get_credentials(&matches, &config)?;
 
-    let (abort_client, client) = HSession::new(
+    let (abort_client, mut client) = HSession::new(
         conn_info.url.to_string(),
         conn_info.username,
         conn_info.password,
@@ -194,127 +194,50 @@ async fn main() -> AnyResult<(),Error> {
         Err(anyhow::anyhow!("Failed to create HSession: {:?}", e))
     })?;
 
-    let (op, resp) = match matches.subcommand().ok_or_else(|| anyhow::anyhow!("No subcommand provided"))? {
-        ("about", _) => HaystackOpTxRx::about(),
-        ("ops", _) => HaystackOpTxRx::ops(),
-        ("filetypes", _) => HaystackOpTxRx::filetypes(),
-        ("nav", sub_m) => {
-            let nav_id = sub_m.get_one::<String>("nav")
-                .map(|s| s.as_str());
-            HaystackOpTxRx::nav(nav_id)
+    let (op, resp) = match &matches.subcommand().ok_or_else(|| anyhow::anyhow!("Failed to parse subcommands"))? {
+        ("repl", _) => {
+            let _ = repl(&mut client, &abort_client)
+                .run_async().await;
+
+            let (close_op, close_resp) = HaystackOpTxRx::close();
+            client.send(close_op).await
                 .or_else(|e| {
-                    Err(anyhow::anyhow!("Failed to create nav op: {:?}", e))
-                })?
-        },
-        ("read", sub_m) => {
-            if let Some(filter) = sub_m.get_one::<String>("filter") {
-                HaystackOpTxRx::read(FStr::Str(filter.as_str()), sub_m.get_one::<usize>("limit").map(|v| *v))
-                    .or_else(|e| {
-                        Err(anyhow::anyhow!("Failed to create read op: {:?}", e))
-                    })?
-            } else if let Some(ids) = sub_m.get_many::<String>("ids") {
-                HaystackOpTxRx::read_by_ids(ids.map(|s| s.as_str()))
-                    .or_else(|e| {
-                        Err(anyhow::anyhow!("Failed to create read op: {:?}", e))
-                    })?
-            } else {
-                Err(anyhow::anyhow!("Read op must have filter or ids"))?
-            }
-        },
-        ("hisRead", sub_m) => {
-            let range_opt = sub_m.get_one::<String>("range");
-            let range = range_opt.map(|s| s.as_str())
-                .ok_or_else(|| anyhow::anyhow!("hisRead op must have range"))?;
-            let id_count = sub_m.get_many::<String>("ids")
-                .ok_or_else(|| anyhow::anyhow!("Failed to get ids"))?
-                .count();
-            match id_count {
-                0 => {
-                    Err(anyhow::anyhow!("hisRead op must have ids"))?
-                },
-                1 => {
-                    let id = sub_m.get_one::<String>("ids")
-                        .ok_or_else(|| anyhow::anyhow!("Failed to get id"))?;
-                    HaystackOpTxRx::his_read(id.as_str(),range)
-                        .or_else(|e| {
-                            Err(anyhow::anyhow!("Failed to create hisRead op: {:?}", e))
-                        })?
-                },
-                _ => {
-                    let ids = sub_m.get_many::<String>("ids")
-                       .ok_or_else(|| anyhow::anyhow!("Failed to get ids"))?;
-                    let timezone = sub_m.get_one::<String>("timezone").map(|s| s.as_str());
-                    HaystackOpTxRx::his_read_multi(ids.map(|s| s.as_str()), range, timezone)
-                       .or_else(|e| {
-                           Err(anyhow::anyhow!("Failed to create hisRead op: {:?}", e))
-                       })?
-                }
-            }
-        },
-        ("watchSub", sub_m) => {
-            let watch_dis = sub_m.get_one::<String>("create").map(|s| s.as_str());
-            let watch_id = sub_m.get_one::<String>("watchId").map(|s| s.as_str());
-            let lease = sub_m.get_one::<String>("lease").map(|s| s.as_str());
-            let ids = sub_m.get_many::<String>("ids");
-            HaystackOpTxRx::watch_sub(watch_dis, watch_id, lease, ids.map(|vr| vr.map(|s| s.as_str())))
+                    Err(anyhow::anyhow!("Failed to send close request: {:?}", e))
+                })?;
+            let response = close_resp.await
                 .or_else(|e| {
-                    Err(anyhow::anyhow!("Failed to create watchPoll op: {:?}", e))
-                })?
+                    Err(anyhow::anyhow!("Failed to get close response: {:?}", e))
+                })?;
+
+            //println!("Close response:\n{:?}", response.get_raw());
+            return Result::Ok(());
         },
-        ("watchUnsub", sub_m) => {
-            let watch_id = sub_m.get_one::<String>("watchId").map(|s| s.as_str())
-                .ok_or_else(|| anyhow::anyhow!("watchId not provided"))?;
-            let close = sub_m.get_one::<bool>("close").map_or(false, |x| *x);
-            let ids = sub_m.get_many::<String>("ids");
-            HaystackOpTxRx::watch_unsub(watch_id, ids.map(|vr| vr.map(|s| s.as_str())), close)
+        (cmd, sub_m) => {
+            get_haystack_op(*cmd, *sub_m) //(&matches)
                 .or_else(|e| {
-                    Err(anyhow::anyhow!("Failed to create watchUnsub op: {:?}", e))
+                    Err(anyhow::anyhow!("Failed to get haystack op: {:?}", e))
                 })?
-        },
-        ("watchPoll", sub_m) => {
-            let watch_id = sub_m.get_one::<String>("watchId").map(|s| s.as_str())
-                .ok_or_else(|| anyhow::anyhow!("watchId not provided"))?;
-            let refresh = sub_m.get_one::<bool>("refresh")
-                .map_or(false, |x| *x);
-            HaystackOpTxRx::watch_poll(watch_id, refresh)
-                .or_else(|e| {
-                    Err(anyhow::anyhow!("Failed to create watchPoll op: {:?}", e))
-                })?
-        },
-        ("hisWrite", sub_m) => {
-            let his = sub_m.get_one::<String>("data")
-                .ok_or_else(|| anyhow::anyhow!("His data not provided"))?;
-            HaystackOpTxRx::his_write(his.as_str())
-                .or_else(|e| {
-                    Err(anyhow::anyhow!("Failed to create hisWrite op: {:?}", e))
-                })?
-        },
-        _ => {
-            return Err(anyhow::anyhow!("Subcommand \"{}\" either not supported or doesn't exist", matches.subcommand().ok_or_else(|| anyhow::anyhow!("No subcommand provided"))?.0))
         }
     };
 
-    client.send(op).await
+    let response = send_haystack_op(&mut client, resp, op).await
         .or_else(|e| {
-            Err(anyhow::anyhow!("Failed to send request: {:?}", e))
+            Err(anyhow::anyhow!("Failed to send haystack op: {:?}", e))
         })?;
-    
-    let response = resp.await
-        .or_else(|e| {
-            Err(anyhow::anyhow!("Failed to get response: {:?}", e))
-        })?;
+
     print!("{}", response.get_raw());
-    io::stdout().flush().unwrap();
 
     let (close_op, close_resp) = HaystackOpTxRx::close();
     client.send(close_op).await
         .or_else(|e| {
             Err(anyhow::anyhow!("Failed to send close request: {:?}", e))
         })?;
-    close_resp.await
+    let response = close_resp.await
         .or_else(|e| {
             Err(anyhow::anyhow!("Failed to get close response: {:?}", e))
         })?;
+
+    // TODO: Check if the response is an error
     Result::Ok(())
 }
 

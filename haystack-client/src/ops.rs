@@ -184,7 +184,7 @@ impl <'a>HaystackOpTxRx {
         let op = Self {
             op: FStr::Str("close"),
             method: FStr::Str("POST"),
-            body: Some(FStr::Str("ver:\"3.0\"\nempty")),
+            body: Some(FStr::Str("ver:\"3.0\"\nempty\n")),
             resp_tx
         };
 

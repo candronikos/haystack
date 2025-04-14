@@ -22,6 +22,7 @@ features = ["full"]
 futures = "0.3"
 scram = "0.6.0"
 saphyr = "0.0.4"
+reedline-repl-rs = { version = "1.2.1", features = ["async"] }
 
 # scram = { version = "0.7", package = "scram-2"}
 # [patch.crates-io]

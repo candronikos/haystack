@@ -1,5 +1,5 @@
 # Haystack Client
-Rust implementation of an async haystack client library and CLI tool.
+Rust implementation of an async haystack client library and CLI tool and REPL.
 
 ## Implemented Ops
 - [x] About

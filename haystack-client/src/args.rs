@@ -1,17 +1,29 @@
-use clap::{Arg, ArgAction, ArgGroup, Command, Parser, Subcommand};
+use std::{io::{self, Read, Write}, pin::Pin};
+
+use anyhow::{Error, Result as AnyResult};
+use clap::{Arg, ArgAction, ArgGroup, ArgMatches, Command, Parser, Subcommand};
+use futures::stream::{AbortHandle, Aborted, Any};
+use haystackclientlib::ops::{FStr, HaystackOpTxRx, HaystackResponse};
+use reedline_repl_rs::{AsyncCallback, Repl};
+use saphyr::AnnotatedMapping;
+use tokio::sync::{oneshot::Receiver,mpsc::Sender};
 use url::{Url, Host};
 
 /*
 ops().toRecList.map(r => "OP { def:\""+r->def+"\",doc:\""+r["doc"]+"\",is:\""+r->is+"\",lib:\""+r->lib+"\",no_side_effects:\""+r.has("no_side_effects")+"\",nodoc:\""+r.has("nodoc")+"\",type_name:\""+r["type_name"]+"\" }") // def,doc,is,lib,no_side_effects,nodoc,type_name
 */
-pub struct OP<'a:'static> {
-    def: &'a str,
-    doc: &'a str,
-    is: &'a str,
-    lib: &'a str,
+
+type REPL_FUNC_TYPE<T> = fn(ArgMatches, &mut T) -> AnyResult<(HaystackOpTxRx, Receiver<HaystackResponse>)>;
+type MATCH_FUNC_TYPE = fn(&ArgMatches) -> AnyResult<(HaystackOpTxRx, Receiver<HaystackResponse>)>;
+
+pub struct OP {
+    def: &'static str,
+    doc: &'static str,
+    is: &'static str,
+    lib: &'static str,
     no_side_effects: bool,
     nodoc: bool,
-    type_name: &'a str,
+    type_name: &'static str,
     cmd: Option<&'static dyn Fn(&OP) -> Command>,
 }
 
@@ -168,7 +180,117 @@ fn cmd_his_write(op:&OP) -> Command {
     cmd
 }
 
-const OPS: &[OP<'static>; 26] = &[
+fn match_about(_: &ArgMatches) -> AnyResult<(HaystackOpTxRx,Receiver<HaystackResponse>)> {
+    Ok(HaystackOpTxRx::about())
+}
+
+fn match_filetypes(matches: &ArgMatches) -> AnyResult<(HaystackOpTxRx, Receiver<HaystackResponse>)> {
+    Ok(HaystackOpTxRx::filetypes())
+}
+
+fn match_his_read(sub_m: &ArgMatches) -> AnyResult<(HaystackOpTxRx, Receiver<HaystackResponse>)> {
+    let range_opt = sub_m.get_one::<String>("range");
+    let range = range_opt.map(|s| s.as_str())
+        .ok_or_else(|| anyhow::anyhow!("hisRead op must have range"))?;
+    let id_count = sub_m.get_many::<String>("ids")
+        .ok_or_else(|| anyhow::anyhow!("Failed to get ids"))?
+        .count();
+    match id_count {
+        0 => {
+            Err(anyhow::anyhow!("hisRead op must have ids"))?
+        },
+        1 => {
+            let id = sub_m.get_one::<String>("ids")
+                .ok_or_else(|| anyhow::anyhow!("Failed to get id"))?;
+            HaystackOpTxRx::his_read(id.as_str(),range)
+                .or_else(|e| {
+                    Err(anyhow::anyhow!("Failed to create hisRead op: {:?}", e))
+                })
+        },
+        _ => {
+            let ids = sub_m.get_many::<String>("ids")
+               .ok_or_else(|| anyhow::anyhow!("Failed to get ids"))?;
+            let timezone = sub_m.get_one::<String>("timezone").map(|s| s.as_str());
+            HaystackOpTxRx::his_read_multi(ids.map(|s| s.as_str()), range, timezone)
+               .or_else(|e| {
+                   Err(anyhow::anyhow!("Failed to create hisRead op: {:?}", e))
+               })
+        }
+    }
+}
+
+fn match_his_write(sub_m: &ArgMatches) -> Result<(HaystackOpTxRx, Receiver<HaystackResponse>), Error> {
+    let his = sub_m.get_one::<String>("data")
+        .ok_or_else(|| anyhow::anyhow!("His data not provided"))?;
+    HaystackOpTxRx::his_write(his.as_str())
+        .or_else(|e| {
+            Err(anyhow::anyhow!("Failed to create hisWrite op: {:?}", e))
+        })
+}
+
+fn match_nav(sub_m: &ArgMatches) -> Result<(HaystackOpTxRx, Receiver<HaystackResponse>), Error> {
+    let nav_id = sub_m.get_one::<String>("nav")
+        .map(|s| s.as_str());
+    HaystackOpTxRx::nav(nav_id)
+        .or_else(|e| {
+            Err(anyhow::anyhow!("Failed to create nav op: {:?}", e))
+        })
+}
+
+fn match_ops(matches: &ArgMatches) -> Result<(HaystackOpTxRx, Receiver<HaystackResponse>), Error> {
+    Ok(HaystackOpTxRx::ops())
+}
+
+fn match_read(sub_m: &ArgMatches) -> Result<(HaystackOpTxRx, Receiver<HaystackResponse>), Error> {
+    if let Some(filter) = sub_m.get_one::<String>("filter") {
+        HaystackOpTxRx::read(FStr::Str(filter.as_str()), sub_m.get_one::<usize>("limit").map(|v| *v))
+            .or_else(|e| {
+                Err(anyhow::anyhow!("Failed to create read op: {:?}", e))
+            })
+    } else if let Some(ids) = sub_m.get_many::<String>("ids") {
+        HaystackOpTxRx::read_by_ids(ids.map(|s| s.as_str()))
+            .or_else(|e| {
+                Err(anyhow::anyhow!("Failed to create read op: {:?}", e))
+            })
+    } else {
+        Err(anyhow::anyhow!("Read op must have filter or ids"))?
+    }
+}
+
+fn match_watch_poll(sub_m: &ArgMatches) -> Result<(HaystackOpTxRx, Receiver<HaystackResponse>), Error> {
+    let watch_id = sub_m.get_one::<String>("watchId").map(|s| s.as_str())
+        .ok_or_else(|| anyhow::anyhow!("watchId not provided"))?;
+    let refresh = sub_m.get_one::<bool>("refresh")
+        .map_or(false, |x| *x);
+    HaystackOpTxRx::watch_poll(watch_id, refresh)
+        .or_else(|e| {
+            Err(anyhow::anyhow!("Failed to create watchPoll op: {:?}", e))
+        })
+}
+
+fn match_watch_sub(sub_m: &ArgMatches) -> Result<(HaystackOpTxRx, Receiver<HaystackResponse>), Error> {
+    let watch_dis = sub_m.get_one::<String>("create").map(|s| s.as_str());
+    let watch_id = sub_m.get_one::<String>("watchId").map(|s| s.as_str());
+    let lease = sub_m.get_one::<String>("lease").map(|s| s.as_str());
+    let ids = sub_m.get_many::<String>("ids");
+    HaystackOpTxRx::watch_sub(watch_dis, watch_id, lease, ids.map(|vr| vr.map(|s| s.as_str())))
+        .or_else(|e| {
+            Err(anyhow::anyhow!("Failed to create watchPoll op: {:?}", e))
+        })
+}
+
+fn match_watch_unsub(sub_m: &ArgMatches) -> Result<(HaystackOpTxRx, Receiver<HaystackResponse>), Error> {
+    let watch_id = sub_m.get_one::<String>("watchId").map(|s| s.as_str())
+        .ok_or_else(|| anyhow::anyhow!("watchId not provided"))?;
+    let close = sub_m.get_one::<bool>("close").map_or(false, |x| *x);
+    let ids = sub_m.get_many::<String>("ids");
+    HaystackOpTxRx::watch_unsub(watch_id, ids.map(|vr| vr.map(|s| s.as_str())), close)
+        .or_else(|e| {
+            Err(anyhow::anyhow!("Failed to create watchUnsub op: {:?}", e))
+        })
+}
+
+const OPS: &[OP; 26] = &[
     OP {
         def:"op:about",
         doc:"Query basic information about the server. See `docHaystack::Ops#about` chapter.",
@@ -466,10 +588,195 @@ pub fn cli() -> Command {
         .default_missing_value("true")
         .help("Tell the client to accept invalid SSL certificates"));
 
+        cmd = cmd.subcommand(Command::new("repl")
+            .about("Run the REPL"));
+
     for op in OPS {
         if let Some(op_cmd) = op.cmd {
             cmd = cmd.subcommand(op_cmd(op));
         }
     }
     cmd
+}
+
+async fn repl_generic<'a>(m_func: MATCH_FUNC_TYPE, matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    let Context { abort_handle, sender: client } = context;
+    
+    let (op, resp) = m_func(&matches)
+        .or_else(|e| {
+            Err(anyhow::anyhow!("Failed to create haystack op: {:?}", e))
+        })?;
+
+    let response = send_haystack_op(client, resp, op).await
+        .or_else(|e| {
+            Err(anyhow::anyhow!("Failed to get response: {:?}", e))
+        })?;
+
+    Ok(Some(response.get_raw().to_string()))
+}
+
+async fn repl_not_implemented<'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    todo!("Not implemented yet");
+}
+
+async fn repl_about<'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    repl_generic(match_about, matches, context).await
+}
+
+async fn repl_ops<'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    repl_generic(match_ops, matches, context).await
+}
+
+async fn repl_filetypes<'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    repl_generic(match_filetypes, matches, context).await
+}
+
+async fn repl_nav<'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    repl_generic(match_nav, matches, context).await
+}
+
+async fn repl_read<'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    repl_generic(match_read, matches, context).await
+}
+
+async fn repl_his_read<'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    repl_generic(match_his_read, matches, context).await
+}
+
+async fn repl_watch_sub<'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    repl_generic(match_watch_sub, matches, context).await
+}
+
+async fn repl_watch_unsub<'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    repl_generic(match_watch_unsub, matches, context).await
+}
+
+async fn repl_watch_poll<'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    repl_generic(match_watch_poll, matches, context).await
+}
+
+async fn repl_watch_his_write<'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    repl_generic(match_his_write, matches, context).await
+}
+
+pub fn repl<'a>(client: &'a mut Sender<HaystackOpTxRx>, abort_handle: &'a AbortHandle) -> Repl<Context<'a>, anyhow::Error> {
+    const VERSION: &str = env!("CARGO_PKG_VERSION");
+    let context: Context<'_> = Context {
+        abort_handle,
+        sender: client,
+    };
+
+    let mut repl_obj = Repl::new(context)
+        .with_name("haystack-client")
+        .with_version(VERSION)
+        .with_stop_on_ctrl_c(true)
+        .with_stop_on_ctrl_d(false);
+
+    for op in OPS {
+        if let Some(op_cmd) = op.cmd {
+
+            let cmd = op_cmd(op);
+
+            /*
+            if let Some(repl_cmd) = op.repl_cmd {
+                repl_obj = repl_obj
+                    .with_command_async(
+                        op_cmd(op),
+                        |args, context| Box::pin(eval_subcommand(repl_cmd, args, context))
+                    );
+            }
+            */
+        }
+    }
+
+    fn get_cmd<'a>(key: &str) -> Command {
+        let op = OPS.iter().find(|x| x.def == key).unwrap();
+        op.cmd.unwrap()(op)
+    }
+
+    // repl_not_implemented
+    // repl_obj = get_cmd(repl_obj, 0, repl_about);
+    repl_obj = repl_obj
+        .with_command_async(get_cmd("op:about"), |args, context| Box::pin(repl_about(args, context)))
+        .with_command_async(get_cmd("op:backup"), |args, context| Box::pin(repl_not_implemented(args, context)))
+        .with_command_async(get_cmd("op:commit"), |args, context| Box::pin(repl_not_implemented(args, context)))
+        .with_command_async(get_cmd("op:defs"), |args, context| Box::pin(repl_not_implemented(args, context)))
+        .with_command_async(get_cmd("op:eval"), |args, context| Box::pin(repl_not_implemented(args, context)))
+        .with_command_async(get_cmd("op:evalAll"), |args, context| Box::pin(repl_not_implemented(args, context)))
+        .with_command_async(get_cmd("op:export"), |args, context| Box::pin(repl_not_implemented(args, context)))
+        .with_command_async(get_cmd("op:ext"), |args, context| Box::pin(repl_not_implemented(args, context)))
+        .with_command_async(get_cmd("op:file"), |args, context| Box::pin(repl_not_implemented(args, context)))
+        .with_command_async(get_cmd("op:filetypes"), |args, context| Box::pin(repl_filetypes(args, context)))
+        .with_command_async(get_cmd("op:funcShim"), |args, context| Box::pin(repl_not_implemented(args, context)))
+        .with_command_async(get_cmd("op:hisRead"), |args, context| Box::pin(repl_his_read(args, context)))
+        .with_command_async(get_cmd("op:hisWrite"), |args, context| Box::pin(repl_watch_his_write(args, context)))
+        .with_command_async(get_cmd("op:invokeAction"), |args, context| Box::pin(repl_not_implemented(args, context)))
+        .with_command_async(get_cmd("op:io"), |args, context| Box::pin(repl_not_implemented(args, context)))
+        .with_command_async(get_cmd("op:libs"), |args, context| Box::pin(repl_not_implemented(args, context)))
+        .with_command_async(get_cmd("op:link"), |args, context| Box::pin(repl_not_implemented(args, context)))
+        .with_command_async(get_cmd("op:nav"), |args, context| Box::pin(repl_nav(args, context)))
+        .with_command_async(get_cmd("op:ops"), |args, context| Box::pin(repl_ops(args, context)))
+        .with_command_async(get_cmd("op:pointWrite"), |args, context| Box::pin(repl_not_implemented(args, context)))
+        .with_command_async(get_cmd("op:read"), |args, context| Box::pin(repl_read(args, context)))
+        .with_command_async(get_cmd("op:rec"), |args, context| Box::pin(repl_not_implemented(args, context)))
+        .with_command_async(get_cmd("op:upload"), |args, context| Box::pin(repl_not_implemented(args, context)))
+        .with_command_async(get_cmd("op:watchPoll"), |args, context| Box::pin(repl_watch_poll(args, context)))
+        .with_command_async(get_cmd("op:watchSub"), |args, context| Box::pin(repl_watch_sub(args, context)))
+        .with_command_async(get_cmd("op:watchUnsub"), |args, context| Box::pin(repl_watch_unsub(args, context)));
+repl_obj
+}
+
+pub struct Context<'a> {
+    abort_handle: &'a AbortHandle,
+    sender: &'a Sender<HaystackOpTxRx>,
+}
+
+pub async fn eval_subcommand<'a>(get_op: MATCH_FUNC_TYPE, matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    let Context { abort_handle, sender: client } = context;
+    
+    let (op, resp) = get_op(&matches)
+        .or_else(|e| {
+            Err(anyhow::anyhow!("Failed to create haystack op: {:?}", e))
+        })?;
+
+    let response = send_haystack_op(client, resp, op).await
+        .or_else(|e| {
+            Err(anyhow::anyhow!("Failed to get response: {:?}", e))
+        })?;
+    //print!("{}", response.get_raw());
+    //io::stdout().flush().unwrap();
+    
+    Ok(Some(response.get_raw().to_string()))
+}
+
+pub async fn send_haystack_op(client: &Sender<HaystackOpTxRx>, resp: Receiver<HaystackResponse>, op: HaystackOpTxRx) -> AnyResult<HaystackResponse> {
+    client.send(op).await
+        .or_else(|e| {
+            Err(anyhow::anyhow!("Failed to send request: {:?}", e))
+        })?;
+    
+    resp.await
+        .or_else(|e| {
+            Err(anyhow::anyhow!("Failed to get response: {:?}", e))
+        })
+}
+
+pub fn get_haystack_op(cmd: &str, matches: &ArgMatches) -> Result<(HaystackOpTxRx,Receiver<HaystackResponse>), Error> {
+    let res = match (cmd, matches) {
+        ("about", sub_m) => match_about(sub_m),
+        ("ops", sub_m) => match_ops(sub_m),
+        ("filetypes", sub_m,) => match_filetypes(sub_m),
+        ("nav", sub_m) => match_nav(sub_m),
+        ("read", sub_m) => match_read(sub_m),
+        ("hisRead", sub_m) => match_his_read(sub_m),
+        ("watchSub", sub_m) => match_watch_sub(sub_m),
+        ("watchUnsub", sub_m) => match_watch_unsub(sub_m),
+        ("watchPoll", sub_m) => match_watch_poll(sub_m),
+        ("hisWrite", sub_m) => match_his_write(sub_m),
+        _ => {
+            return Err(anyhow::anyhow!("Subcommand \"{}\" either not supported or doesn't exist", matches.subcommand().ok_or_else(|| anyhow::anyhow!("No subcommand provided"))?.0))
+        }
+    };
+
+    res
 }

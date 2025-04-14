@@ -1,4 +1,4 @@
-use std::{io::{self, Read, Write}, pin::Pin};
+use std::{io::{self, Read, Write}, path::PathBuf, pin::Pin};
 
 use anyhow::{Error, Result as AnyResult};
 use clap::{Arg, ArgAction, ArgGroup, ArgMatches, Command, Parser, Subcommand};
@@ -659,43 +659,33 @@ async fn repl_watch_his_write<'a>(matches: ArgMatches, context: &mut Context<'a>
     repl_generic(match_his_write, matches, context).await
 }
 
-pub fn repl<'a>(client: &'a mut Sender<HaystackOpTxRx>, abort_handle: &'a AbortHandle) -> Repl<Context<'a>, anyhow::Error> {
-    const VERSION: &str = env!("CARGO_PKG_VERSION");
+async fn update_prompt<T>(_context: &mut T) -> AnyResult<Option<String>> {
+    Ok(Some("updated".to_string()))
+}
+
+pub fn repl<'a>(client: &'a mut Sender<HaystackOpTxRx>, abort_handle: &'a AbortHandle, history_file: PathBuf) -> Repl<Context<'a>, anyhow::Error> {
     let context: Context<'_> = Context {
         abort_handle,
         sender: client,
     };
+    
+    const PKG_NAME: &str = env!("CARGO_PKG_NAME");
+    const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
+    const VERSION: &str = env!("CARGO_PKG_VERSION");
 
     let mut repl_obj = Repl::new(context)
-        .with_name("haystack-client")
+        .with_name(PKG_NAME)
         .with_version(VERSION)
-        .with_stop_on_ctrl_c(true)
-        .with_stop_on_ctrl_d(false);
-
-    for op in OPS {
-        if let Some(op_cmd) = op.cmd {
-
-            let cmd = op_cmd(op);
-
-            /*
-            if let Some(repl_cmd) = op.repl_cmd {
-                repl_obj = repl_obj
-                    .with_command_async(
-                        op_cmd(op),
-                        |args, context| Box::pin(eval_subcommand(repl_cmd, args, context))
-                    );
-            }
-            */
-        }
-    }
+        .with_history(history_file, 1000)
+        .with_quick_completions(true)
+        .with_partial_completions(true)
+        .with_prompt("hs");
 
     fn get_cmd<'a>(key: &str) -> Command {
         let op = OPS.iter().find(|x| x.def == key).unwrap();
         op.cmd.unwrap()(op)
     }
 
-    // repl_not_implemented
-    // repl_obj = get_cmd(repl_obj, 0, repl_about);
     repl_obj = repl_obj
         .with_command_async(get_cmd("op:about"), |args, context| Box::pin(repl_about(args, context)))
         .with_command_async(get_cmd("op:backup"), |args, context| Box::pin(repl_not_implemented(args, context)))
@@ -743,8 +733,6 @@ pub async fn eval_subcommand<'a>(get_op: MATCH_FUNC_TYPE, matches: ArgMatches, c
         .or_else(|e| {
             Err(anyhow::anyhow!("Failed to get response: {:?}", e))
         })?;
-    //print!("{}", response.get_raw());
-    //io::stdout().flush().unwrap();
     
     Ok(Some(response.get_raw().to_string()))
 }

@@ -25,6 +25,7 @@ use saphyr::{LoadableYamlNode, Yaml, YamlLoader};
 
 const CONFIG_DIR_NAME: &str = "haystack";
 const CONFIG_FILE_NAME: &str = "config.yaml";
+const HISTORY_FILE_NAME: &str = "history.txt";
 
 mod args;
 use args::{cli, get_haystack_op, repl, send_haystack_op, Destination};
@@ -71,9 +72,6 @@ impl Settings {
 }
 
 fn get_credentials(args: &clap::ArgMatches, config: &Option<Vec<Yaml>>) -> AnyResult<ConnInfo,Error> {
-    //let sub_cmd = args.subcommand_matches(args.subcommand_name().ok_or(anyhow::anyhow!("Failed to get subcommand name"))?)
-    //    .ok_or_else(|| anyhow::anyhow!("Failed to get subcommand matches"))?;
-
     let destination: Option<&Destination> = args.get_one("destination");
     let arg_user: Option<String> = args.get_one::<&str>("username").map(|s| s.to_string());
     let arg_pass: Option<String> = args.get_one::<&str>("password").map(|s| s.to_string());
@@ -146,6 +144,7 @@ async fn main() -> AnyResult<()> {
     let user_config_dir = config_dir().context("Config directory error")?;
     let hs_config_dir = Path::join(&user_config_dir, CONFIG_DIR_NAME);
     let hs_config_file = Path::join(&hs_config_dir, CONFIG_FILE_NAME);
+    let history_file = Path::join(&hs_config_dir, HISTORY_FILE_NAME);
     let mut haystack_settings = Settings::default();
 
     if !hs_config_dir.exists() {
@@ -196,7 +195,7 @@ async fn main() -> AnyResult<()> {
 
     match &matches.subcommand().ok_or_else(|| anyhow::anyhow!("Failed to parse subcommands"))? {
         ("repl", _) => {
-            let _ = repl(&mut client, &abort_client)
+            let _ = repl(&mut client, &abort_client, history_file)
                 .run_async().await;
 
             let (close_op, close_resp) = HaystackOpTxRx::close();

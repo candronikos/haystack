@@ -194,38 +194,27 @@ async fn main() -> AnyResult<()> {
         Err(anyhow::anyhow!("Failed to create HSession: {:?}", e))
     })?;
 
-    let (op, resp) = match &matches.subcommand().ok_or_else(|| anyhow::anyhow!("Failed to parse subcommands"))? {
+    match &matches.subcommand().ok_or_else(|| anyhow::anyhow!("Failed to parse subcommands"))? {
         ("repl", _) => {
             let _ = repl(&mut client, &abort_client)
                 .run_async().await;
 
             let (close_op, close_resp) = HaystackOpTxRx::close();
-            client.send(close_op).await
-                .or_else(|e| {
-                    Err(anyhow::anyhow!("Failed to send close request: {:?}", e))
-                })?;
-            let response = close_resp.await
-                .or_else(|e| {
-                    Err(anyhow::anyhow!("Failed to get close response: {:?}", e))
-                })?;
-
-            //println!("Close response:\n{:?}", response.get_raw());
-            return Result::Ok(());
         },
         (cmd, sub_m) => {
-            get_haystack_op(*cmd, *sub_m) //(&matches)
+            let (op, resp) = get_haystack_op(*cmd, *sub_m) //(&matches)
                 .or_else(|e| {
                     Err(anyhow::anyhow!("Failed to get haystack op: {:?}", e))
-                })?
+                })?;
+
+            let response = send_haystack_op(&mut client, resp, op).await
+                .or_else(|e| {
+                    Err(anyhow::anyhow!("Failed to send haystack op: {:?}", e))
+                })?;
+        
+            print!("{}", response.get_raw());
         }
     };
-
-    let response = send_haystack_op(&mut client, resp, op).await
-        .or_else(|e| {
-            Err(anyhow::anyhow!("Failed to send haystack op: {:?}", e))
-        })?;
-
-    print!("{}", response.get_raw());
 
     let (close_op, close_resp) = HaystackOpTxRx::close();
     client.send(close_op).await

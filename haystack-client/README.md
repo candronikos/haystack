@@ -64,6 +64,7 @@ haystack-client default watchPoll w-2f8e2739-3c4b3bde --refresh
 * Provide some more advanced tooling to suport `hisWrite`
     - Support to map data from CSV to native haystack types
     - Support for different filetypes
-        * CSV, ZINC, JSON
+        * CSV, ZINC, JSON, Trio
     - Support methods to map to point rec IDs on the server
+    - Embed scripting language, i.e. lua or awk?
 * Use an alternative library for SCRAM authentication

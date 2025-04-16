@@ -27,7 +27,8 @@ mod h_na;
 pub use h_na::NA;
 
 mod h_number;
-pub use h_number::Number;
+pub use h_number::{Number, NumTrait};
+pub use num::Float;
 
 mod h_str;
 pub use h_str::Str;

@@ -1,8 +1,10 @@
-use std::{fmt::{self,Write}, str::SplitWhitespace};
+use std::{fmt::{self, Display, Write}, str::{FromStr, SplitWhitespace}};
 
 use anyhow::{anyhow, Context, Error, Result};
 
 use tokio::sync::oneshot;
+
+use haystack_types::{self as hs_types, HCast, Float};
 
 #[derive(Debug)]
 pub enum FStr<'a> {
@@ -434,13 +436,24 @@ impl <'a>HaystackOpTxRx {
 
 #[derive(Debug)]
 pub enum HaystackResponse {
-    Raw(String)
+    Raw(String),
 }
 
 impl <'a>HaystackResponse {
     pub fn get_raw(self) -> FStr<'a> {
         let HaystackResponse::Raw(body) = self;
         FStr::String(body)
+    }
+    pub fn as_result<T: Float + Display + FromStr>(self) -> Result<HaystackResponse,Error> {
+        match self {
+            HaystackResponse::Raw(body) => {
+                hs_types::io::parse::zinc::grid_err::<T>(body.as_str())
+                    .or_else(|e| {
+                        Err(anyhow!("{}", body))
+                    })?;
+                Ok(HaystackResponse::Raw(body))
+            }
+        }
     }
 }
 

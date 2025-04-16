@@ -19,6 +19,8 @@ pub struct HNumber<T: Display> {
 }
 
 pub type Number<T> = HNumber<T>;
+pub trait NumTrait: Float + Display + FromStr {}
+impl<T> NumTrait for T where T: Float + Display + FromStr {}
 
 const THIS_TYPE: HType = HType::Number;
 

@@ -4,6 +4,7 @@ extern crate clap;
 use clap::Parser;
 
 use futures::future::{Abortable, AbortHandle};
+use haystack_types::NumTrait;
 use haystackclientlib::ops::FStr;
 use tokio::sync::mpsc;
 use url::Url;
@@ -29,6 +30,8 @@ const HISTORY_FILE_NAME: &str = "history.txt";
 
 mod args;
 use args::{cli, get_haystack_op, repl, send_haystack_op, Destination};
+
+type NUMBER = f64;
 
 #[derive(Debug)]
 struct ConnInfo {
@@ -195,7 +198,7 @@ async fn main() -> AnyResult<()> {
 
     match &matches.subcommand().ok_or_else(|| anyhow::anyhow!("Failed to parse subcommands"))? {
         ("repl", _) => {
-            let _ = repl(&mut client, &abort_client, history_file)
+            let _ = repl::<NUMBER>(&mut client, &abort_client, history_file)
                 .run_async().await;
 
             let (close_op, close_resp) = HaystackOpTxRx::close();
@@ -206,7 +209,7 @@ async fn main() -> AnyResult<()> {
                     Err(anyhow::anyhow!("Failed to get haystack op: {:?}", e))
                 })?;
 
-            let response = send_haystack_op(&mut client, resp, op).await
+            let response = send_haystack_op::<NUMBER>(&mut client, resp, op).await
                 .or_else(|e| {
                     Err(anyhow::anyhow!("Failed to send haystack op: {:?}", e))
                 })?;
@@ -223,7 +226,7 @@ async fn main() -> AnyResult<()> {
     let response = close_resp.await
         .or_else(|e| {
             Err(anyhow::anyhow!("Failed to get close response: {:?}", e))
-        })?;
+        })?.as_result::<NUMBER>()?;
 
     // TODO: Check if the response is an error
     Result::Ok(())

@@ -16,6 +16,10 @@ impl HStr {
         let HStr(s) = self;
         s
     }
+    pub fn clone_into_string(&self) -> String {
+        let HStr(s) = self;
+        s.clone()
+    }
     pub fn as_str(&self) -> &str {
         &self.0
     }

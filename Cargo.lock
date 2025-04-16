@@ -772,6 +772,7 @@ dependencies = [
  "dialoguer",
  "dirs",
  "futures",
+ "haystack-types",
  "lazy_static",
  "nom",
  "reedline-repl-rs",

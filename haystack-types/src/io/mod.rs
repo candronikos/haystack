@@ -34,6 +34,8 @@ use super::*;
     }
 
     pub mod zinc {
+        use nom::{character::complete::newline, combinator::all_consuming, error::ParseError, Err};
+
         use super::*;
 
         pub fn literal<'a, 'b, NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str, Box<dyn HVal<'a,NumTrait> + 'a>> {
@@ -316,12 +318,74 @@ use super::*;
             Ok((input,columns))
         }
 
+        pub fn grid_err<NumTrait: Float + Display + FromStr>(input: &str) -> IResult<&str, HGrid<NumTrait>> {
+            let (input,_) = tag("ver:\"3.0\"")(input)?;
+            let (input,meta) = delimited(space1, grid_meta::<NumTrait>, tag("\n"))(input)?;
+            let (_, is_empty) = all_consuming(map(terminated(tag("\nempty"), take_while1(|c| c == '\n')), |_| true))(input)?;
+            if is_empty || meta.contains_key("err") {
+                //let dis = meta.get("dis").unwrap().get_string_val().unwrap().into_string();
+                let dis = match meta.get("dis") {
+                    Some(v) => {
+                        // v.get_string_val().unwrap().into_string()
+                        if let Some(s) = v.get_string_val() {
+                            s.clone_into_string()
+                        } else {
+                            return Err(nom::Err::Error(Error{
+                                input: input,
+                                code: ErrorKind::Tag
+                            }))
+                        }
+                    },
+                    None => return Err(nom::Err::Error(Error{
+                        input: input,
+                        code: ErrorKind::Tag
+                    }))
+                };
+                
+                // meta.get("errTrace").map(|s| s.get_string_val().unwrap().into_string())
+                let errTrace = match meta.get("errTrace") {
+                    Some(v) => {
+                        // v.get_string_val().unwrap().into_string()
+                        if let Some(s) = v.get_string_val() {
+                            Some(s.clone_into_string())
+                        } else {
+                            return Err(nom::Err::Error(Error{
+                                input: input,
+                                code: ErrorKind::Tag
+                            }))
+                        }
+                    },
+                    None => return Err(nom::Err::Error(Error{
+                        input: input,
+                        code: ErrorKind::Tag
+                    }))
+                };
+
+                return Ok((input, HGrid::Error {
+                    dis: dis,
+                    errTrace: errTrace,
+                }));
+                
+            }
+
+            Err(nom::Err::Error(Error{
+                input: input,
+                code: ErrorKind::Tag
+            }))
+        }
+
         pub fn grid<'a, 'b, NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str, HGrid<'a,NumTrait>> {
             let (input,version) = delimited(tag("ver:\""), recognize(double), tag("\""))(input)?;
 
             // Grid Meta
             let (input,meta) = delimited(space1, grid_meta::<NumTrait>, tag("\n"))(input)?;
 
+            let (_, is_empty) = all_consuming(map(terminated(tag("\nempty"), take_while1(|c| c == '\n')), |_| true))(input)?;
+            if is_empty {
+                return Ok((input, HGrid::Empty));
+                
+            }
+            
             // Cols
             let (input,columns) = terminated(cols::<NumTrait>, tag("\n"))(input)?;
 

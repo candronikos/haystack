@@ -1,7 +1,9 @@
+use core::{hash, panic};
 use core::slice::SliceIndex;
 use core::ops::Index;
 use std::slice::Iter;
 use num::Float;
+use crate::h_str::HStr;
 use crate::{HVal,HType};
 use std::fmt::{self,Write,Display};
 use std::str::FromStr;
@@ -14,11 +16,18 @@ pub use h_col::{Col,HCol};
 pub mod h_row;
 pub use h_row::{Row,HRow};
 
-pub struct HGrid<'a,T> {
-    meta: HashMap<String, Box<dyn HVal<'a,T> + 'a>>,
-    col_index: HashMap<String, usize>,
-    cols: Vec<Col<'a,T>>,
-    rows: Vec<Row<'a,T>>,
+pub enum HGrid<'a, T> {
+    Grid {
+        meta: HashMap<String, Box<dyn HVal<'a,T> + 'a>>,
+        col_index: HashMap<String, usize>,
+        cols: Vec<HCol<'a,T>>,
+        rows: Vec<HRow<'a,T>>,
+    },
+    Error {
+        dis: String,
+        errTrace: Option<String>,
+    },
+    Empty,
 }
 
 pub type Grid<'a,T> = HGrid<'a,T>;
@@ -26,7 +35,8 @@ pub type Grid<'a,T> = HGrid<'a,T>;
 #[derive(Debug)]
 pub enum HGridErr {
     NotFound,
-    IndexErr
+    IndexErr,
+    NotImplemented
 }
 
 const THIS_TYPE: HType = HType::Grid;
@@ -47,23 +57,27 @@ impl <'g,'a:'g,T:'a + Float + Display + FromStr>HGrid<'a,T> {
             cols = columns;
         }
 
-        let mut grid = HGrid { meta, col_index, cols, rows:Vec::new() };
-
-        let rows = grid_rows.into_iter().map(|r| {
+        let rows: Vec<HRow<'a, T>> = grid_rows.into_iter().map(|r| {
             for (k,_) in r.iter() {
                 let col_name = k.to_string();
-                if !grid.col_index.contains_key(&col_name) {
-                    let len = grid.col_index.len();
-                    grid.col_index.insert(col_name,len);
-                    grid.cols.push(Col::new(k.to_string(), None));
+                if !col_index.contains_key(&col_name) {
+                    let len = col_index.len();
+                    col_index.insert(col_name,len);
+                    cols.push(Col::new(k.to_string(), None));
                 }
             }
 
-            let row: Vec<Option<Box<dyn HVal<T>>>> = grid.cols.iter().map(|c| r.remove(c.name.as_str())).collect();
+            let row: Vec<Option<Box<dyn HVal<T>>>> = cols.iter().map(|c| r.remove(c.name.as_str())).collect();
             Row::new(row)
         }).collect();
 
-        grid.rows = rows;
+        let grid = HGrid::Grid {
+            meta,
+            col_index,
+            cols,
+            rows
+        };
+
         grid
     }
 
@@ -86,51 +100,101 @@ impl <'g,'a:'g,T:'a + Float + Display + FromStr>HGrid<'a,T> {
             Row::new(r)
         }).collect();
 
-        HGrid { meta, col_index, cols, rows }
+        HGrid::Grid{ meta, col_index, cols, rows }
     }
 
     pub fn add_meta(mut self, meta: HashMap<String, Box<dyn HVal<'a,T> + 'a>>) -> Result<HGrid<'a,T>,HGridErr> {
-        self.meta.extend(meta);
+        match &mut self {
+            HGrid::Grid { meta: orig_meta, .. } => {
+                orig_meta.extend(meta);
+            },
+            HGrid::Error { dis, errTrace } => {
+                return Err(HGridErr::NotImplemented);
+            },
+            HGrid::Empty => {
+                self = HGrid::Grid {
+                    meta: meta,
+                    col_index: HashMap::new(),
+                    cols: Vec::new(),
+                    rows: Vec::new()
+                };
+            }
+        }
         Ok(self)
     }
 
     pub fn add_col_meta(mut self, col: &str, meta: HashMap<String, Box<dyn HVal<'a,T> + 'a>>) -> Result<Self,HGridErr> {
-        let idx = self.col_index.get(col).ok_or(HGridErr::NotFound)?;
-        self.cols.get_mut(*idx).ok_or(HGridErr::NotFound)?
-            .add_meta(meta);
+        match &mut self {
+            HGrid::Grid { col_index, cols, .. } => {
+                let idx = col_index.get(col).ok_or(HGridErr::NotFound)?;
+                cols.get_mut(*idx).ok_or(HGridErr::NotFound)?
+                    .add_meta(meta);
+            },
+            HGrid::Error { dis, errTrace } => {
+                return Err(HGridErr::NotImplemented);
+            },
+            HGrid::Empty => {
+                return Err(HGridErr::NotFound);
+            }
+        }
         Ok(self)
     }
 
     pub fn get(self: &'g Self, key: usize) -> Result<&Row<'a,T>,HGridErr> {
-        self.rows.get(key).ok_or(HGridErr::IndexErr)
+        match self {
+            HGrid::Grid { rows, .. } => rows.get(key).ok_or(HGridErr::IndexErr),
+            _ => Err(HGridErr::IndexErr),
+        }
     }
 
     pub fn first(self: &'g Self) -> Result<&Row<'a,T>,HGridErr> {
-        self.rows.get(0).ok_or(HGridErr::IndexErr)
+        match self {
+            HGrid::Grid { rows, .. } => rows.get(0).ok_or(HGridErr::IndexErr),
+            HGrid::Error { dis, errTrace } => Err(HGridErr::NotImplemented),
+            _ => Err(HGridErr::IndexErr),
+        }
     }
 
     pub fn last(self: &'g Self) -> Result<&Row<'a,T>,HGridErr> {
-        let length = self.rows.len();
-        self.rows.get(length-1).ok_or(HGridErr::IndexErr)
+        if let HGrid::Grid { rows, .. } = self {
+            let length = rows.len();
+            rows.get(length - 1).ok_or(HGridErr::IndexErr)
+        } else {
+            Err(HGridErr::IndexErr)
+        }
     }
 
     pub fn has(&self, key: &str) -> bool {
-        self.col_index.contains_key(key)
+        match self {
+            HGrid::Grid { col_index, .. } => col_index.contains_key(key),
+            HGrid::Error { .. } => key=="err" || key=="errTrace" || key=="dis",
+            _ => false,
+        }
     }
 
     pub fn meta(&'g self) -> &'g HashMap<String, Box<(dyn HVal<'a, T> + 'a)>> {
-        &self.meta
+        match self {
+            HGrid::Grid { meta, .. } => meta,
+            HGrid::Error { dis, errTrace } => todo!("Not implemented"),
+            HGrid::Empty => todo!("Not implemented"),
+        }
     }
 
     pub fn iter_cols(&'g self) -> Iter<'_, HCol<'a, T>> {
-        self.cols.iter()
+        match self {
+            HGrid::Grid { cols, .. } => cols.iter(),
+            _ => panic!("Cannot iterate columns on non-Grid variant"),
+        }
     }
 
-    // pub fn iter(&'g self) -> &HRow<'a,T> {
     pub fn iter(&'g self) -> Iter<'_, HRow<'a, T>> {
-        // pub fn iter(&self) -> Box<dyn Iterator<Item=&HRow<'_,T>> + '_> {
-        // HGridIter { index:0, grid:self }
-        self.rows.iter()
+        match self {
+            HGrid::Grid { rows, .. } => rows.iter(),
+            HGrid::Empty => Iter::default(),
+            HGrid::Error { dis, errTrace } => {
+                panic!("Cannot iterate rows on Error variant: {:?} {:?}", dis, errTrace)
+            }
+        }
     }
 }
 
@@ -175,36 +239,56 @@ where
 
 impl <'a,T:'a + Float + Display + FromStr>HVal<'a,T> for HGrid<'a,T> {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        write!(buf,"ver:\"3.0\" ")?;
-        if !self.meta.is_empty() {
-            let mut iter = self.meta.iter().peekable();
-            while let Some((k,v)) = iter.next() {
-                write!(buf, " {}", k.as_str())?;
-                match v.haystack_type() {
-                    HType::Marker => (),
-                    _ => { write!(buf, ":")?; v.to_zinc(buf)?; }
-                };
-            }
-        }
-        write!(buf, "\n")?;
-        if !self.cols.is_empty() {
-            let mut iter = self.cols.iter().peekable();
-            while let Some(c) = iter.next() {
-                c.to_zinc(buf)?;
-                if let Some(_) = iter.peek() {
-                    write!(buf, ", ")?;
+        match self {
+            HGrid::Grid { meta, col_index, cols, rows } => {
+                write!(buf,"ver:\"3.0\" ")?;
+                if !meta.is_empty() {
+                    let mut iter = meta.iter().peekable();
+                    while let Some((k,v)) = iter.next() {
+                        write!(buf, " {}", k.as_str())?;
+                        match v.haystack_type() {
+                            HType::Marker => (),
+                            _ => { write!(buf, ":")?; v.to_zinc(buf)?; }
+                        };
+                    }
                 }
-            }
-        }
-        write!(buf, "\n")?;
-        if !self.rows.is_empty() {
-            let mut iter = self.rows.iter().peekable();
-            while let Some(r) = iter.next() {
-                r.to_zinc(self, buf)?;
                 write!(buf, "\n")?;
+                if !cols.is_empty() {
+                    let mut iter = cols.iter().peekable();
+                    while let Some(c) = iter.next() {
+                        c.to_zinc(buf)?;
+                        if let Some(_) = iter.peek() {
+                            write!(buf, ", ")?;
+                        }
+                    }
+                }
+                write!(buf, "\n")?;
+                if !rows.is_empty() {
+                    let mut iter = rows.iter().peekable();
+                    while let Some(r) = iter.next() {
+                        r.to_zinc(self, buf)?;
+                        write!(buf, "\n")?;
+                    }
+                }
+                Ok(())
+            },
+            HGrid::Error { dis, errTrace } => {
+                //write!(buf,"ver:\"3.0\" err dis:{} errTrace:{}\nempty",dis,HStr(errTrace.toString))?;
+                write!(buf,"ver:\"3.0\" err dis:")?;
+                //HStr(dis.to_string()).to_zinc(buf)?;
+                <HStr as HVal<'_, T>>::to_zinc(&HStr(dis.to_string()), buf)?;
+
+                if let Some(errTrace) = errTrace {
+                    write!(buf," errTrace:")?;
+                    //HStr(errTrace.to_string()).to_zinc(buf)?;
+                    <HStr as HVal<'_, T>>::to_zinc(&HStr(errTrace.to_string()), buf)?;
+                }
+                write!(buf,"\nempty\n")
+            },
+            HGrid::Empty => {
+                write!(buf,"ver:\"3.0\"\nempty\n")
             }
         }
-        Ok(())
     }
     fn to_json(&self, _buf: &mut String) -> fmt::Result {
         unimplemented!();
@@ -219,6 +303,10 @@ impl <'a,T:'a + Float + Display + FromStr>HVal<'a,T> for HGrid<'a,T> {
 mod tests {
     use super::*;
     use super::super::{MARKER,REMOVE};
+
+    const EMPTY_GRID: &str = "ver:\"3.0\"\nempty\n";
+    const ERROR_GRID: &str = "ver:\"3.0\" err dis:\"Display message\"\nempty\n";
+    const ERROR_GRID_TRACE: &str = "ver:\"3.0\" err dis:\"Display message\" errTrace:\"Error trace (Optional)\"\nempty\n";
 
     #[test]
     fn print_grid() {

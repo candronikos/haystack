@@ -3,6 +3,7 @@ use std::{io::{self, Read, Write}, path::PathBuf, pin::Pin};
 use anyhow::{Error, Result as AnyResult};
 use clap::{Arg, ArgAction, ArgGroup, ArgMatches, Command, Parser, Subcommand};
 use futures::stream::{AbortHandle, Aborted, Any};
+use haystack_types::NumTrait;
 use haystackclientlib::ops::{FStr, HaystackOpTxRx, HaystackResponse};
 use reedline_repl_rs::{AsyncCallback, Repl};
 use saphyr::AnnotatedMapping;
@@ -599,7 +600,7 @@ pub fn cli() -> Command {
     cmd
 }
 
-async fn repl_generic<'a>(m_func: MATCH_FUNC_TYPE, matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+async fn repl_generic<'a, T:NumTrait>(m_func: MATCH_FUNC_TYPE, matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
     let Context { abort_handle, sender: client } = context;
     
     let (op, resp) = m_func(&matches)
@@ -607,7 +608,7 @@ async fn repl_generic<'a>(m_func: MATCH_FUNC_TYPE, matches: ArgMatches, context:
             Err(anyhow::anyhow!("Failed to create haystack op: {:?}", e))
         })?;
 
-    let response = send_haystack_op(client, resp, op).await
+    let response = send_haystack_op::<T>(client, resp, op).await
         .or_else(|e| {
             Err(anyhow::anyhow!("Failed to get response: {:?}", e))
         })?;
@@ -619,51 +620,51 @@ async fn repl_not_implemented<'a>(matches: ArgMatches, context: &mut Context<'a>
     todo!("Not implemented yet");
 }
 
-async fn repl_about<'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
-    repl_generic(match_about, matches, context).await
+async fn repl_about<'a, T:NumTrait>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    repl_generic::<T>(match_about, matches, context).await
 }
 
-async fn repl_ops<'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
-    repl_generic(match_ops, matches, context).await
+async fn repl_ops<'a, T:NumTrait>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    repl_generic::<T>(match_ops, matches, context).await
 }
 
-async fn repl_filetypes<'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
-    repl_generic(match_filetypes, matches, context).await
+async fn repl_filetypes<'a, T:NumTrait>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    repl_generic::<T>(match_filetypes, matches, context).await
 }
 
-async fn repl_nav<'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
-    repl_generic(match_nav, matches, context).await
+async fn repl_nav<'a, T:NumTrait>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    repl_generic::<T>(match_nav, matches, context).await
 }
 
-async fn repl_read<'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
-    repl_generic(match_read, matches, context).await
+async fn repl_read<'a, T:NumTrait>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    repl_generic::<T>(match_read, matches, context).await
 }
 
-async fn repl_his_read<'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
-    repl_generic(match_his_read, matches, context).await
+async fn repl_his_read<'a, T:NumTrait>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    repl_generic::<T>(match_his_read, matches, context).await
 }
 
-async fn repl_watch_sub<'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
-    repl_generic(match_watch_sub, matches, context).await
+async fn repl_watch_sub<'a, T:NumTrait>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    repl_generic::<T>(match_watch_sub, matches, context).await
 }
 
-async fn repl_watch_unsub<'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
-    repl_generic(match_watch_unsub, matches, context).await
+async fn repl_watch_unsub<'a, T:NumTrait>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    repl_generic::<T>(match_watch_unsub, matches, context).await
 }
 
-async fn repl_watch_poll<'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
-    repl_generic(match_watch_poll, matches, context).await
+async fn repl_watch_poll<'a, T:NumTrait>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    repl_generic::<T>(match_watch_poll, matches, context).await
 }
 
-async fn repl_watch_his_write<'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
-    repl_generic(match_his_write, matches, context).await
+async fn repl_watch_his_write<'a, T:NumTrait>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    repl_generic::<T>(match_his_write, matches, context).await
 }
 
 async fn update_prompt<T>(_context: &mut T) -> AnyResult<Option<String>> {
     Ok(Some("updated".to_string()))
 }
 
-pub fn repl<'a>(client: &'a mut Sender<HaystackOpTxRx>, abort_handle: &'a AbortHandle, history_file: PathBuf) -> Repl<Context<'a>, anyhow::Error> {
+pub fn repl<'a, T:NumTrait + 'a>(client: &'a mut Sender<HaystackOpTxRx>, abort_handle: &'a AbortHandle, history_file: PathBuf) -> Repl<Context<'a>, anyhow::Error> {
     let context: Context<'_> = Context {
         abort_handle,
         sender: client,
@@ -687,7 +688,7 @@ pub fn repl<'a>(client: &'a mut Sender<HaystackOpTxRx>, abort_handle: &'a AbortH
     }
 
     repl_obj = repl_obj
-        .with_command_async(get_cmd("op:about"), |args, context| Box::pin(repl_about(args, context)))
+        .with_command_async(get_cmd("op:about"), |args, context| Box::pin(repl_about::<T>(args, context)))
         .with_command_async(get_cmd("op:backup"), |args, context| Box::pin(repl_not_implemented(args, context)))
         .with_command_async(get_cmd("op:commit"), |args, context| Box::pin(repl_not_implemented(args, context)))
         .with_command_async(get_cmd("op:defs"), |args, context| Box::pin(repl_not_implemented(args, context)))
@@ -696,23 +697,23 @@ pub fn repl<'a>(client: &'a mut Sender<HaystackOpTxRx>, abort_handle: &'a AbortH
         .with_command_async(get_cmd("op:export"), |args, context| Box::pin(repl_not_implemented(args, context)))
         .with_command_async(get_cmd("op:ext"), |args, context| Box::pin(repl_not_implemented(args, context)))
         .with_command_async(get_cmd("op:file"), |args, context| Box::pin(repl_not_implemented(args, context)))
-        .with_command_async(get_cmd("op:filetypes"), |args, context| Box::pin(repl_filetypes(args, context)))
+        .with_command_async(get_cmd("op:filetypes"), |args, context| Box::pin(repl_filetypes::<T>(args, context)))
         .with_command_async(get_cmd("op:funcShim"), |args, context| Box::pin(repl_not_implemented(args, context)))
-        .with_command_async(get_cmd("op:hisRead"), |args, context| Box::pin(repl_his_read(args, context)))
-        .with_command_async(get_cmd("op:hisWrite"), |args, context| Box::pin(repl_watch_his_write(args, context)))
+        .with_command_async(get_cmd("op:hisRead"), |args, context| Box::pin(repl_his_read::<T>(args, context)))
+        .with_command_async(get_cmd("op:hisWrite"), |args, context| Box::pin(repl_watch_his_write::<T>(args, context)))
         .with_command_async(get_cmd("op:invokeAction"), |args, context| Box::pin(repl_not_implemented(args, context)))
         .with_command_async(get_cmd("op:io"), |args, context| Box::pin(repl_not_implemented(args, context)))
         .with_command_async(get_cmd("op:libs"), |args, context| Box::pin(repl_not_implemented(args, context)))
         .with_command_async(get_cmd("op:link"), |args, context| Box::pin(repl_not_implemented(args, context)))
-        .with_command_async(get_cmd("op:nav"), |args, context| Box::pin(repl_nav(args, context)))
-        .with_command_async(get_cmd("op:ops"), |args, context| Box::pin(repl_ops(args, context)))
+        .with_command_async(get_cmd("op:nav"), |args, context| Box::pin(repl_nav::<T>(args, context)))
+        .with_command_async(get_cmd("op:ops"), |args, context| Box::pin(repl_ops::<T>(args, context)))
         .with_command_async(get_cmd("op:pointWrite"), |args, context| Box::pin(repl_not_implemented(args, context)))
-        .with_command_async(get_cmd("op:read"), |args, context| Box::pin(repl_read(args, context)))
+        .with_command_async(get_cmd("op:read"), |args, context| Box::pin(repl_read::<T>(args, context)))
         .with_command_async(get_cmd("op:rec"), |args, context| Box::pin(repl_not_implemented(args, context)))
         .with_command_async(get_cmd("op:upload"), |args, context| Box::pin(repl_not_implemented(args, context)))
-        .with_command_async(get_cmd("op:watchPoll"), |args, context| Box::pin(repl_watch_poll(args, context)))
-        .with_command_async(get_cmd("op:watchSub"), |args, context| Box::pin(repl_watch_sub(args, context)))
-        .with_command_async(get_cmd("op:watchUnsub"), |args, context| Box::pin(repl_watch_unsub(args, context)));
+        .with_command_async(get_cmd("op:watchPoll"), |args, context| Box::pin(repl_watch_poll::<T>(args, context)))
+        .with_command_async(get_cmd("op:watchSub"), |args, context| Box::pin(repl_watch_sub::<T>(args, context)))
+        .with_command_async(get_cmd("op:watchUnsub"), |args, context| Box::pin(repl_watch_unsub::<T>(args, context)));
 repl_obj
 }
 
@@ -721,7 +722,7 @@ pub struct Context<'a> {
     sender: &'a Sender<HaystackOpTxRx>,
 }
 
-pub async fn eval_subcommand<'a>(get_op: MATCH_FUNC_TYPE, matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+pub async fn eval_subcommand<'a, T:NumTrait + 'a>(get_op: MATCH_FUNC_TYPE, matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
     let Context { abort_handle, sender: client } = context;
     
     let (op, resp) = get_op(&matches)
@@ -729,7 +730,7 @@ pub async fn eval_subcommand<'a>(get_op: MATCH_FUNC_TYPE, matches: ArgMatches, c
             Err(anyhow::anyhow!("Failed to create haystack op: {:?}", e))
         })?;
 
-    let response = send_haystack_op(client, resp, op).await
+    let response = send_haystack_op::<T>(client, resp, op).await
         .or_else(|e| {
             Err(anyhow::anyhow!("Failed to get response: {:?}", e))
         })?;
@@ -737,7 +738,7 @@ pub async fn eval_subcommand<'a>(get_op: MATCH_FUNC_TYPE, matches: ArgMatches, c
     Ok(Some(response.get_raw().to_string()))
 }
 
-pub async fn send_haystack_op(client: &Sender<HaystackOpTxRx>, resp: Receiver<HaystackResponse>, op: HaystackOpTxRx) -> AnyResult<HaystackResponse> {
+pub async fn send_haystack_op<T: NumTrait>(client: &Sender<HaystackOpTxRx>, resp: Receiver<HaystackResponse>, op: HaystackOpTxRx) -> AnyResult<HaystackResponse> {
     client.send(op).await
         .or_else(|e| {
             Err(anyhow::anyhow!("Failed to send request: {:?}", e))
@@ -746,7 +747,7 @@ pub async fn send_haystack_op(client: &Sender<HaystackOpTxRx>, resp: Receiver<Ha
     resp.await
         .or_else(|e| {
             Err(anyhow::anyhow!("Failed to get response: {:?}", e))
-        })
+        })?.as_result::<T>()
 }
 
 pub fn get_haystack_op(cmd: &str, matches: &ArgMatches) -> Result<(HaystackOpTxRx,Receiver<HaystackResponse>), Error> {

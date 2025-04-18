@@ -321,7 +321,7 @@ use super::*;
         pub fn grid_err<NumTrait: Float + Display + FromStr>(input: &str) -> IResult<&str, HGrid<NumTrait>> {
             let (input,_) = tag("ver:\"3.0\"")(input)?;
             let (input,meta) = delimited(space1, grid_meta::<NumTrait>, tag("\n"))(input)?;
-            let (_, is_empty) = all_consuming(map(terminated(tag("\nempty"), take_while1(|c| c == '\n')), |_| true))(input)?;
+            let (_, is_empty) = all_consuming(map(terminated(tag("empty"), take_while1(|c| c == '\n')), |_| true))(input)?;
             if is_empty || meta.contains_key("err") {
                 //let dis = meta.get("dis").unwrap().get_string_val().unwrap().into_string();
                 let dis = match meta.get("dis") {

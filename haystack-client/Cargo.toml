@@ -20,6 +20,7 @@ features = ["full"]
 
 [dependencies]
 haystack-types = { path = "../haystack-types" }
+is-terminal = "0.4.16"
 futures = "0.3"
 scram = "0.6.0"
 saphyr = "0.0.4"
@@ -44,4 +45,3 @@ scram = { git = "https://github.com/edgedb/scram.git" }
 
 [dev-dependencies]
 rstest = "0.25.0"
-lazy_static = "1.5.0"

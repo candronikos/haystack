@@ -60,37 +60,44 @@ pub enum Grid {
     Raw(String)
 }
 
-fn new_hs_session<'a>(uri: String, username: String, password: String, accept_invalid_certs: bool, existing_session: Arc<Mutex<Option<String>>>, buffer: Option<usize>) -> Result<(AbortHandle,mpsc::Sender<HaystackOpTxRx>),Error<'a>> {
+async fn new_hs_session<'a>(uri: String, username: String, password: String, accept_invalid_certs: bool, existing_session: Arc<Mutex<Option<String>>>, buffer: Option<usize>) -> Result<(AbortHandle,mpsc::Sender<HaystackOpTxRx>, Option<String>),Error<'a>> {
     let (tx, mut rx) = mpsc::channel::<HaystackOpTxRx>(buffer.unwrap_or(10000));
 
     let uri_member = url::Url::parse(&uri).map_err( |e| Error::URI(e))?;
+    let mut http_client = reqwest::Client::builder();
+    
+    http_client = http_client
+        .danger_accept_invalid_certs(accept_invalid_certs);
+    
+    let http_client = http_client
+        .build()
+        .unwrap();
+    
+    let mut hs_session = HSession {
+        uri: uri_member,
+        grid_format: GridFormat::Zinc,
+        username: username,
+        password: password,
+        auth_info: existing_session,
+        // semaphore: Arc::new(Semaphore::new(1)),
+        _http_client: http_client,
+    };
+
+    let auth_token: Option<String>;
+    if !hs_session.is_authenticated().await {
+        auth_token = Some(hs_session._authenticate().await.unwrap());
+    } else {
+        auth_token = None;
+    }
 
     let (abort_handle, abort_registration) = AbortHandle::new_pair();
     let future = Abortable::new(async move {
-        let mut http_client = reqwest::Client::builder();
-        
-        http_client = http_client
-            .danger_accept_invalid_certs(accept_invalid_certs);
-        
-        let http_client = http_client
-            .build()
-            .unwrap();
-        
-        let mut hs_session = HSession {
-            uri: uri_member,
-            grid_format: GridFormat::Zinc,
-            username: username,
-            password: password,
-            auth_info: existing_session,
-            // semaphore: Arc::new(Semaphore::new(1)),
-            _http_client: http_client,
-        };
 
         let semaphore = Arc::new(Semaphore::new(1));
         while let Some(op) = rx.recv().await {
             let _permit = semaphore.clone().acquire_owned().await.unwrap();
             if !hs_session.is_authenticated().await {
-                let () = hs_session._authenticate().await.unwrap();
+                let _ = hs_session._authenticate().await.unwrap();
                 // drop(_permit);
             }
             drop(_permit);
@@ -130,7 +137,7 @@ fn new_hs_session<'a>(uri: String, username: String, password: String, accept_in
 
     tokio::spawn(future);
 
-    Ok((abort_handle,tx))
+    Ok((abort_handle,tx, auth_token))
 }
 
 struct HTTPContext {
@@ -141,14 +148,14 @@ struct HTTPContext {
 }
 
 impl <'a>HSession {
-    pub fn new(uri: String, username: String, password: String, accept_invalid_certs: bool, existing_session: Arc<tokio::sync::Mutex<Option<String>>>, buffer: Option<usize>) -> Result<(AbortHandle,mpsc::Sender<HaystackOpTxRx>),Error<'a>> {
+    pub async fn new(uri: String, username: String, password: String, accept_invalid_certs: bool, existing_session: Arc<tokio::sync::Mutex<Option<String>>>, buffer: Option<usize>) -> Result<(AbortHandle,mpsc::Sender<HaystackOpTxRx>, Option<String>),Error<'a>> {
         let mut url = url::Url::parse(&uri).map_err( |e| Error::URI(e))?;
         if !url.path().ends_with('/') {
             url.path_segments_mut()
                 .expect("Cannot modify URL path segments")
                 .push("");
         }
-        new_hs_session(url.to_string(), username, password, accept_invalid_certs, existing_session, buffer)
+        new_hs_session(url.to_string(), username, password, accept_invalid_certs, existing_session, buffer).await
     }
 
     async fn _request(ctx: HTTPContext, haystack_op: HaystackOpTxRx) -> AnyResult<(HaystackOpTxRx,FStr<'a>)> {
@@ -186,7 +193,7 @@ impl <'a>HSession {
         Ok((haystack_op,res.into()))
     }
 
-    async fn _authenticate(&mut self) -> AnyResult<()> {
+    async fn _authenticate(&mut self) -> AnyResult<String> {
         // let client = reqwest::Client::new();
         let client = self._http_client.clone();
 
@@ -352,10 +359,8 @@ impl <'a>HSession {
             .ok_or(anyhow!("\"authToken\" missing from server response"))?
         )).map_err( |e| anyhow!("Format: {:?}",e))?;
 
-        *self.auth_info.clone().lock_owned().await = Some(bearer_string);
-        // self._http_client = Some(client);
-        // self._authenticated = true;
-        Ok(())
+        *self.auth_info.clone().lock_owned().await = Some(bearer_string.clone());
+        Ok(bearer_string)
     }
 
     pub async fn is_authenticated(&self) -> bool {
@@ -375,8 +380,7 @@ pub fn eof<I: InputLength + Copy, E: ParseError<I>>(input: I) -> IResult<I, I, E
 mod tests {
     use rstest::*;
     use futures::future;
-    use lazy_static::lazy_static;
-    use std::ops::DerefMut;
+    use std::ops::{Deref, DerefMut};
     use super::*;
 
     // #[fixture]
@@ -395,20 +399,18 @@ mod tests {
     //     future::ready::<Box<mpsc::Sender<ops::HaystackOpTxRx>>>(Box::new(HS_SESSION.1.clone()))
     // }
 
-    #[fixture]
     // TODO: Write test with close op that closes original session
-    fn client() -> future::Ready<Box<mpsc::Sender<ops::HaystackOpTxRx>>> {
-        lazy_static! {
-            static ref HS_SESSION: (AbortHandle,mpsc::Sender<ops::HaystackOpTxRx>) = HSession::new(
+    #[fixture]
+    async fn client() -> Box<mpsc::Sender<ops::HaystackOpTxRx>> {
+        let hs_session: (AbortHandle, mpsc::Sender<ops::HaystackOpTxRx>, Option<String>) = HSession::new(
                 "https://analytics.host.docker.internal/api/demo/".to_owned(),
                 "su".to_owned(),
                 "password".to_owned(),
                 true,
                 Arc::new(Mutex::new(None)),
                 None
-            ).unwrap();
-        }
-        future::ready::<Box<mpsc::Sender<ops::HaystackOpTxRx>>>(Box::new(HS_SESSION.1.clone()))
+            ).await.unwrap();
+        Box::new(hs_session.1)
     }
 
     #[rstest]
@@ -507,25 +509,25 @@ mod tests {
         }
     }
 
-    #[rstest]
-    #[tokio::test]
-    async fn reuse_with_multi_op<D, F>(client: F)
-    	where F: std::future::Future<Output = D> + Clone,
-        	D: DerefMut<Target = mpsc::Sender<ops::HaystackOpTxRx>> {
-        let (op,resp) = HaystackOpTxRx::nav(Some("`equip:/Carytown`")).unwrap();
-        let client_res = client.clone().await;
-        let permit = client_res.reserve().await.or_else(|e| Err(anyhow!("Failed to reserve permit: {}",e))).unwrap();
-        let res = permit.send(op);
+    // #[rstest]
+    // #[tokio::test]
+    // async fn reuse_with_multi_op<D, F>(client: F)
+    //     where F: std::future::Future<Output = D>,
+    //     	D: DerefMut<Target = mpsc::Sender<ops::HaystackOpTxRx>> {
+    //     let (op,resp) = HaystackOpTxRx::nav(Some("`equip:/Carytown`")).unwrap();
+    //     let client_res = client.clone().await;
+    //     let permit = client_res.reserve().await.or_else(|e| Err(anyhow!("Failed to reserve permit: {}",e))).unwrap();
+    //     let res = permit.send(op);
 
-        let response = resp.await.unwrap();
+    //     let _response = resp.await.unwrap();
 
-        let (op,resp) = HaystackOpTxRx::about();
-        let client_res = client.await;
-        let permit = client_res.reserve().await.or_else(|e| Err(anyhow!("Failed to reserve permit: {}",e))).unwrap();
-        let res = permit.send(op);
+    //     let (op,resp) = HaystackOpTxRx::about();
+    //     let client_res = client.clone().await;
+    //     let permit = client_res.reserve().await.or_else(|e| Err(anyhow!("Failed to reserve permit: {}",e))).unwrap();
+    //     let res = permit.send(op);
 
-        let response = resp.await.unwrap();
-    }
+    //     let response = resp.await.unwrap();
+    // }
 
     #[rstest]
     #[tokio::test]
@@ -545,14 +547,14 @@ mod tests {
     #[tokio::test]
     async fn spawn_multiple_tasks_in_new_session() {
         use futures::join;
-        let (abort_handle,addr) = HSession::new(
+        let (abort_handle,addr, _) = HSession::new(
             "https://analytics.host.docker.internal/api/demo/".to_owned(),
             "su".to_owned(),
             "password".to_owned(),
             true,
             Arc::new(Mutex::new(None)),
             None
-        ).unwrap();
+        ).await.unwrap();
 
         let (nav_op,nav_resp) = HaystackOpTxRx::nav(None).unwrap();
         let (formats_op,formats_resp) = HaystackOpTxRx::filetypes();

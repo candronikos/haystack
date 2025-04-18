@@ -10,12 +10,36 @@ use saphyr::AnnotatedMapping;
 use tokio::sync::{oneshot::Receiver,mpsc::Sender};
 use url::{Url, Host};
 
+use is_terminal::IsTerminal;
+
 /*
 ops().toRecList.map(r => "OP { def:\""+r->def+"\",doc:\""+r["doc"]+"\",is:\""+r->is+"\",lib:\""+r->lib+"\",no_side_effects:\""+r.has("no_side_effects")+"\",nodoc:\""+r.has("nodoc")+"\",type_name:\""+r["type_name"]+"\" }") // def,doc,is,lib,no_side_effects,nodoc,type_name
 */
 
 type REPL_FUNC_TYPE<T> = fn(ArgMatches, &mut T) -> AnyResult<(HaystackOpTxRx, Receiver<HaystackResponse>)>;
 type MATCH_FUNC_TYPE = fn(&ArgMatches) -> AnyResult<(HaystackOpTxRx, Receiver<HaystackResponse>)>;
+
+pub struct IsTTY {
+    pub stdin: bool,
+    pub stdout: bool,
+    pub stderr: bool,
+}
+
+impl IsTTY {
+    pub fn new() -> Self {
+        Self {
+            stdin: io::stdin().is_terminal(),
+            stdout: io::stdout().is_terminal(),
+            stderr: io::stderr().is_terminal(),
+        }
+    }
+    pub fn all(&self) -> bool {
+        self.stdin && self.stdout && self.stderr
+    }
+    pub fn any(&self) -> bool {
+        self.stdin || self.stdout || self.stderr
+    }
+}
 
 pub struct OP {
     def: &'static str,
@@ -181,11 +205,15 @@ fn cmd_his_write(op:&OP) -> Command {
     cmd
 }
 
+fn match_auth(_: &ArgMatches) -> AnyResult<(HaystackOpTxRx,Receiver<HaystackResponse>)> {
+    Ok(HaystackOpTxRx::about())
+}
+
 fn match_about(_: &ArgMatches) -> AnyResult<(HaystackOpTxRx,Receiver<HaystackResponse>)> {
     Ok(HaystackOpTxRx::about())
 }
 
-fn match_filetypes(matches: &ArgMatches) -> AnyResult<(HaystackOpTxRx, Receiver<HaystackResponse>)> {
+pub fn match_filetypes(matches: &ArgMatches) -> AnyResult<(HaystackOpTxRx, Receiver<HaystackResponse>)> {
     Ok(HaystackOpTxRx::filetypes())
 }
 
@@ -535,6 +563,13 @@ pub enum Destination {
         username: Option<String>,
         host: Host,
     },
+    Env {
+        url: Url,
+        username: String,
+        password: String,
+        accept_invalid_certs: bool,
+        auth_info: Option<String>,
+    }
 }
 
 fn parse_destination(input: &str) -> Result<Destination, String> {
@@ -559,13 +594,13 @@ fn parse_destination(input: &str) -> Result<Destination, String> {
     Err(format!("Invalid destination format: {}", input))
 }
 
-pub fn cli() -> Command {
+pub fn cli(is_tty: IsTTY) -> Command {
     let mut cmd = command!()
     .arg(Arg::new("destination")
         .action(ArgAction::Set)
         //.global(true)
         .value_parser(parse_destination)
-        .required(true)
+        .required(false)
         .help("The haystack server destination which can be specified as either [user@]hostname or a URI of the form https://[user@]hostname[:port]."))
     .arg(Arg::new("username")
         .short('u')
@@ -589,8 +624,11 @@ pub fn cli() -> Command {
         .default_missing_value("true")
         .help("Tell the client to accept invalid SSL certificates"));
 
-        cmd = cmd.subcommand(Command::new("repl")
-            .about("Run the REPL"));
+        cmd = cmd
+            .subcommand(Command::new("auth")
+                .about("Return the auth information. Normally stored for reuse in environment variable 'HAYSTACK_AUTH_CONFIG'"))
+            .subcommand(Command::new("repl")
+                .about("Run the REPL"));
 
     for op in OPS {
         if let Some(op_cmd) = op.cmd {
@@ -618,6 +656,10 @@ async fn repl_generic<'a, T:NumTrait>(m_func: MATCH_FUNC_TYPE, matches: ArgMatch
 
 async fn repl_not_implemented<'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
     todo!("Not implemented yet");
+}
+
+async fn repl_auth<'a, T:NumTrait>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    repl_generic::<T>(match_auth, matches, context).await
 }
 
 async fn repl_about<'a, T:NumTrait>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
@@ -688,6 +730,7 @@ pub fn repl<'a, T:NumTrait + 'a>(client: &'a mut Sender<HaystackOpTxRx>, abort_h
     }
 
     repl_obj = repl_obj
+        .with_command_async(get_cmd("op:about"), |args, context| Box::pin(repl_auth::<T>(args, context)))
         .with_command_async(get_cmd("op:about"), |args, context| Box::pin(repl_about::<T>(args, context)))
         .with_command_async(get_cmd("op:backup"), |args, context| Box::pin(repl_not_implemented(args, context)))
         .with_command_async(get_cmd("op:commit"), |args, context| Box::pin(repl_not_implemented(args, context)))
@@ -752,6 +795,7 @@ pub async fn send_haystack_op<T: NumTrait>(client: &Sender<HaystackOpTxRx>, resp
 
 pub fn get_haystack_op(cmd: &str, matches: &ArgMatches) -> Result<(HaystackOpTxRx,Receiver<HaystackResponse>), Error> {
     let res = match (cmd, matches) {
+        ("authInfo", sub_m) => match_auth(sub_m),
         ("about", sub_m) => match_about(sub_m),
         ("ops", sub_m) => match_ops(sub_m),
         ("filetypes", sub_m,) => match_filetypes(sub_m),

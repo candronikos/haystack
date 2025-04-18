@@ -26,6 +26,11 @@ Rust implementation of an async haystack client library and CLI tool and REPL.
 
 ## Example CLI uses
 ```{bash}
+# Reuse haystack bearer token
+(
+    export HAYSTACK_AUTH_CONFIG=`hs default auth`; hs read --filter "point" --limit=1
+) > read
+
 # About
 haystack-client default about
 

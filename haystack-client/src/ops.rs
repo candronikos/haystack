@@ -2,6 +2,7 @@ use std::{fmt::{self, Display, Write}, str::{FromStr, SplitWhitespace}};
 
 use anyhow::{anyhow, Context, Error, Result};
 
+use nom::Err;
 use tokio::sync::oneshot;
 
 use haystack_types::{self as hs_types, HCast, Float};
@@ -443,14 +444,17 @@ impl <'a>HaystackResponse {
         let HaystackResponse::Raw(body) = self;
         FStr::String(body)
     }
-    pub fn as_result<T: Float + Display + FromStr>(self) -> Result<HaystackResponse,Error> {
+    pub fn as_result<T: Float + Display + FromStr>(self) -> Result<HaystackResponse> {
         match self {
-            HaystackResponse::Raw(body) => {
-                hs_types::io::parse::zinc::grid_err::<T>(body.as_str())
-                    .or_else(|e| {
+            HaystackResponse::Raw(ref body) => {
+                match hs_types::io::parse::zinc::grid_err::<T>(body.as_str()) {
+                    Ok((input, grid_err)) => {
                         Err(anyhow!("{}", body))
-                    })?;
-                Ok(HaystackResponse::Raw(body))
+                    },
+                    Err(e) => {
+                        Ok(HaystackResponse::Raw(body.to_owned()))
+                    }
+                }
             }
         }
     }

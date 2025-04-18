@@ -421,7 +421,6 @@ use super::*;
                     let temp1 = &e.1.unwrap();
                     let v = temp1.get("dis").unwrap();
                     v.to_zinc(&mut buf).unwrap();
-                    println!("FIELD\n{:?}",buf);
                     let rhs = Box::new(HStr("Fri 31-Jul-2020".to_owned())) as Box<dyn HVal<f64>>;
                     assert_eq!(v,&rhs)
                 } else {

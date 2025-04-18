@@ -395,20 +395,6 @@ mod tests {
     //     future::ready::<Box<mpsc::Sender<ops::HaystackOpTxRx>>>(Box::new(HS_SESSION.1.clone()))
     // }
 
-    lazy_static! {
-        static ref CLIENT: (AbortHandle, mpsc::Sender<ops::HaystackOpTxRx>) = {
-            HSession::new(
-                "https://analytics.host.docker.internal/api/demo/".to_owned(),
-                "su".to_owned(),
-                "password".to_owned(),
-                true,
-                Arc::new(Mutex::new(None)),
-                None,
-            )
-            .unwrap()
-        };
-    }
-
     #[fixture]
     // TODO: Write test with close op that closes original session
     fn client() -> future::Ready<Box<mpsc::Sender<ops::HaystackOpTxRx>>> {

@@ -232,7 +232,6 @@ impl <'a>HaystackOpTxRx {
                 .or(Err(anyhow!("Failed to write OP body")))?;
         }
         
-        println!("grid: {}", grid);
         let op = Self {
             op: FStr::Str("read"),
             method: FStr::Str("POST"),

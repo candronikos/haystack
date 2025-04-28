@@ -2,14 +2,13 @@ use nom::multi::many0;
 use nom::bytes::complete::take_while1;
 use nom::character::complete::alphanumeric1;
 use nom::combinator::recognize;
-use nom::sequence::tuple;
 use nom::bytes::complete::tag;
 use nom::branch::alt;
 use num::Float;
 use core::str::FromStr;
 use std::fmt::{self,Display,Formatter};
 use crate::h_val::HVal;
-use nom::IResult;
+use nom::{IResult, Parser};
 
 #[derive(Debug,PartialEq)]
 pub enum Txt<'a> {
@@ -77,10 +76,10 @@ pub fn unicode_char(ex: char) -> impl Fn(char) -> bool {
 
 pub fn id(input: &str) -> IResult<&str,&str> {
     let lower = |c: char| { c>='a' && c<='z' };
-    recognize(tuple((
+    recognize(((
         take_while1(lower),
         many0(alt((alphanumeric1,tag("_"))))
-    )))(input)
+    ))).parse(input)
 }
 
 pub trait ZincWriter<'a> {

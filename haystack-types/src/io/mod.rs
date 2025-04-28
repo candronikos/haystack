@@ -5,7 +5,7 @@ use nom::multi::separated_list1;
 use nom::combinator::{map,opt,verify,recognize,success,value,iterator};
 use nom::character::complete::{digit1,char as nom_char,space1};
 use nom::character::{is_digit,is_alphanumeric};
-use nom::sequence::{tuple,preceded,terminated,separated_pair};
+use nom::sequence::{preceded,terminated,separated_pair};
 use nom::number::complete::double;
 use nom::error::{Error, ErrorKind};
 
@@ -34,7 +34,7 @@ use super::*;
     }
 
     pub mod zinc {
-        use nom::{character::complete::newline, combinator::all_consuming, error::ParseError, Err};
+        use nom::{character::complete::newline, combinator::all_consuming, error::ParseError, AsChar, Err};
 
         use super::*;
 
@@ -58,34 +58,34 @@ use super::*;
                 into_box!(list,NumTrait,'a),
                 into_box!(delimited(tag("<<"),grid::<NumTrait>,tag(">>")),NumTrait,'a),
                 // TODO: Implement symbol type
-            ))(input)
+            )).parse(input)
         }
 
         pub fn boolean(input: &str) -> IResult<&str, HBool> {
             alt((
                 value(HBool(true),tag("T")),
                 value(HBool(false),tag("F"))
-            ))(input)
+            )).parse(input)
         }
 
         pub fn null(input: &str) -> IResult<&str, HNull> {
             use crate::h_null::NULL;
-            map(tag("N"), |_s: &str| { NULL })(input)
+            map(tag("N"), |_s: &str| { NULL }).parse(input)
         }
 
         pub fn na(input: &str) -> IResult<&str, HNA> {
             use crate::h_na::NA;
-            map(tag("NA"), |_s: &str| { NA })(input)
+            map(tag("NA"), |_s: &str| { NA }).parse(input)
         }
 
         pub fn marker(input: &str) -> IResult<&str, HMarker> {
             use crate::h_marker::MARKER;
-            map(tag("M"), |_s: &str| { MARKER })(input)
+            map(tag("M"), |_s: &str| { MARKER }).parse(input)
         }
 
         pub fn remove(input: &str) -> IResult<&str, HRemove> {
             use crate::h_remove::REMOVE;
-            map(tag("R"), |_s: &str| { REMOVE })(input)
+            map(tag("R"), |_s: &str| { REMOVE }).parse(input)
         }
 
         pub fn string(input: &str) -> IResult<&str, HStr> {
@@ -102,7 +102,7 @@ use super::*;
                 take_while1(unicode_char('"')),
             )));
 
-            let string_literal = it.fold(String::new(),|mut acc, input| { acc.push_str(input); acc });
+            let string_literal = it.by_ref().fold(String::new(),|mut acc, input| { acc.push_str(input); acc });
             let (input,()) = it.finish()?;
             let (input,_) = tag("\"")(input)?;
 
@@ -127,7 +127,7 @@ use super::*;
                 take_while1(unicode_char('`')),
             )));
 
-            let url_literal = it.fold(String::new(),|mut acc, input| { acc.push_str(input); acc });
+            let url_literal = it.by_ref().fold(String::new(),|mut acc, input| { acc.push_str(input); acc });
             let (input,()) = it.finish()?;
             let (input,_) = tag("`")(input)?;
 
@@ -138,48 +138,44 @@ use super::*;
 
         pub fn ref_chars_body<I>(prefix:char) -> impl FnMut(I) -> IResult<I,I>
         where
-            I: nom::InputLength +
-                nom::InputTake +
-                nom::InputIter +
-                nom::Slice<std::ops::RangeFrom<usize>> +
-                nom::InputTakeAtPosition<Item = char> +
-                Clone,
-            <I as nom::InputIter>::Item: nom::AsChar,
+            I: nom::Input + Clone,
+            <I as nom::Input>::Item: nom::AsChar + Copy,
         {
-            let f = |c:char| {
-                c.is_ascii_alphanumeric() || match c {
-                    '_' | ':' | '-' | '.' | '~' => true,
-                    _ => false
-                }
-            };
-            preceded(nom::character::complete::char(prefix), take_while1(f))
+            
+        move |input| preceded(nom::character::complete::char::<I, nom::error::Error<I>>(prefix), take_while1(|c: <I as nom::Input>::Item| {
+            let c = c.as_char();
+            c.is_ascii_alphanumeric() || match c {
+                '_' | ':' | '-' | '.' | '~' => true,
+                _ => false
+            }
+        })).parse(input)
         }
 
         fn reference(input: &str) -> IResult<&str, HRef> {
-            let (input,(ref_str,dis_str)) = tuple((
+            let (input,(ref_str,dis_str)) = ((
                 ref_chars_body('@'),
                 opt(preceded(tag(" "), string)),
-            ))(input)?;
+            )).parse(input)?;
             Ok((input,HRef::new(ref_str.to_owned(), dis_str.map(|s| s.into_string()))))
         }
 
         fn get_2_digits(input: &str) -> IResult<&str, &str> {
-            verify(take(2usize),|s: &str| s.chars().all(|c| char::is_digit(c,10)))(input)
+            verify(take(2usize),|s: &str| s.chars().all(|c| char::is_digit(c,10))).parse(input)
         }
 
         fn get_offset(input: &str) -> IResult<&str, (i32, u32, u32)> {
-            tuple((
+            ((
                 alt((value(-1,nom_char('-')),value(1,nom_char('+')))),
                 map(get_2_digits, |s| u32::from_str_radix(s,10).unwrap()),
                 preceded(tag(":"), map(get_2_digits, |s| u32::from_str_radix(s,10).unwrap()))
-            ))(input)
+            )).parse(input)
         }
 
         fn get_named_tz(input: &str) -> IResult<&str, &str> {
-            recognize(tuple((
+            recognize(((
                 take_while1(|c: char| c.is_ascii_uppercase()),
                 take_while(|c: char| is_alphanumeric(c as u8) || c == '/' || c== '-' || c== '_' || c== '+')
-            )))(input)
+            ))).parse(input)
         }
 
         fn timezone(input: &str) -> IResult<&str, (String, HOffset)> {
@@ -187,10 +183,10 @@ use super::*;
             use chrono::offset::FixedOffset;
 
             let (input, (first, second)) = alt((
-                tuple((recognize(get_offset), preceded(tag(" "), get_named_tz))),
-                tuple((tag("Z"), preceded(tag(" "), get_named_tz))),
-                tuple((tag("Z"), success(""))),
-            ))(input)?;
+                (recognize(get_offset), preceded(tag(" "), get_named_tz)),
+                (tag("Z"), preceded(tag(" "), get_named_tz)),
+                (tag("Z"), success("")),
+            )).parse(input)?;
 
             // TODO: Implement with TZ instead of String
             let timezone: (String, HOffset) = match first {
@@ -215,7 +211,7 @@ use super::*;
 
         pub fn datetime(input: &str) -> IResult<&str, HDateTime> {
             let start = input;
-            let (input, (yr, mo, day, hr, min, sec, nano, tz)) = tuple((
+            let (input, (yr, mo, day, hr, min, sec, nano, tz)) = (
                 terminated(map(take(4usize), |s| i32::from_str_radix(s,10)),tag("-")),
                 terminated(map(take(2usize), |s| u32::from_str_radix(s,10)),tag("-")),
                 terminated(map(take(2usize), |s| u32::from_str_radix(s,10)),tag("T")),
@@ -224,7 +220,7 @@ use super::*;
                 map(take(2usize), |s| u32::from_str_radix(s,10)),
                 opt(preceded(tag("."),map(digit1, |s| u32::from_str_radix(s,10)))),
                 timezone
-            ))(start)?;
+            ).parse(start)?;
 
             let yr = yr.or(Err(nom::Err::Error(Error{ input: start, code: ErrorKind::Digit })))?;
             let mo = mo.or(Err(nom::Err::Error(Error{ input: start, code: ErrorKind::Digit })))?;
@@ -243,11 +239,11 @@ use super::*;
         }
 
         fn coord_deg<T: Float + Display + FromStr>(input: &str) -> IResult<&str, T> {
-            map_res(recognize(tuple((opt(tag("-")),digit1,opt(tuple((tag("."),digit1)))))),|s: &str| s.parse::<T>())(input)
+            map_res(recognize(((opt(tag("-")),digit1,opt(((tag("."),digit1)))))),|s: &str| s.parse::<T>()).parse(input)
         }
 
         pub fn coord<T: Float + Display + FromStr>(input: &str) -> IResult<&str, HCoord<T>> {
-            let (input,(lat,long)) = tuple((delimited(tag("C("),coord_deg,tag(",")),terminated(coord_deg,tag(")"))))(input)?;
+            let (input,(lat,long)) = (delimited(tag("C("),coord_deg,tag(",")),terminated(coord_deg,tag(")"))).parse(input)?;
     
             Ok((input,HCoord::new(lat,long)))
         }
@@ -255,8 +251,8 @@ use super::*;
         fn tags<'a,'b,NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str,Option<HashMap<String,Box<dyn HVal<'a,NumTrait> + 'a>>>> {
             let (input,res_opt) = opt(separated_list1(
                 tag(" "),
-                tuple((id, opt(preceded(tag(":"), literal::<NumTrait>))))
-            ))(input)?;
+                ((id, opt(preceded(tag(":"), literal::<NumTrait>))))
+            )).parse(input)?;
 
             let mut map: HashMap<String, Box<dyn HVal<'a,NumTrait> + 'a>> = HashMap::new();
             let map_opt: Option<_>;
@@ -273,13 +269,13 @@ use super::*;
         }
 
         fn tags_list<'a,'b,NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str,Option<Vec<Box<dyn HVal<'a,NumTrait> + 'a>>>> {
-            let (input,res) = opt(separated_list1(tag(","),literal::<NumTrait>))(input)?;
+            let (input,res) = opt(separated_list1(tag(","),literal::<NumTrait>)).parse(input)?;
 
             Ok((input,res))
         }
 
         pub fn dict<'a, 'b, NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str, HDict<'a,NumTrait>> {
-            let (input,opt_dict) = delimited(tag("{"),tags::<NumTrait>,tag("}"))(input)?;
+            let (input,opt_dict) = delimited(tag("{"),tags::<NumTrait>,tag("}")).parse(input)?;
 
             let dict = match opt_dict {
                 Some(dict) => dict,
@@ -290,7 +286,7 @@ use super::*;
         }
 
         pub fn list<'a, 'b, NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str, HList<'a,NumTrait>> {
-            let (input,opt_vec) = delimited(tag("["),tags_list::<NumTrait>,tag("]"))(input)?;
+            let (input,opt_vec) = delimited(tag("["),tags_list::<NumTrait>,tag("]")).parse(input)?;
 
             let vec = match opt_vec {
                 Some(vec) => vec,
@@ -312,7 +308,7 @@ use super::*;
         }
 
         pub fn cols<'a, 'b, NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str, Vec<(String,Option<HashMap<String,Box<dyn HVal<'a,NumTrait> + 'a>>>)>> {
-            let (input,columns): (_,Vec<(_, Option<HashMap<_,Box<dyn HVal<'a,NumTrait>>>>)>) = separated_list1(tag(","), separated_pair(id, space1, tags::<NumTrait>))(input)?;
+            let (input,columns): (_,Vec<(_, Option<HashMap<_,Box<dyn HVal<'a,NumTrait>>>>)>) = separated_list1(tag(","), separated_pair(id, space1, tags::<NumTrait>)).parse(input)?;
             let columns = columns.into_iter().map(|(id,meta)| (id.to_owned(),meta));
             let columns = columns.collect();
             Ok((input,columns))
@@ -320,8 +316,8 @@ use super::*;
 
         pub fn grid_err<NumTrait: Float + Display + FromStr>(input: &str) -> IResult<&str, HGrid<NumTrait>> {
             let (input,_) = tag("ver:\"3.0\"")(input)?;
-            let (input,meta) = delimited(space1, grid_meta::<NumTrait>, tag("\n"))(input)?;
-            let (_, is_empty) = all_consuming(map(terminated(tag("empty"), take_while1(|c| c == '\n')), |_| true))(input)?;
+            let (input,meta) = delimited(space1, grid_meta::<NumTrait>, tag("\n")).parse(input)?;
+            let (_, is_empty) = all_consuming(map(terminated(tag("empty"), take_while1(|c| c == '\n')), |_| true)).parse(input)?;
             if is_empty || meta.contains_key("err") {
                 //let dis = meta.get("dis").unwrap().get_string_val().unwrap().into_string();
                 let dis = match meta.get("dis") {
@@ -375,24 +371,24 @@ use super::*;
         }
 
         pub fn grid<'a, 'b, NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str, HGrid<'a,NumTrait>> {
-            let (input,version) = delimited(tag("ver:\""), recognize(double), tag("\""))(input)?;
+            let (input,version) = delimited(tag("ver:\""), recognize(double), tag("\"")).parse(input)?;
 
             // Grid Meta
-            let (input,meta) = delimited(space1, grid_meta::<NumTrait>, tag("\n"))(input)?;
+            let (input,meta) = delimited(space1, grid_meta::<NumTrait>, tag("\n")).parse(input)?;
 
-            let (_, is_empty) = all_consuming(map(terminated(tag("\nempty"), take_while1(|c| c == '\n')), |_| true))(input)?;
+            let (_, is_empty) = all_consuming(map(terminated(tag("\nempty"), take_while1(|c| c == '\n')), |_| true)).parse(input)?;
             if is_empty {
                 return Ok((input, HGrid::Empty));
                 
             }
             
             // Cols
-            let (input,columns) = terminated(cols::<NumTrait>, tag("\n"))(input)?;
+            let (input,columns) = terminated(cols::<NumTrait>, tag("\n")).parse(input)?;
 
             // Rows
             let row_width = columns.len();
             let (input,rows) = separated_list1(tag("\n"),
-                verify(separated_list1(tag(","),opt(literal::<NumTrait>)),|v: &Vec<Option<Box<dyn HVal<NumTrait>>>>| v.len()==row_width))(input)?;
+                verify(separated_list1(tag(","),opt(literal::<NumTrait>)),|v: &Vec<Option<Box<dyn HVal<NumTrait>>>>| v.len()==row_width)).parse(input)?;
 
             let grid = HGrid::from_row_vec(columns,rows)
                 .add_meta(meta).unwrap();
@@ -528,7 +524,7 @@ use super::*;
             opt(alt((tag("+"),tag("-"))))
                 .map(|sign| if let Some(c) = sign { c!="-" } else { true } ),
             digits
-        ))(input)
+        )).parse(input)
     }
 
     pub fn is_unit(c: char) -> bool {
@@ -547,10 +543,10 @@ use super::*;
         use std::slice;
 
         let start = input;
-        let (input, is_positive) = map(opt(tag("-")),|d| d.is_none())(start)?;
+        let (input, is_positive) = map(opt(tag("-")),|d| d.is_none()).parse(start)?;
         let (input, integer) = digits(input)?;
-        let (input, decimals) = opt(preceded(tag("."),digits))(input)?;
-        let (input, exponent) = opt(exp)(input)?;
+        let (input, decimals) = opt(preceded(tag("."),digits)).parse(input)?;
+        let (input, exponent) = opt(exp).parse(input)?;
         let number_slice = unsafe {
             slice::from_raw_parts(start.as_ptr(),
             (input.as_ptr() as usize) - (start.as_ptr() as usize))
@@ -572,7 +568,7 @@ use super::*;
                 code: nom::error::ErrorKind::Float }));
         }
 
-        let (input, unit_opt) = opt(unit)(input)?;
+        let (input, unit_opt) = opt(unit).parse(input)?;
 
         Ok((input, HNumber::new(number_ty, unit_opt)))
     }

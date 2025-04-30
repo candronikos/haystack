@@ -1,5 +1,5 @@
 use num::Float;
-use crate::{HVal,HType};
+use crate::{HType, HVal, NumTrait};
 use std::fmt::{self,Write,Display};
 use std::str::FromStr;
 
@@ -21,7 +21,7 @@ impl HTime {
     }
 }
 
-impl <'a,T:'a + Float + Display + FromStr>HVal<'a,T> for HTime {
+impl <'a,T: NumTrait + 'a>HVal<'a,T> for HTime {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         write!(buf,"{:0>2}:{:0>2}:{:0>2}.{}",self.inner.hour(),self.inner.minute(),
         self.inner.second(),self.inner.nanosecond())?;

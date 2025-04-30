@@ -638,7 +638,7 @@ pub fn cli(is_tty: IsTTY) -> Command {
     cmd
 }
 
-async fn repl_generic<'a, T:NumTrait>(m_func: MATCH_FUNC_TYPE, matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+async fn repl_generic<'a, T:NumTrait + 'a>(m_func: MATCH_FUNC_TYPE, matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
     let Context { abort_handle, sender: client } = context;
     
     let (op, resp) = m_func(&matches)
@@ -658,47 +658,47 @@ async fn repl_not_implemented<'a>(matches: ArgMatches, context: &mut Context<'a>
     todo!("Not implemented yet");
 }
 
-async fn repl_auth<'a, T:NumTrait>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+async fn repl_auth<'a, T:NumTrait + 'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
     repl_generic::<T>(match_auth, matches, context).await
 }
 
-async fn repl_about<'a, T:NumTrait>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+async fn repl_about<'a, T:NumTrait + 'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
     repl_generic::<T>(match_about, matches, context).await
 }
 
-async fn repl_ops<'a, T:NumTrait>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+async fn repl_ops<'a, T:NumTrait + 'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
     repl_generic::<T>(match_ops, matches, context).await
 }
 
-async fn repl_filetypes<'a, T:NumTrait>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+async fn repl_filetypes<'a, T:NumTrait + 'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
     repl_generic::<T>(match_filetypes, matches, context).await
 }
 
-async fn repl_nav<'a, T:NumTrait>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+async fn repl_nav<'a, T:NumTrait + 'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
     repl_generic::<T>(match_nav, matches, context).await
 }
 
-async fn repl_read<'a, T:NumTrait>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+async fn repl_read<'a, T:NumTrait + 'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
     repl_generic::<T>(match_read, matches, context).await
 }
 
-async fn repl_his_read<'a, T:NumTrait>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+async fn repl_his_read<'a, T:NumTrait + 'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
     repl_generic::<T>(match_his_read, matches, context).await
 }
 
-async fn repl_watch_sub<'a, T:NumTrait>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+async fn repl_watch_sub<'a, T:NumTrait + 'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
     repl_generic::<T>(match_watch_sub, matches, context).await
 }
 
-async fn repl_watch_unsub<'a, T:NumTrait>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+async fn repl_watch_unsub<'a, T:NumTrait + 'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
     repl_generic::<T>(match_watch_unsub, matches, context).await
 }
 
-async fn repl_watch_poll<'a, T:NumTrait>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+async fn repl_watch_poll<'a, T:NumTrait + 'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
     repl_generic::<T>(match_watch_poll, matches, context).await
 }
 
-async fn repl_watch_his_write<'a, T:NumTrait>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+async fn repl_watch_his_write<'a, T:NumTrait + 'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
     repl_generic::<T>(match_his_write, matches, context).await
 }
 

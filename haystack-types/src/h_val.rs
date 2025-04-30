@@ -1,5 +1,6 @@
 use crate::common::{ZincWriter,ZincReader,JsonWriter,TrioWriter};
-use crate::io;
+use crate::io::HBox;
+use crate::{io, NumTrait};
 use std::fmt::{self,Display,Formatter,Debug};
 use core::str::FromStr;
 use num::Float;
@@ -53,9 +54,7 @@ macro_rules! set_trait_get_method {
         fn $name(&self) -> Option<&$tt> { None }
     };
     ( $name:ident, $tt:ident, $lt:lifetime, $t:ty ) => {
-        // fn get_dict_val(&self) -> Option<&HDict<'a,T>> { None }
-        // fn $name(&self) -> Option<&$tt<'a,T>> { None }
-        fn $name(&self) -> Option<&$tt<$lt,$t>> { None }
+        fn $name(&$lt self) -> Option<&$lt $tt<$lt,$t>> { None }
     };
 }
 
@@ -70,7 +69,7 @@ macro_rules! set_trait_eq_method {
     }
 }
 
-pub trait HVal<'a,T:'a + Float + Display + FromStr> {
+pub trait HVal<'a,T: NumTrait + 'a> {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result;
     fn to_json(&self, buf: &mut String) -> fmt::Result;
     fn haystack_type(&self) -> HType;
@@ -95,22 +94,23 @@ pub trait HVal<'a,T:'a + Float + Display + FromStr> {
     set_trait_get_method!(get_grid_val, HGrid,'a,T);
 }
 
-impl <'a,T:'a + Float + Display + FromStr>Display for dyn HVal<'a,T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}(",self.haystack_type())?;
+impl <'a,T: NumTrait + 'a>Display for dyn HVal<'a,T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let self_as_hval: &(dyn HVal<'a, T> + 'a) = self;
+        write!(f, "{}(",self_as_hval.haystack_type())?;
         let mut buf = String::new();
-        self.to_zinc(&mut buf)?;
+        HVal::to_zinc(self_as_hval, &mut buf)?;
         write!(f, "{})",buf)
     }
 }
 
-impl <'a,T:'a + Float + Display + FromStr>Debug for dyn HVal<'a,T> {
+impl <'a,T: NumTrait + 'a>Debug for dyn HVal<'a,T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}",self)
     }
 }
 
-impl <'a,T:'a + Float + Display + FromStr>PartialEq for dyn HVal<'a,T> {
+impl <'a,T: NumTrait + 'a>PartialEq for dyn HVal<'a,T> {
     fn eq(&self, other: &dyn HVal<'a,T>) -> bool {
         // TODO: Implement equality testing for HVal
         if self.haystack_type() == other.haystack_type() {
@@ -120,17 +120,20 @@ impl <'a,T:'a + Float + Display + FromStr>PartialEq for dyn HVal<'a,T> {
     }
 }
 
-impl <'a,T:'a + Float + Display + FromStr>ZincWriter<'a> for dyn HVal<'a,T> {
+impl <'a,T: NumTrait + 'a>ZincWriter<'a,T> for dyn HVal<'a,T> + 'a {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result { self.to_zinc(buf) }
 }
 
-impl <'a,'b,T: 'a + Float + Display + FromStr>ZincReader<'a,'b,T> for dyn HVal<'a,T> {
-    fn parse(buf: &'b str) -> IResult<&'b str, Box<dyn HVal<'a,T> + 'a>> {
+impl <'a,T: NumTrait + 'a>ZincReader<'a,T> for dyn HVal<'a,T> {
+    fn parse<'b>(buf: &'b str) -> IResult<&'b str, HBox<'a,T>>
+    where
+        'a: 'b
+    {
         io::parse::zinc::literal::<T>(buf)
     }
 }
 
-impl <'a>Display for dyn ZincWriter<'a> {
+impl <'a,T: NumTrait + 'a>Display for dyn ZincWriter<'a,T> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let mut buf = String::new();
         self.to_zinc(&mut buf)?;
@@ -138,11 +141,11 @@ impl <'a>Display for dyn ZincWriter<'a> {
     }
 }
 
-impl <'a,T:'a + Float + Display + FromStr>JsonWriter<'a> for dyn HVal<'a,T> {
+impl <'a,T: NumTrait + 'a>JsonWriter<'a,T> for dyn HVal<'a,T> {
     fn to_json(&self, buf: &mut String) -> fmt::Result { self.to_json(buf) }
 }
 
-impl <'a>Display for dyn JsonWriter<'a> {
+impl <'a,T: NumTrait + 'a>Display for dyn JsonWriter<'a,T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut buf = String::new();
         self.to_json(&mut buf)?;
@@ -150,11 +153,11 @@ impl <'a>Display for dyn JsonWriter<'a> {
     }
 }
 
-impl <'a,T:'a + Float + Display + FromStr>TrioWriter<'a> for dyn HVal<'a,T> {
+impl <'a,T: NumTrait + 'a>TrioWriter<'a,T> for dyn HVal<'a,T> {
     fn to_trio(&self, buf: &mut String) -> fmt::Result { self.to_zinc(buf) }
 }
 
-impl <'a>Display for dyn TrioWriter<'a> {
+impl <'a,T: NumTrait + 'a>Display for dyn TrioWriter<'a,T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut buf = String::new();
         self.to_trio(&mut buf)?;

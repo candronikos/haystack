@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use core::fmt::Display;
 use num::Float;
-use crate::{HVal,HType};
+use crate::{HType, HVal, NumTrait};
 use std::fmt::{self,Write};
 
 use chrono::naive::NaiveDate;
@@ -22,7 +22,7 @@ impl HDate {
     }
 }
 
-impl <'a,T:'a + Float + Display + FromStr>HVal<'a,T> for HDate {
+impl <'a,T: NumTrait + 'a>HVal<'a,T> for HDate {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         write!(buf,"{:0>4}-{:0>2}-{:0>2}",
             self.inner.year(),

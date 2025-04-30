@@ -1,5 +1,5 @@
 use num::Float;
-use crate::{HVal,HType};
+use crate::{HType, HVal, NumTrait};
 use std::fmt::{self,Write,Display};
 use std::str::FromStr;
 use crate::common::escape_str;
@@ -20,7 +20,7 @@ impl HRef {
     }
 }
 
-impl <'a,T:'a + Float + Display + FromStr>HVal<'a,T> for HRef {
+impl <'a,T: NumTrait + 'a>HVal<'a,T> for HRef {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         write!(buf,"@{}",self.id)?;
         match &self.dis {

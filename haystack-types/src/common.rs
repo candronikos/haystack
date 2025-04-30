@@ -7,7 +7,7 @@ use nom::branch::alt;
 use num::Float;
 use core::str::FromStr;
 use std::fmt::{self,Display,Formatter};
-use crate::h_val::HVal;
+use crate::{h_val::HVal, io::HBox, NumTrait};
 use nom::{IResult, Parser};
 
 #[derive(Debug,PartialEq)]
@@ -82,18 +82,18 @@ pub fn id(input: &str) -> IResult<&str,&str> {
     ))).parse(input)
 }
 
-pub trait ZincWriter<'a> {
+pub trait ZincWriter<'a,T: NumTrait + 'a> {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result;
 }
 
-pub trait ZincReader<'a,'b,T: 'a + Float + Display + FromStr> {
-    fn parse(buf: &'b str) -> IResult<&'b str, Box<dyn HVal<'a,T> + 'a>>;
+pub trait ZincReader<'a,T: NumTrait + 'a> {
+    fn parse<'b>(buf: &'b str) -> IResult<&'b str, HBox<'a,T>> where 'a: 'b;
 }
 
-pub trait JsonWriter<'a> {
+pub trait JsonWriter<'a,T: NumTrait + 'a> {
     fn to_json(&self, buf: &mut String) -> fmt::Result;
 }
 
-pub trait TrioWriter<'a> {
+pub trait TrioWriter<'a,T: NumTrait + 'a> {
     fn to_trio(&self, buf: &mut String) -> fmt::Result;
 }

@@ -10,7 +10,7 @@ use nom::number::complete::double;
 use nom::error::{Error, ErrorKind};
 
 use crate::{HVal, h_bool::HBool, h_null::HNull, h_na::HNA, h_marker::HMarker,
-    h_remove::HRemove, h_number::{HNumber,HUnit}, h_ref::HRef,
+    h_remove::HRemove, h_number::{NumTrait,HNumber,HUnit}, h_ref::HRef,
     h_date::HDate, h_datetime::{HDateTime,HOffset}, h_time::HTime,
     h_coord::HCoord, h_str::HStr, h_uri::HUri, h_dict::HDict,
     h_list::HList, h_grid::HGrid};
@@ -20,16 +20,19 @@ use crate::common::*;
 use std::collections::HashMap;
 use core::fmt::Display;
 use core::str::FromStr;
+use std::rc::Rc;
 use num::Float;
 
+pub type HBox<'a,T> = Rc<dyn HVal<'a,T> + 'a>;
+
 pub mod parse {
-use nom::sequence::delimited;
-use nom::combinator::map_res;
-use super::*;
+    use nom::sequence::delimited;
+    use nom::combinator::map_res;
+    use super::*;
 
     macro_rules! into_box {
         ( $fn: expr, $num_type: ty, $lt: lifetime ) => {
-            map($fn,| hval | { Box::new(hval) as Box<dyn HVal<$lt,$num_type> + $lt> })
+            map($fn,| hval | { Rc::new(hval) as HBox<$lt, $num_type>})
         }
     }
 
@@ -38,25 +41,29 @@ use super::*;
 
         use super::*;
 
-        pub fn literal<'a, 'b, NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str, Box<dyn HVal<'a,NumTrait> + 'a>> {
+        pub fn literal<'a,'b,T>(input: &'b str) -> IResult<&'b str, HBox<'a,T>>
+        where
+            T: NumTrait + 'a,
+            'a:'b
+        {
             alt((
-                into_box!(na,NumTrait,'a),
-                into_box!(null,NumTrait,'a),
-                into_box!(marker,NumTrait,'a),
-                into_box!(remove,NumTrait,'a),
-                into_box!(boolean,NumTrait,'a),
-                into_box!(reference, NumTrait,'a),
-                into_box!(string,NumTrait,'a),
-                into_box!(uri,NumTrait,'a),
-                into_box!(datetime,NumTrait,'a),
-                into_box!(date,NumTrait,'a),
-                into_box!(time,NumTrait,'a),
-                into_box!(number,NumTrait,'a),
-                into_box!(coord,NumTrait,'a),
+                into_box!(na,T,'a),
+                into_box!(null,T,'a),
+                into_box!(marker,T,'a),
+                into_box!(remove,T,'a),
+                into_box!(boolean,T,'a),
+                into_box!(reference, T,'a),
+                into_box!(string,T,'a),
+                into_box!(uri,T,'a),
+                into_box!(datetime,T,'a),
+                into_box!(date,T,'a),
+                into_box!(time,T,'a),
+                into_box!(number,T,'a),
+                into_box!(coord,T,'a),
                 // TODO: Implement tests for collection types
-                into_box!(dict,NumTrait,'a),
-                into_box!(list,NumTrait,'a),
-                into_box!(delimited(tag("<<"),grid::<NumTrait>,tag(">>")),NumTrait,'a),
+                into_box!(dict,T,'a),
+                into_box!(list,T,'a),
+                into_box!(delimited(tag("<<"),grid::<T>,tag(">>")),T,'a),
                 // TODO: Implement symbol type
             )).parse(input)
         }
@@ -248,17 +255,21 @@ use super::*;
             Ok((input,HCoord::new(lat,long)))
         }
 
-        fn tags<'a,'b,NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str,Option<HashMap<String,Box<dyn HVal<'a,NumTrait> + 'a>>>> {
+        fn tags<'a,'b,T>(input: &'b str) -> IResult<&'b str,Option<HashMap<String,HBox<'a,T>>>>
+        where
+            T: NumTrait + 'a,
+            'a:'b,
+        {
             let (input,res_opt) = opt(separated_list1(
                 tag(" "),
-                ((id, opt(preceded(tag(":"), literal::<NumTrait>))))
+                (id, opt(preceded(tag(":"), literal::<'a,'b,T>)))
             )).parse(input)?;
 
-            let mut map: HashMap<String, Box<dyn HVal<'a,NumTrait> + 'a>> = HashMap::new();
+            let mut map: HashMap<String, HBox<'a,T>> = HashMap::new();
             let map_opt: Option<_>;
             if let Some(res) = res_opt {
                 res.into_iter().for_each(|(k,v)| {
-                    map.insert(k.to_owned(), v.unwrap_or(Box::new(crate::h_marker::MARKER) as Box<dyn HVal<'a,NumTrait>>));
+                    map.insert(k.to_owned(), v.unwrap_or(Rc::new(crate::h_marker::MARKER) as HBox<'a, T>));
                 });
                 map_opt = Some(map);
             } else {
@@ -268,14 +279,22 @@ use super::*;
             Ok((input,map_opt))
         }
 
-        fn tags_list<'a,'b,NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str,Option<Vec<Box<dyn HVal<'a,NumTrait> + 'a>>>> {
-            let (input,res) = opt(separated_list1(tag(","),literal::<NumTrait>)).parse(input)?;
+        fn tags_list<'a,'b,T: NumTrait + 'a>(input: &'b str) -> IResult<&'b str,Option<Vec<HBox<'a,T>>>>
+        where
+            T: NumTrait + 'a,
+            'a:'b,
+        {
+            let (input,res) = opt(separated_list1((take_while(AsChar::is_space),tag(","),take_while(AsChar::is_space)),literal::<'a,'b,T>)).parse(input)?;
 
             Ok((input,res))
         }
 
-        pub fn dict<'a, 'b, NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str, HDict<'a,NumTrait>> {
-            let (input,opt_dict) = delimited(tag("{"),tags::<NumTrait>,tag("}")).parse(input)?;
+        pub fn dict<'a,'b,T>(input: &'b str) -> IResult<&'b str, HDict<'a,T>>
+        where
+            T: NumTrait + 'a,
+            'a:'b,
+        {
+            let (input,opt_dict) = delimited(tag("{"),tags::<'a,'b,T>,tag("}")).parse(input)?;
 
             let dict = match opt_dict {
                 Some(dict) => dict,
@@ -285,8 +304,12 @@ use super::*;
             Ok((input,HDict::from_map(dict)))
         }
 
-        pub fn list<'a, 'b, NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str, HList<'a,NumTrait>> {
-            let (input,opt_vec) = delimited(tag("["),tags_list::<NumTrait>,tag("]")).parse(input)?;
+        pub fn list<'a,'b, T>(input: &'b str) -> IResult<&'b str, HList<'a,T>>
+        where
+            T: NumTrait + 'a,
+            'a:'b,
+        {
+            let (input,opt_vec) = delimited(tag("["),tags_list::<'a,'b,T>,tag("]")).parse(input)?;
 
             let vec = match opt_vec {
                 Some(vec) => vec,
@@ -296,27 +319,42 @@ use super::*;
             Ok((input,HList::from_vec(vec)))
         }
 
-        pub fn grid_meta<'a, 'b, NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str, HashMap<String,Box<dyn HVal<'a,NumTrait> + 'a>>> {
-            let (input,opt_dict) = tags::<NumTrait>(input)?;
+        pub fn grid_meta<'a,'b,T>(input: &'b str) -> IResult<&'b str, HashMap<String,HBox<'a,T>>>
+        where
+            T: NumTrait + 'a,
+            'a:'b,
+        {
+            let (input,opt_dict) = tags::<'a,'b,T>(input)?;
 
             let dict = match opt_dict {
                 Some(dict) => dict,
-                None => HashMap::new()
+                None => Err(nom::Err::Error(Error{
+                    input: input,
+                    code: ErrorKind::Tag
+                }))?
             };
 
             Ok((input,dict))
         }
 
-        pub fn cols<'a, 'b, NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str, Vec<(String,Option<HashMap<String,Box<dyn HVal<'a,NumTrait> + 'a>>>)>> {
-            let (input,columns): (_,Vec<(_, Option<HashMap<_,Box<dyn HVal<'a,NumTrait>>>>)>) = separated_list1(tag(","), separated_pair(id, space1, tags::<NumTrait>)).parse(input)?;
+        pub fn cols<'a,'b,T>(input: &'b str) -> IResult<&'b str, Vec<(String,Option<HashMap<String,HBox<'a,T>>>)>>
+        where
+            T: NumTrait + 'a,
+            'a:'b,
+        {
+            let (input,columns): (_,Vec<(_, Option<HashMap<_,HBox<'a,T>>>)>) = separated_list1(tag(","), separated_pair(id, space1, tags::<T>)).parse(input)?;
             let columns = columns.into_iter().map(|(id,meta)| (id.to_owned(),meta));
             let columns = columns.collect();
             Ok((input,columns))
         }
 
-        pub fn grid_err<NumTrait: Float + Display + FromStr>(input: &str) -> IResult<&str, HGrid<NumTrait>> {
+        pub fn grid_err<'a,'b,T>(input: &'b str) -> IResult<&'b str, HGrid<T>>
+        where
+            T: NumTrait + 'a,
+            'a: 'b,
+        {
             let (input,_) = tag("ver:\"3.0\"")(input)?;
-            let (input,meta) = delimited(space1, grid_meta::<NumTrait>, tag("\n")).parse(input)?;
+            let (input,meta) = delimited(space1, grid_meta::<'a,'b,T>, tag("\n")).parse(input)?;
             let (_, is_empty) = all_consuming(map(terminated(tag("empty"), take_while1(|c| c == '\n')), |_| true)).parse(input)?;
             if is_empty || meta.contains_key("err") {
                 //let dis = meta.get("dis").unwrap().get_string_val().unwrap().into_string();
@@ -357,10 +395,10 @@ use super::*;
                     }))
                 };
 
-                return Ok((input, HGrid::Error {
-                    dis: dis,
-                    errTrace: errTrace,
-                }));
+                let err = HGrid::Error {
+                    dis, errTrace,
+                };
+                return Ok((input, err));
                 
             }
 
@@ -370,28 +408,38 @@ use super::*;
             }))
         }
 
-        pub fn grid<'a, 'b, NumTrait: 'a + Float + Display + FromStr>(input: &'b str) -> IResult<&'b str, HGrid<'a,NumTrait>> {
+        pub fn grid<'a,'b, T>(input: &'b str) -> IResult<&'b str, HGrid<'a,T>>
+        where 
+            'a: 'b,
+            T: NumTrait + 'a,
+        {
             let (input,version) = delimited(tag("ver:\""), recognize(double), tag("\"")).parse(input)?;
 
             // Grid Meta
-            let (input,meta) = delimited(space1, grid_meta::<NumTrait>, tag("\n")).parse(input)?;
-
+            let (input,meta) = opt(preceded(space1, grid_meta::<'a,'b,T>)).parse(input)?;
             let (_, is_empty) = all_consuming(map(terminated(tag("\nempty"), take_while1(|c| c == '\n')), |_| true)).parse(input)?;
             if is_empty {
-                return Ok((input, HGrid::Empty));
-                
+                return Ok((input, HGrid::Empty { meta }));
             }
             
             // Cols
-            let (input,columns) = terminated(cols::<NumTrait>, tag("\n")).parse(input)?;
+            let (input,columns) = terminated(cols::<T>, tag("\n")).parse(input)?;
 
             // Rows
             let row_width = columns.len();
-            let (input,rows) = separated_list1(tag("\n"),
-                verify(separated_list1(tag(","),opt(literal::<NumTrait>)),|v: &Vec<Option<Box<dyn HVal<NumTrait>>>>| v.len()==row_width)).parse(input)?;
+            let (input,rows) = separated_list1(
+                tag("\n"),
+                verify(
+                    separated_list1(tag(","),opt(literal::<T>)),
+                    |v: &Vec<Option<HBox<T>>>| v.len()==row_width
+                )
+            ).parse(input)?;
 
-            let grid = HGrid::from_row_vec(columns,rows)
-                .add_meta(meta).unwrap();
+            let mut grid = HGrid::from_row_vec(columns,rows);
+
+            if let Some(meta) = meta {
+                grid = grid.add_meta(meta).unwrap();
+            }
 
             Ok((input,grid))
         }
@@ -412,12 +460,14 @@ use super::*;
                 let input = "dis:\"Fri 31-Jul-2020\" view:\"chart\" title:\"Line\" chartNoScroll chartLegend:\"hide\" hisStart:2020-07-31T00:00:00-04:00 New_York hisEnd:2020-08-01T00:00:00-04:00 New_York hisLimit:10000";
 
                 let res = tags::<f64>(input);
-                if let Ok(e) = res {
+                if let Ok((_,e)) = res {
+                    let e1_ref = e.as_ref();
                     let mut buf = String::new();
-                    let temp1 = &e.1.unwrap();
-                    let v = temp1.get("dis").unwrap();
+                    let boxed_element = e1_ref.unwrap();
+                    
+                    let v = boxed_element.get("dis").unwrap();
                     v.to_zinc(&mut buf).unwrap();
-                    let rhs = Box::new(HStr("Fri 31-Jul-2020".to_owned())) as Box<dyn HVal<f64>>;
+                    let rhs = Rc::new(HStr("Fri 31-Jul-2020".to_owned())) as HBox<f64>;
                     assert_eq!(v,&rhs)
                 } else {
                     panic!("Failed to parse separated list")
@@ -471,8 +521,8 @@ use super::*;
             #[test]
             fn coerce_na2hval() {
                 use crate::h_na::NA;
-                let v = literal::<f64>("NA").unwrap();
-                let lhs = v.1.get_na();
+                let (_,v) = literal::<f64>("NA").unwrap();
+                let lhs = v.get_na();
                 assert_eq!(lhs,Some(&NA))
             }
 
@@ -504,6 +554,139 @@ use super::*;
                 assert_literal!("`http://www.google.com`",get_uri,HUri::new("http://www.google.com").unwrap());
                 assert_literal!("1.5kWh",get_number,HNumber::new(1.5f64,Some(HUnit::new("kWh".to_owned()))));
             }
+            
+            #[test]
+            fn parse_literal_na() {
+                assert_eq!(literal::<f64>("NA").unwrap().1.get_na(), Some(&crate::h_na::NA));
+            }
+
+            #[test]
+            fn parse_literal_null() {
+                assert_eq!(literal::<f64>("N").unwrap().1.get_null(), Some(&crate::h_null::NULL));
+            }
+
+            #[test]
+            fn parse_literal_marker() {
+                assert_eq!(literal::<f64>("M").unwrap().1.get_marker(), Some(&crate::h_marker::MARKER));
+            }
+
+            #[test]
+            fn parse_literal_remove() {
+                assert_eq!(literal::<f64>("R").unwrap().1.get_remove(), Some(&crate::h_remove::REMOVE));
+            }
+
+            #[test]
+            fn parse_literal_bool() {
+                assert_eq!(literal::<f64>("T").unwrap().1.get_bool(), Some(&HBool(true)));
+                assert_eq!(literal::<f64>("F").unwrap().1.get_bool(), Some(&HBool(false)));
+            }
+
+            #[test]
+            fn parse_literal_string() {
+                assert_eq!(
+                    literal::<f64>(r#""Hello\nWorld""#).unwrap().1.get_string(),
+                    Some(&HStr("Hello\nWorld".to_owned()))
+                );
+            }
+
+            #[test]
+            fn parse_literal_uri() {
+                assert_eq!(
+                    literal::<f64>("`http://example.com`").unwrap().1.get_uri(),
+                    Some(&HUri::new("http://example.com").unwrap())
+                );
+            }
+
+            #[test]
+            fn parse_literal_number() {
+                assert_eq!(
+                    literal::<f64>("42.5").unwrap().1.get_number(),
+                    Some(&HNumber::new(42.5, None))
+                );
+                assert_eq!(
+                    literal::<f64>("1.5kWh").unwrap().1.get_number(),
+                    Some(&HNumber::new(1.5, Some(HUnit::new("kWh".to_owned()))))
+                );
+            }
+
+            #[test]
+            fn parse_literal_coord() {
+                assert_eq!(
+                    literal::<f64>("C(12.34,-56.78)").unwrap().1.get_coord_val(),
+                    Some(&HCoord::new(12.34, -56.78))
+                );
+            }
+
+            #[test]
+            fn parse_literal_datetime() {
+                let tz_obj = ("America/New_York".to_owned(), HOffset::Fixed(chrono::offset::FixedOffset::east(-5 * 3600)));
+                assert_eq!(
+                    literal::<f64>("2023-03-15T12:34:56.789-05:00 America/New_York")
+                        .unwrap()
+                        .1
+                        .get_datetime(),
+                    Some(&HDateTime::new(2023, 3, 15, 12, 34, 56, 789, tz_obj))
+                );
+            }
+
+            #[test]
+            fn parse_literal_dict() {
+                let input = r#"{key1:"value1" key2:42 key3:T}"#;
+                let result = dict::<f64>(input).unwrap().1;
+                assert_eq!(result.get("key1").unwrap().get_string(), Some(&HStr("value1".to_owned())));
+                assert_eq!(result.get("key2").unwrap().get_number(), Some(&HNumber::new(42.0, None)));
+                assert_eq!(result.get("key3").unwrap().get_bool(), Some(&HBool(true)));
+            }
+
+            #[test]
+            fn parse_literal_list() {
+                let input = r#"[42,"hello" , T]"#;
+                let result = list::<f64>(input).unwrap().1;
+                assert_eq!(result[0].get_number(), Some(&HNumber::new(42.0, None)));
+                assert_eq!(result[1].get_string(), Some(&HStr("hello".to_owned())));
+                assert_eq!(result[2].get_bool(), Some(&HBool(true)));
+            }
+
+            #[test]
+            fn parse_grid_empty() {
+                let input = "ver:\"3.0\"\nempty\n";
+                let empty_grid = grid::<f64>(input).unwrap().1;
+                if let HGrid::Empty { meta } = empty_grid {
+                    assert!(meta.is_none());
+                } else {
+                    panic!("Expected an empty grid");
+                }
+                //assert_eq!(grid::<f64>(input).unwrap().1, HGrid::<f64>::Empty);
+            }
+
+            #[test]
+            fn parse_empty_grid_with_meta() {
+                let input = "ver:\"3.0\" dis:\"Example Grid\"\nempty\n";
+                let grid: HGrid<'_, f64> = grid::<f64>(input).unwrap().1;
+                match grid {
+                    HGrid::Empty { meta } => {
+                        assert_eq!(meta.unwrap().get("dis").unwrap().get_string(), Some(&HStr("Example Grid".to_owned())));
+                    },
+                    _ => panic!("Expected an empty grid with metadata"),
+                }
+            }
+
+            /*
+            #[test]
+            fn parse_grid_with_rows() {
+                let input = r#"ver:"3.0" dis:"Example Grid"
+                                    col1 col2
+                                    42,"hello"
+                                    T,F
+                                    "#;
+                let grid = grid::<f64>(input).unwrap().1;
+                assert_eq!(grid.meta().get("dis").unwrap().get_string(), Some(&HStr("Example Grid".to_owned())));
+                assert_eq!(grid.rows()[0][0].get_number(), Some(&HNumber::new(42.0, None)));
+                assert_eq!(grid.rows()[0][1].get_string(), Some(&HStr("hello".to_owned())));
+                assert_eq!(grid.rows()[1][0].get_bool(), Some(&HBool(true)));
+                assert_eq!(grid.rows()[1][1].get_bool(), Some(&HBool(false)));
+            }
+            */
         }
     }
 
@@ -539,7 +722,7 @@ use super::*;
         Ok((input,HUnit::new(unit_str.to_owned())))
     }
 
-    pub fn number<'a, T: 'a + Float + Display + FromStr>(input: &str) -> IResult<&str, HNumber<T>> {
+    pub fn number<T: Float + Display + FromStr>(input: &str) -> IResult<&str, HNumber<T>> {
         use std::slice;
 
         let start = input;

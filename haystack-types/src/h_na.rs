@@ -1,5 +1,5 @@
 use num::Float;
-use crate::{HVal,HType};
+use crate::{HType, HVal, NumTrait};
 use crate::common::Txt;
 use std::fmt::{self,Write,Display};
 use std::str::FromStr;
@@ -14,7 +14,7 @@ const JSON: Txt = Txt::Const("z:");
 
 const THIS_TYPE: HType = HType::NA;
 
-impl <'a,T:'a + Float + Display + FromStr>HVal<'a,T> for HNA {
+impl <'a,T: NumTrait + 'a>HVal<'a,T> for HNA {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         write!(buf,"{}",ZINC)
     }

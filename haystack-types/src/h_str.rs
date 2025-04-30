@@ -1,5 +1,5 @@
 use num::Float;
-use crate::{HVal,HType};
+use crate::{HType, HVal, NumTrait};
 use crate::common::{escape_str};
 use std::fmt::{self,Write,Display};
 use std::str::FromStr;
@@ -25,7 +25,7 @@ impl HStr {
     }
 }
 
-impl <'a,T:'a + Float + Display + FromStr>HVal<'a,T> for HStr {
+impl <'a,T: NumTrait + 'a>HVal<'a,T> for HStr {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         buf.push('\"');
         self.0.chars().try_for_each(|c| { escape_str(c,buf) })?;

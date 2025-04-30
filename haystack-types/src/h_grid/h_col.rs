@@ -1,19 +1,29 @@
 use num::Float;
-use crate::{HCast,HVal,HType};
+use crate::io::HBox;
+use crate::{HCast, HType, HVal, NumTrait};
 use std::fmt::{self,Write,Display};
 use std::str::FromStr;
 
 use std::collections::HashMap;
 
-pub struct HCol<'a,T> {
+pub struct HCol<'a,T: NumTrait + 'a> {
     pub name: String,
-    meta: HashMap<String, Box<dyn HVal<'a,T> + 'a>>
+    meta: HashMap<String, HBox<'a,T>>
+}
+
+impl<'a, T: NumTrait + 'a> fmt::Debug for HCol<'a, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("HCol")
+            .field("name", &self.name)
+            .field("meta", &format_args!("{:?}", self.meta.keys().collect::<Vec<_>>()))
+            .finish()
+    }
 }
 
 pub type Col<'a,T> = HCol<'a,T>;
 
-impl <'a,T:'a + Float + Display + FromStr>HCol<'a,T> {
-    pub fn new(name: String, meta: Option<HashMap<String, Box<dyn HVal<'a,T> + 'a>>>) -> Self {
+impl <'a,T: NumTrait + 'a>HCol<'a,T> {
+    pub fn new(name: String, meta: Option<HashMap<String, HBox<'a,T>>>) -> Self {
         Self {
             name,
             meta: meta.unwrap_or(HashMap::new())
@@ -21,12 +31,12 @@ impl <'a,T:'a + Float + Display + FromStr>HCol<'a,T> {
     }
 }
 
-impl <'a,T:'a + Float + Display + FromStr>HCol<'a,T> {
+impl <'a,T: NumTrait + 'a>HCol<'a,T> {
     // pub fn name<'a>(&'a self) -> &'a str {
     //     &self.name
     // }
 
-    pub fn get(&self, key: String) -> Option<&Box<dyn HVal<'a,T> + 'a>> {
+    pub fn get(&self, key: String) -> Option<&HBox<'a,T>> {
         self.meta.get(&key)
     }
 
@@ -34,7 +44,7 @@ impl <'a,T:'a + Float + Display + FromStr>HCol<'a,T> {
         self.meta.contains_key(&key)
     }
 
-    pub fn add_meta(&mut self, meta: HashMap<String, Box<dyn HVal<'a,T> + 'a>>) {
+    pub fn add_meta(&mut self, meta: HashMap<String, HBox<'a,T>>) {
         self.meta.extend(meta)
     }
 

@@ -21,6 +21,7 @@ pub struct HNumber<T: Display> {
 pub type Number<T> = HNumber<T>;
 pub trait NumTrait: Float + Display + FromStr {}
 impl<T> NumTrait for T where T: Float + Display + FromStr {}
+//impl<'a,T> NumTrait for T where T: 'a + Float + Display + FromStr {}
 
 const THIS_TYPE: HType = HType::Number;
 
@@ -34,7 +35,7 @@ impl <T: Float + Display>Number<T> {
     }
 }
 
-impl <'a, T: 'a + Float + Display + FromStr>HVal<'a,T> for HNumber<T> {
+impl <'a, T: NumTrait + 'a>HVal<'a,T> for HNumber<T> {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         match &self.unit {
             Some(unit) =>  write!(buf,"{}{}",self.val,unit),

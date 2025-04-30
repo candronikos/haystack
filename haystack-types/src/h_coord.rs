@@ -1,5 +1,5 @@
 use num::Float;
-use crate::{HVal,HType};
+use crate::{HType, HVal, NumTrait};
 use std::fmt::{self,Display,Write};
 use core::str::FromStr;
 
@@ -19,7 +19,7 @@ impl <T>HCoord<T> {
     }
 }
 
-impl <'a,T: 'a + Float + Display + FromStr>HVal<'a,T> for HCoord<T> {
+impl <'a,T: NumTrait + 'a>HVal<'a,T> for HCoord<T> {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         write!(buf,"C({},{})",self.lat,self.long)
     }

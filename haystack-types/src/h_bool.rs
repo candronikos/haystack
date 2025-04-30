@@ -1,5 +1,5 @@
 use num::Float;
-use crate::{HVal,HType};
+use crate::{HType, HVal, NumTrait};
 use crate::common::Txt;
 use std::fmt::{self,Write,Display};
 use std::str::FromStr;
@@ -17,7 +17,7 @@ const JSON_FALSE: Txt = Txt::Const("false");
 
 const THIS_TYPE: HType = HType::Bool;
 
-impl <'a,T:'a + Float + Display + FromStr>HVal<'a,T> for HBool {
+impl <'a,T: NumTrait + 'a>HVal<'a,T> for HBool {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         match self.0 {
             true => write!(buf,"{}",ZINC_TRUE),

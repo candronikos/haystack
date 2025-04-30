@@ -1,7 +1,7 @@
 use core::str::FromStr;
 use core::fmt::Display;
 use num::Float;
-use crate::{HVal,HType};
+use crate::{HType, HVal, NumTrait};
 use std::fmt::{self,Write};
 
 use url::{Url,ParseError as UrlParseError};
@@ -20,7 +20,7 @@ impl HUri {
     }
 }
 
-impl <'a,T:'a + Float + Display + FromStr>HVal<'a,T> for HUri {
+impl <'a,T: NumTrait + 'a>HVal<'a,T> for HUri {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         buf.push('`');
         buf.push_str(self.0.as_str());

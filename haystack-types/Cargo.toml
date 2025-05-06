@@ -4,6 +4,8 @@ version = "0.1.0"
 authors = ["Christopher Andronikos <me@candronikos.com>"]
 edition = "2024"
 license = "MIT"
+homepage = "https://candronikos.com/projects/haystack-rust/"
+repository = "https://github.com/candronikos/haystack"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

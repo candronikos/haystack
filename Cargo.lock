@@ -763,6 +763,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "haystack-awk"
+version = "0.1.0"
+dependencies = [
+ "haystack-types",
+ "nom 8.0.0",
+ "nom-language",
+]
+
+[[package]]
 name = "haystack-client"
 version = "0.1.0"
 dependencies = [

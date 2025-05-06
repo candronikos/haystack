@@ -1,0 +1,17 @@
+[package]
+name = "haystack-awk"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "haystackawklib"
+path = "src/lib/mod.rs"
+
+[[bin]]
+name = "haystack-awk"
+path = "src/bin/main.rs"
+
+[dependencies]
+nom = "8.0.0"
+nom-language = "0.1.0"
+haystack-types = { path = "../haystack-types" }

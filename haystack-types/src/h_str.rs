@@ -12,6 +12,10 @@ pub type Str = HStr;
 const THIS_TYPE: HType = HType::Str;
 
 impl HStr {
+    pub fn new(s: &str) -> Self {
+        HStr(s.to_string())
+    }
+
     pub fn into_string(self) -> String {
         let HStr(s) = self;
         s

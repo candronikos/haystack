@@ -4,6 +4,7 @@ members = [
     "haystack-types",
     "haystack-db",
     "haystack-client",
+    "haystack-awk",
     #"haystack-render",
     # "haystack-cli",
 ]

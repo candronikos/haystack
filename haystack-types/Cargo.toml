@@ -6,6 +6,7 @@ edition = "2024"
 license = "MIT"
 homepage = "https://candronikos.com/projects/haystack-rust/"
 repository = "https://github.com/candronikos/haystack"
+description = "Haystack types and traits for Rust."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

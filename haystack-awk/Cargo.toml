@@ -3,6 +3,7 @@ name = "haystack-awk"
 version = "0.1.1"
 edition = "2024"
 license = "MIT"
+description = "A Zinc-aware AWK utility for processing data."
 
 [lib]
 name = "haystackawklib"

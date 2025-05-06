@@ -6,7 +6,7 @@ edition = "2024"
 license = "MIT"
 repository = "https://github.com/candronikos/haystack"
 description = "Haystack types and traits for Rust."
-keywords = ["haystack", "skyspark"]
+keywords = ["haystack", "skyspark", "zinc", "trio"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

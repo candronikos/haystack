@@ -764,7 +764,7 @@ dependencies = [
 
 [[package]]
 name = "haystack-awk"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "haystack-types",
  "nom 8.0.0",
@@ -773,7 +773,7 @@ dependencies = [
 
 [[package]]
 name = "haystack-client"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "base64 0.12.3",
@@ -803,7 +803,7 @@ dependencies = [
 
 [[package]]
 name = "haystack-types"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "chrono",
  "chrono-tz",

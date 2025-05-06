@@ -1,6 +1,6 @@
 [package]
 name = "haystack-types"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Christopher Andronikos <me@candronikos.com>"]
 edition = "2024"
 license = "MIT"

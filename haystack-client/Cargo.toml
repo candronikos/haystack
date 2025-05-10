@@ -23,7 +23,7 @@ version = "1.44"
 features = ["full"]
 
 [dependencies]
-haystack-types = "0.1.1"
+haystack-types = { version = "0.1.1", path = "../haystack-types"}
 is-terminal = "0.4.16"
 futures = "0.3"
 scram = "0.6.0"

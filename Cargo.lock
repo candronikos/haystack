@@ -691,7 +691,7 @@ dependencies = [
  "dialoguer",
  "dirs",
  "futures",
- "haystack-types 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "haystack-types",
  "is-terminal",
  "nom 7.1.3",
  "reedline-repl-rs",
@@ -706,19 +706,6 @@ dependencies = [
 [[package]]
 name = "haystack-types"
 version = "0.1.1"
-dependencies = [
- "chrono",
- "chrono-tz",
- "nom 8.0.0",
- "num",
- "url",
-]
-
-[[package]]
-name = "haystack-types"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d8ecb2a937b1744e1a13c41ce3dce797250b96be626a24235f316bb9c5c22d1"
 dependencies = [
  "chrono",
  "chrono-tz",

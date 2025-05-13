@@ -23,32 +23,42 @@ jobs:
       # Install OpenSSL dependencies (platform-specific)
       - name: Install OpenSSL dependencies
         run: |
-          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-            sudo apt update
-            sudo apt install -y libssl-dev pkg-config
-          elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-            brew install openssl pkg-config
-          elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            choco install openssl.light
-          elif [[ "${{ matrix.os }}" == "freebsd" ]]; then
-            sudo pkg install -y openssl pkgconf
-          fi
+          case "${{ matrix.os }}" in
+            ubuntu-latest)
+              sudo apt update
+              sudo apt install -y libssl-dev pkg-config
+              ;;
+            macos-latest)
+              brew install openssl pkg-config
+              ;;
+            windows-latest)
+              choco install openssl.light
+              ;;
+            freebsd)
+              sudo pkg install -y openssl pkgconf
+              ;;
+          esac
 
       # Set environment variables for OpenSSL (platform-specific)
       - name: Set environment variables
         run: |
-          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-            echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig" >> $GITHUB_ENV
-            echo "OPENSSL_DIR=/usr" >> $GITHUB_ENV
-          elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-            echo "PKG_CONFIG_PATH=$(brew --prefix openssl)/lib/pkgconfig" >> $GITHUB_ENV
-            echo "OPENSSL_DIR=$(brew --prefix openssl)" >> $GITHUB_ENV
-          elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            echo "OPENSSL_DIR=C:\\Program Files\\OpenSSL-Win64" >> $GITHUB_ENV
-          elif [[ "${{ matrix.os }}" == "freebsd" ]]; then
-            echo "PKG_CONFIG_PATH=/usr/local/lib/pkgconfig" >> $GITHUB_ENV
-            echo "OPENSSL_DIR=/usr/local" >> $GITHUB_ENV
-          fi
+          case "${{ matrix.os }}" in
+            ubuntu-latest)
+              echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig" >> $GITHUB_ENV
+              echo "OPENSSL_DIR=/usr" >> $GITHUB_ENV
+              ;;
+            macos-latest)
+              echo "PKG_CONFIG_PATH=$(brew --prefix openssl)/lib/pkgconfig" >> $GITHUB_ENV
+              echo "OPENSSL_DIR=$(brew --prefix openssl)" >> $GITHUB_ENV
+              ;;
+            windows-latest)
+              echo "OPENSSL_DIR=C:\\Program Files\\OpenSSL-Win64" >> $GITHUB_ENV
+              ;;
+            freebsd)
+              echo "PKG_CONFIG_PATH=/usr/local/lib/pkgconfig" >> $GITHUB_ENV
+              echo "OPENSSL_DIR=/usr/local" >> $GITHUB_ENV
+              ;;
+          esac
 
       # Set up Rust
       - name: Set up Rust

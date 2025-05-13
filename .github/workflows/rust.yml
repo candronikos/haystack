@@ -17,6 +17,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # Install OpenSSL dependencies (platform-specific)
+      - name: Install OpenSSL dependencies
+        run: |
+          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            sudo apt update
+            sudo apt install -y libssl-dev pkg-config
+          elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            brew install openssl pkg-config
+          elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            choco install openssl.light
+          elif [[ "${{ matrix.os }}" == "freebsd" ]]; then
+            sudo pkg install -y openssl pkgconf
+          fi
+
       # Set up Rust
       - name: Set up Rust
         uses: actions-rs/toolchain@v1

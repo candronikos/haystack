@@ -31,6 +31,22 @@ jobs:
             sudo pkg install -y openssl pkgconf
           fi
 
+      # Set environment variables for OpenSSL (platform-specific)
+      - name: Set environment variables
+        run: |
+          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig" >> $GITHUB_ENV
+            echo "OPENSSL_DIR=/usr" >> $GITHUB_ENV
+          elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            echo "PKG_CONFIG_PATH=$(brew --prefix openssl)/lib/pkgconfig" >> $GITHUB_ENV
+            echo "OPENSSL_DIR=$(brew --prefix openssl)" >> $GITHUB_ENV
+          elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            echo "OPENSSL_DIR=C:\\Program Files\\OpenSSL-Win64" >> $GITHUB_ENV
+          elif [[ "${{ matrix.os }}" == "freebsd" ]]; then
+            echo "PKG_CONFIG_PATH=/usr/local/lib/pkgconfig" >> $GITHUB_ENV
+            echo "OPENSSL_DIR=/usr/local" >> $GITHUB_ENV
+          fi
+
       # Set up Rust
       - name: Set up Rust
         uses: actions-rs/toolchain@v1

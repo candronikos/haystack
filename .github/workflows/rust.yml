@@ -73,7 +73,7 @@ jobs:
 
       # Upload the artifacts
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: haystack-release-binaries
           path: |

@@ -33,7 +33,7 @@ Rust implementation of an async haystack client library and CLI tool and REPL.
 - [ ] Invoke Action
 
 ## Example CLI uses
-```{bash}
+```console
 # Reuse haystack bearer token
 ( # () Opens a sub-shell
   export HAYSTACK_AUTH_CONFIG=`hs default auth`;

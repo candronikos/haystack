@@ -1,0 +1,48 @@
+name: Cross-Platform Release Build
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Rust
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      # Install cross for cross-compilation
+      - name: Install cross
+        run: cargo install cross
+
+      # Build release binaries for multiple platforms
+      - name: Build release binaries
+        run: |
+          cross build --release --target x86_64-unknown-linux-gnu
+          cross build --release --target x86_64-apple-darwin
+          cross build --release --target x86_64-pc-windows-gnu
+          cross build --release --target x86_64-unknown-freebsd
+
+      # Upload the artifacts
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: haystack-release-binaries
+          path: |
+            target/x86_64-unknown-linux-gnu/release/haystack-client
+            target/x86_64-apple-darwin/release/haystack-client
+            target/x86_64-pc-windows-gnu/release/haystack-client.exe
+            target/x86_64-unknown-freebsd/release/haystack-client

@@ -66,7 +66,7 @@ jobs:
       # Build release binaries for multiple platforms
       - name: Build release binaries
         run: |
-          cross build --release --target x86_64-unknown-linux-gnu
+          cross build --release --target x86_64-unknown-linux-gnu --force-non-host
           cross build --release --target x86_64-apple-darwin
           cross build --release --target x86_64-pc-windows-gnu
           cross build --release --target x86_64-unknown-freebsd

@@ -1,0 +1,91 @@
+name: Cross-Platform Release Build
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  package:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        target: [x86_64-unknown-linux-gnu, x86_64-pc-windows-gnu]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Install OpenSSL dependencies (platform-specific)
+      - name: Install OpenSSL dependencies
+        run: |
+          if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+            sudo apt update
+            sudo apt install -y libssl-dev pkg-config
+          elif [ "${{ matrix.os }}" == "macos-latest" ]; then
+            brew install openssl pkg-config
+          elif [ "${{ matrix.os }}" == "windows-latest" ]; then
+            choco install openssl.light
+          fi
+        shell: bash
+
+      # Set environment variables for OpenSSL (platform-specific)
+      - name: Set environment variables
+        run: |
+          if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+            echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig" >> $GITHUB_ENV
+            echo "OPENSSL_DIR=/usr/lib/ssl" >> $GITHUB_ENV
+            export PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig
+            export OPENSSL_DIR=/usr/lib/ssl
+          elif [ "${{ matrix.os }}" == "macos-latest" ]; then
+            echo "PKG_CONFIG_PATH=$(brew --prefix openssl)/lib/pkgconfig" >> $GITHUB_ENV
+            echo "OPENSSL_DIR=$(brew --prefix openssl)" >> $GITHUB_ENV
+            export PKG_CONFIG_PATH=$(brew --prefix openssl)/lib/pkgconfig
+            export OPENSSL_DIR=$(brew --prefix openssl)
+          elif [ "${{ matrix.os }}" == "windows-latest" ]; then
+            echo "OPENSSL_DIR=C:\\Program Files\\OpenSSL-Win64" >> $GITHUB_ENV
+            export OPENSSL_DIR=C:\\Program Files\\OpenSSL-Win64
+          fi
+        shell: bash
+
+      # Set up Rust
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      # Install cross for cross-compilation
+      - name: Install cross
+        run: cargo install cross
+
+      # # Build release binaries for multiple platforms67|
+      # - name: Add Rust targets
+      #   run: |
+      #     rustup target add x86_64-unknown-linux-gnu
+      #     rustup target add x86_64-apple-darwin
+      #     rustup target add x86_64-pc-windows-gnu
+      # #    rustup target add x86_64-unknown-freebsd
+          
+      # Build release binaries for multiple platforms
+      - name: Build release binaries
+        run: |
+          if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+            cross build --release --target x86_64-unknown-linux-gnu
+          elif [ "${{ matrix.os }}" == "macos-latest" ]; then
+            cargo build --release --target x86_64-apple-darwin
+          elif [ "${{ matrix.os }}" == "windows-latest" ]; then
+            cross build --release --target x86_64-pc-windows-gnu
+          fi
+
+      # Upload the artifacts
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: haystack-release-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/haystack-client*

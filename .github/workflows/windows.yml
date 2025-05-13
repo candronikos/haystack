@@ -1,0 +1,48 @@
+name: Built for Windows
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Cache Cargo registry
+      - name: Cache Cargo registry
+        uses: actions/cache@v3
+        with:
+          path: C:\Users\runneradmin\.cargo\registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-registry-
+
+      # Cache Cargo index
+      - name: Cache Cargo index
+        uses: actions/cache@v3
+        with:
+          path: C:\Users\runneradmin\.cargo\git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-index-
+
+      - name: Install dependencies
+        run: |
+          choco install openssl
+          set PATH=C:\Program Files\OpenSSL-Win64\bin;%PATH%
+
+      - name: Build project
+        run: cargo build --release --target x86_64-pc-windows-msvc -p haystack-client
+
+      - name: Upload release binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: haystack-client-windows-x64.exe
+          path: target\x86_64-pc-windows-msvc\release\haystack-client.exe

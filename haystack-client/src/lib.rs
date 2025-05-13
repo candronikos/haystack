@@ -434,7 +434,7 @@ mod tests {
     async fn ops<D, F>(client: F)
     	where F: std::future::Future<Output = D>,
         	D: DerefMut<Target = mpsc::Sender<ops::HaystackOpTxRx>> {
-        let (op,resp) = HaystackOpTxRx::ops();
+        let (op,resp) = HaystackOpTxRx::ops(None, None).unwrap();
 
         let client_res = client.await;
         let permit = client_res.reserve().await.or_else(|e| Err(anyhow!("Failed to reserve permit: {}",e))).unwrap();
@@ -450,7 +450,7 @@ mod tests {
     async fn filetypes<D, F>(client: F)
    		where F: std::future::Future<Output = D>,
         	D: DerefMut<Target = mpsc::Sender<ops::HaystackOpTxRx>> {
-        let (op,resp) = HaystackOpTxRx::filetypes();
+        let (op,resp) = HaystackOpTxRx::filetypes(None,None).unwrap();
 
         let client_res = client.await;
         let permit = client_res.reserve().await.or_else(|e| Err(anyhow!("Failed to reserve permit: {}",e))).unwrap();
@@ -557,7 +557,7 @@ mod tests {
         ).await.unwrap();
 
         let (nav_op,nav_resp) = HaystackOpTxRx::nav(None).unwrap();
-        let (formats_op,formats_resp) = HaystackOpTxRx::filetypes();
+        let (formats_op,formats_resp) = HaystackOpTxRx::filetypes(None, None).unwrap();
         let (about_op,about_resp) = HaystackOpTxRx::about();
 
         let mut nav_addr = addr.clone();

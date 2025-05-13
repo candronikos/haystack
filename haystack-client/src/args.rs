@@ -73,6 +73,70 @@ fn cmd_nav(op:&OP) -> Command {
     cmd
 }
 
+fn cmd_defs(op:&OP) -> Command {
+    let mut cmd = cmd_generic(op);
+    cmd = cmd
+        .arg(Arg::new("filter")
+            .action(ArgAction::Set)
+            .required(false)
+            .help("The filter to apply to the defs operation"))
+        .arg(Arg::new("limit")
+            .long("limit")
+            .action(ArgAction::Set)
+            .value_parser(value_parser!(usize))
+            .num_args(1)
+            .help("The maximum number of defs to return"));
+    cmd
+}
+
+fn cmd_filetypes(op:&OP) -> Command {
+    let mut cmd = cmd_generic(op);
+    cmd = cmd
+        .arg(Arg::new("filter")
+            .action(ArgAction::Set)
+            .required(false)
+            .help("The filter to apply to the filetypes operation"))
+        .arg(Arg::new("limit")
+            .long("limit")
+            .action(ArgAction::Set)
+            .value_parser(value_parser!(usize))
+            .num_args(1)
+            .help("The maximum number of filetypes to return"));
+    cmd
+}
+
+fn cmd_ops(op:&OP) -> Command {
+    let mut cmd = cmd_generic(op);
+    cmd = cmd
+        .arg(Arg::new("filter")
+            .action(ArgAction::Set)
+            .required(false)
+            .help("The filter to apply to the filetypes operation"))
+        .arg(Arg::new("limit")
+            .long("limit")
+            .action(ArgAction::Set)
+            .value_parser(value_parser!(usize))
+            .num_args(1)
+            .help("The maximum number of filetypes to return"));
+    cmd
+}
+
+fn cmd_libs(op:&OP) -> Command {
+    let mut cmd = cmd_generic(op);
+    cmd = cmd
+        .arg(Arg::new("filter")
+            .action(ArgAction::Set)
+            .required(false)
+            .help("The filter to apply to the filetypes operation"))
+        .arg(Arg::new("limit")
+            .long("limit")
+            .action(ArgAction::Set)
+            .value_parser(value_parser!(usize))
+            .num_args(1)
+            .help("The maximum number of filetypes to return"));
+    cmd
+}
+
 fn cmd_read(op:&OP) -> Command {
     let mut cmd = cmd_generic(op);
     cmd = cmd
@@ -214,7 +278,12 @@ fn match_about(_: &ArgMatches) -> AnyResult<(HaystackOpTxRx,Receiver<HaystackRes
 }
 
 pub fn match_filetypes(matches: &ArgMatches) -> AnyResult<(HaystackOpTxRx, Receiver<HaystackResponse>)> {
-    Ok(HaystackOpTxRx::filetypes())
+    let filter = matches.get_one::<String>("filter")
+        .map(|s| FStr::Str(s.as_str()));
+    let limit = matches.get_one::<usize>("limit")
+        .map(|v| *v);
+
+    Ok(HaystackOpTxRx::filetypes(filter, limit)?)
 }
 
 fn match_his_read(sub_m: &ArgMatches) -> AnyResult<(HaystackOpTxRx, Receiver<HaystackResponse>)> {
@@ -267,11 +336,35 @@ fn match_nav(sub_m: &ArgMatches) -> Result<(HaystackOpTxRx, Receiver<HaystackRes
 }
 
 fn match_ops(matches: &ArgMatches) -> Result<(HaystackOpTxRx, Receiver<HaystackResponse>), Error> {
-    Ok(HaystackOpTxRx::ops())
+    let filter = matches.get_one::<String>("filter")
+        .map(|s| FStr::Str(s.as_str()));
+    let limit = matches.get_one::<usize>("limit")
+        .map(|v| *v);
+
+    HaystackOpTxRx::ops(filter,limit)
+}
+
+fn match_defs(matches: &ArgMatches) -> Result<(HaystackOpTxRx, Receiver<HaystackResponse>), Error> {
+    let filter = matches.get_one::<String>("filter")
+        .map(|s| FStr::Str(s.as_str()));
+    let limit = matches.get_one::<usize>("limit")
+        .map(|v| *v);
+
+    HaystackOpTxRx::defs(filter,limit)
+}
+
+fn match_libs(matches: &ArgMatches) -> Result<(HaystackOpTxRx, Receiver<HaystackResponse>), Error> {
+    let filter = matches.get_one::<String>("filter")
+        .map(|s| FStr::Str(s.as_str()));
+    let limit = matches.get_one::<usize>("limit")
+        .map(|v| *v);
+
+    HaystackOpTxRx::libs(filter,limit)
 }
 
 fn match_read(sub_m: &ArgMatches) -> Result<(HaystackOpTxRx, Receiver<HaystackResponse>), Error> {
     if let Some(filter) = sub_m.get_one::<String>("filter") {
+        println!("Filter: {:?}", filter);
         HaystackOpTxRx::read(FStr::Str(filter.as_str()), sub_m.get_one::<usize>("limit").map(|v| *v))
             .or_else(|e| {
                 Err(anyhow::anyhow!("Failed to create read op: {:?}", e))
@@ -355,7 +448,7 @@ const OPS: &[OP; 26] = &[
         no_side_effects:true,
         nodoc:false,
         type_name:"hx::HxDefsOp",
-        cmd: Some(&cmd_generic) },
+        cmd: Some(&cmd_defs) },
     OP {
         def:"op:eval",
         doc:"Evaluate an Axon expression",
@@ -409,7 +502,7 @@ const OPS: &[OP; 26] = &[
         no_side_effects:true,
         nodoc:false,
         type_name:"hx::HxFiletypesOp",
-        cmd: Some(&cmd_generic) },
+        cmd: Some(&cmd_filetypes) },
     OP {
         def:"op:funcShim",
         doc:"null",
@@ -463,7 +556,7 @@ const OPS: &[OP; 26] = &[
         no_side_effects:true,
         nodoc:false,
         type_name:"hx::HxLibsOp",
-        cmd: Some(&cmd_generic) },
+        cmd: Some(&cmd_libs) },
     OP {
         def:"op:link",
         doc:"null",
@@ -490,7 +583,7 @@ const OPS: &[OP; 26] = &[
         no_side_effects:true,
         nodoc:false,
         type_name:"hx::HxOpsOp",
-        cmd: Some(&cmd_generic) },
+        cmd: Some(&cmd_ops) },
     OP {
         def:"op:pointWrite",
         doc:"Read or command a `writable-point`. See `docHaystack::Ops#pointWrite` chapter.",
@@ -678,6 +771,14 @@ async fn repl_nav<'a, T:NumTrait + 'a>(matches: ArgMatches, context: &mut Contex
     repl_generic::<T>(match_nav, matches, context).await
 }
 
+async fn repl_defs<'a, T:NumTrait + 'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    repl_generic::<T>(match_defs, matches, context).await
+}
+
+async fn repl_libs<'a, T:NumTrait + 'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+    repl_generic::<T>(match_libs, matches, context).await
+}
+
 async fn repl_read<'a, T:NumTrait + 'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
     repl_generic::<T>(match_read, matches, context).await
 }
@@ -734,7 +835,7 @@ pub fn repl<'a, T:NumTrait + 'a>(client: &'a mut Sender<HaystackOpTxRx>, abort_h
         .with_command_async(get_cmd("op:about"), |args, context| Box::pin(repl_about::<T>(args, context)))
         .with_command_async(get_cmd("op:backup"), |args, context| Box::pin(repl_not_implemented(args, context)))
         .with_command_async(get_cmd("op:commit"), |args, context| Box::pin(repl_not_implemented(args, context)))
-        .with_command_async(get_cmd("op:defs"), |args, context| Box::pin(repl_not_implemented(args, context)))
+        .with_command_async(get_cmd("op:defs"), |args, context| Box::pin(repl_defs::<T>(args, context)))
         .with_command_async(get_cmd("op:eval"), |args, context| Box::pin(repl_not_implemented(args, context)))
         .with_command_async(get_cmd("op:evalAll"), |args, context| Box::pin(repl_not_implemented(args, context)))
         .with_command_async(get_cmd("op:export"), |args, context| Box::pin(repl_not_implemented(args, context)))
@@ -746,7 +847,7 @@ pub fn repl<'a, T:NumTrait + 'a>(client: &'a mut Sender<HaystackOpTxRx>, abort_h
         .with_command_async(get_cmd("op:hisWrite"), |args, context| Box::pin(repl_watch_his_write::<T>(args, context)))
         .with_command_async(get_cmd("op:invokeAction"), |args, context| Box::pin(repl_not_implemented(args, context)))
         .with_command_async(get_cmd("op:io"), |args, context| Box::pin(repl_not_implemented(args, context)))
-        .with_command_async(get_cmd("op:libs"), |args, context| Box::pin(repl_not_implemented(args, context)))
+        .with_command_async(get_cmd("op:libs"), |args, context| Box::pin(repl_libs::<T>(args, context)))
         .with_command_async(get_cmd("op:link"), |args, context| Box::pin(repl_not_implemented(args, context)))
         .with_command_async(get_cmd("op:nav"), |args, context| Box::pin(repl_nav::<T>(args, context)))
         .with_command_async(get_cmd("op:ops"), |args, context| Box::pin(repl_ops::<T>(args, context)))
@@ -757,7 +858,7 @@ pub fn repl<'a, T:NumTrait + 'a>(client: &'a mut Sender<HaystackOpTxRx>, abort_h
         .with_command_async(get_cmd("op:watchPoll"), |args, context| Box::pin(repl_watch_poll::<T>(args, context)))
         .with_command_async(get_cmd("op:watchSub"), |args, context| Box::pin(repl_watch_sub::<T>(args, context)))
         .with_command_async(get_cmd("op:watchUnsub"), |args, context| Box::pin(repl_watch_unsub::<T>(args, context)));
-repl_obj
+    repl_obj
 }
 
 pub struct Context<'a> {
@@ -797,6 +898,9 @@ pub fn get_haystack_op(cmd: &str, matches: &ArgMatches) -> Result<(HaystackOpTxR
     let res = match (cmd, matches) {
         ("authInfo", sub_m) => match_auth(sub_m),
         ("about", sub_m) => match_about(sub_m),
+        // TODO: Implement close
+        ("defs", sub_m) => match_defs(sub_m),
+        ("libs", sub_m) => match_libs(sub_m),
         ("ops", sub_m) => match_ops(sub_m),
         ("filetypes", sub_m,) => match_filetypes(sub_m),
         ("nav", sub_m) => match_nav(sub_m),

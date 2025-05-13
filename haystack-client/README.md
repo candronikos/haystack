@@ -4,61 +4,89 @@ Rust implementation of an async haystack client library and CLI tool and REPL.
 ## Implemented Ops
 - [x] About
 - [x] Close
-- [ ] Defs
-- [ ] Libs
+- [x] Defs
+  - [x] filter
+  - [x] limit
+- [x] Libs
+  - [x] filter
+  - [x] limit
 - [x] Ops
+  - [x] filter
+  - [x] limit
 - [x] Filetypes
+  - [x] filter
+  - [x] limit
 - [x] Read
-    - [x] By filter
-    - [x] By id
+  - [x] By filter
+  - [x] By id
 - [x] Nav
 - [x] WatchSub
 - [x] WatchUnsub
 - [x] WatchPoll
 - [ ] PointWrite
-- [x] HisRead
-    - [x] Single hisRead
-    - [x] Batch hisRead
-- [*] HisWrite (Must be valid zinc str)
-    - [x] Single hisWrite
-    - [x] Batch hisWrite
+- [x] hisRead
+  - [x] Single
+  - [x] Batch
+- [x] hisWrite (Must be valid zinc str)
+  - [x] Single
+  - [x] Batch
 - [ ] Invoke Action
 
 ## Example CLI uses
 ```{bash}
 # Reuse haystack bearer token
-(
-    export HAYSTACK_AUTH_CONFIG=`hs default auth`; hs read --filter "point" --limit=1
-) > read
+( # () Opens a sub-shell
+  export HAYSTACK_AUTH_CONFIG=`hs default auth`;
+  
+  # Destination does not need to be included if the environment variable
+  # HAYSTACK_AUTH_CONFIG is set.
+  
+  # I also set up my .bashrc to use the alias "hs" instead of the full name.
+  # Stick with `haystack-client` if you haven't configured your .bashrc this way
+  hs read --filter "point" --limit=1
+
+  # Example below of correct character escaping in bash shell when passing
+  # filters enclosed by either single or double quotes.
+  hs read --filter 'point and unit==\"kWh\" and equipRef->siteRef'
+  hs read --filter "point and unit==\\\"kWh\\\" and equipRef->siteRef"
+)
+
+# Read–eval–print loop (REPL) You will see the prompt "hs〉"
+# To learn about the $DEST argument, see the configuration section below.
+haystack-client $DEST repl
+hs〉about
 
 # About
-haystack-client default about
+haystack-client $DEST about
 
 # Read by filter
-haystack-client default read --filter "point"
+haystack-client $DEST read --filter "point and unit==\"kWh\" and equipRef->siteRef"
 
 # Read by ids
-haystack-client default read --ids @p:demo:r:2f70054a-87f6d1de @p:demo:r:2f70054a-314342cd
+haystack-client $DEST read --ids @p:demo:r:2f70054a-87f6d1de @p:demo:r:2f70054a-314342cd
 
 # His Read (single)
-haystack-client default hisRead yesterday @p:demo:r:2f70054a-87f6d1de
+haystack-client $DEST hisRead yesterday @p:demo:r:2f70054a-87f6d1de
 
 # His Read (batch, could use the optional --timezone argument)
-haystack-client default hisRead yesterday @p:demo:r:2f70054a-87f6d1de @p:demo:r:2f70054a-314342cd
+haystack-client $DEST hisRead yesterday @p:demo:r:2f70054a-87f6d1de @p:demo:r:2f70054a-314342cd
 
 # WatchSub
 ## Can create watches with or without an id list
-haystack-client default watchSub -c "test" @p:demo:r:2f70054a-51d71f8e
+haystack-client $DEST watchSub -c "test" @p:demo:r:2f70054a-51d71f8e
 
 ## Subscribing points to a watch
-haystack-client default watchSub -s "w-2f8e0d48-64f17e75" @p:demo:r:2f70054a-51d71f8e @p:demo:r:2f70054a-69f26216
+haystack-client $DEST watchSub -s "w-2f8e0d48-64f17e75" @p:demo:r:2f70054a-51d71f8e @p:demo:r:2f70054a-69f26216
 
 # Unsubscribing and closing a watch
-haystack-client default watchUnsub --close w-2f8e1d8b-8efac249
-haystack-client default watchUnsub @p:demo:r:2f70054a-51d71f8e
+haystack-client $DEST watchUnsub --close w-2f8e1d8b-8efac249
+haystack-client $DEST watchUnsub @p:demo:r:2f70054a-51d71f8e
 
 # Watch Poll (with or without --refresh)
-haystack-client default watchPoll w-2f8e2739-3c4b3bde --refresh
+haystack-client $DEST watchPoll w-2f8e2739-3c4b3bde --refresh
+
+# Defs
+haystack-client $DEST defs "name==\\\"testJob\\\"" --limit 1
 ```
 
 ## TODO

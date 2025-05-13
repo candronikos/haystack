@@ -170,16 +170,44 @@ impl <'a>HaystackOpTxRx {
         (op, resp_rx)
     }
 
-    pub fn ops() -> (Self,oneshot::Receiver<HaystackResponse>) {
+    pub fn ops(filter: Option<FStr>, limit: Option<usize>) -> Result<(Self,oneshot::Receiver<HaystackResponse>),Error> {
         let (resp_tx, resp_rx) = oneshot::channel();
+        
+        let mut payload = "ver:\"3.0\"\n".to_string();
+
+        match filter {
+            Some(f) => {
+                write!(payload,"filter")?;
+                if limit.is_some() {
+                    write!(payload,",limit")?;
+                }
+                write!(payload,"\n\"{}\"",f)?;
+                if let Some(l) = limit {
+                    write!(payload,",{}",l)?;
+                }
+            },
+            None => {
+                if limit.is_some() {
+                    write!(payload,"limit")?;
+                } else {
+                    write!(payload,"empty")?;
+                }
+                if let Some(l) = limit {
+                    write!(payload,"\n{}",l)?;
+                }
+            }
+        };
+
+        write!(payload,"\n")?;
+
         let op = Self {
             op: FStr::Str("ops"),
-            method: FStr::Str("GET"),
-            body: None,
+            method: FStr::Str("POST"),
+            body: Some(FStr::String(payload)),
             resp_tx
         };
 
-        (op, resp_rx)
+        Ok((op, resp_rx))
     }
 
     pub fn close() -> (Self,oneshot::Receiver<HaystackResponse>) {
@@ -194,16 +222,124 @@ impl <'a>HaystackOpTxRx {
         (op, resp_rx)
     }
 
-    pub fn filetypes() -> (Self,oneshot::Receiver<HaystackResponse>) {
+    pub fn defs(filter: Option<FStr>, limit: Option<usize>) -> Result<(Self,oneshot::Receiver<HaystackResponse>),Error> {
         let (resp_tx, resp_rx) = oneshot::channel();
+        
+        let mut payload = "ver:\"3.0\"\n".to_string();
+
+        match filter {
+            Some(f) => {
+                write!(payload,"filter")?;
+                if limit.is_some() {
+                    write!(payload,",limit")?;
+                }
+                write!(payload,"\n\"{}\"",f)?;
+                if let Some(l) = limit {
+                    write!(payload,",{}",l)?;
+                }
+            },
+            None => {
+                if limit.is_some() {
+                    write!(payload,"limit")?;
+                } else {
+                    write!(payload,"empty")?;
+                }
+                if let Some(l) = limit {
+                    write!(payload,"\n{}",l)?;
+                }
+            }
+        };
+
+        write!(payload,"\n")?;
+
         let op = Self {
-            op: FStr::Str("formats"),
-            method: FStr::Str("GET"),
-            body: None,
+            op: FStr::Str("defs"),
+            method: FStr::Str("POST"),
+            body: Some(FStr::String(payload)),
             resp_tx
         };
 
-        (op, resp_rx)
+        Ok((op, resp_rx))
+    }
+
+    pub fn libs(filter: Option<FStr>, limit: Option<usize>) -> Result<(Self,oneshot::Receiver<HaystackResponse>),Error> {
+        let (resp_tx, resp_rx) = oneshot::channel();
+        
+        let mut payload = "ver:\"3.0\"\n".to_string();
+
+        match filter {
+            Some(f) => {
+                write!(payload,"filter")?;
+                if limit.is_some() {
+                    write!(payload,",limit")?;
+                }
+                write!(payload,"\n\"{}\"",f)?;
+                if let Some(l) = limit {
+                    write!(payload,",{}",l)?;
+                }
+            },
+            None => {
+                if limit.is_some() {
+                    write!(payload,"limit")?;
+                } else {
+                    write!(payload,"empty")?;
+                }
+                if let Some(l) = limit {
+                    write!(payload,"\n{}",l)?;
+                }
+            }
+        };
+
+        write!(payload,"\n")?;
+
+        let op = Self {
+            op: FStr::Str("libs"),
+            method: FStr::Str("POST"),
+            body: Some(FStr::String(payload)),
+            resp_tx
+        };
+
+        Ok((op, resp_rx))
+    }
+
+    pub fn filetypes(filter: Option<FStr>, limit: Option<usize>) -> Result<(Self,oneshot::Receiver<HaystackResponse>),Error> {
+        let (resp_tx, resp_rx) = oneshot::channel();
+        
+        let mut payload = "ver:\"3.0\"\n".to_string();
+
+        match filter {
+            Some(f) => {
+                write!(payload,"filter")?;
+                if limit.is_some() {
+                    write!(payload,",limit")?;
+                }
+                write!(payload,"\n\"{}\"",f)?;
+                if let Some(l) = limit {
+                    write!(payload,",{}",l)?;
+                }
+            },
+            None => {
+                if limit.is_some() {
+                    write!(payload,"limit")?;
+                } else {
+                    write!(payload,"empty")?;
+                }
+                if let Some(l) = limit {
+                    write!(payload,"\n{}",l)?;
+                }
+            }
+        };
+
+        write!(payload,"\n")?;
+
+        let op = Self {
+            op: FStr::Str("filetypes"),
+            method: FStr::Str("POST"),
+            body: Some(FStr::String(payload)),
+            resp_tx
+        };
+
+        Ok((op, resp_rx))
     }
 
     pub fn read(filter: FStr, limit: Option<usize>) -> Result<(Self,oneshot::Receiver<HaystackResponse>),Error> {

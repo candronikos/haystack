@@ -16,7 +16,7 @@
 .vscode
 *.code-workspace
 
-haystack-render
+/worktrees/
 
 haystack-config.yaml
 

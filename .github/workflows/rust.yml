@@ -12,7 +12,7 @@ jobs:
   package:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest, freebsd]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -63,10 +63,6 @@ jobs:
       - name: Install cross
         run: cargo install cross
 
-      # Install target
-      - name: Add Rust target
-        run: rustup target add x86_64-unknown-linux-gnu
-
       # Build release binaries for multiple platforms67|
       - name: Add Rust targets
         run: |
@@ -84,4 +80,4 @@ jobs:
             target/x86_64-unknown-linux-gnu/release/haystack-client
             target/x86_64-apple-darwin/release/haystack-client
             target/x86_64-pc-windows-gnu/release/haystack-client.exe
-            target/x86_64-unknown-freebsd/release/haystack-client
+      #      target/x86_64-unknown-freebsd/release/haystack-client

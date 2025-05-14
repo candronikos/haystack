@@ -14,15 +14,17 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libssl-dev
+          sudo apt-get install -y libssl-dev pkg-config
 
       - name: Set environment variables
-        run: echo "OPENSSL_DIR=/usr/lib/ssl" >> $GITHUB_ENV
+        run: |
+          echo "OPENSSL_DIR=/usr/lib/ssl" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=/usr/lib/pkgconfig" >> $GITHUB_ENV
 
       - name: Build project
         run: cargo build --release

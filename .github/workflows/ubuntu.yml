@@ -24,10 +24,10 @@ jobs:
           #sudo mkdir -p /usr/lib/ssl/include
           #sudo ln -s /usr/include/openssl /usr/lib/ssl/include
       
-      - name: Set environment variables
-        run: |
-          echo "OPENSSL_DIR=/usr/lib/ssl" >> $GITHUB_ENV
-          echo "PKG_CONFIG_PATH=/usr/lib/pkgconfig" >> $GITHUB_ENV
+      # - name: Set environment variables
+      #   run: |
+      #     echo "OPENSSL_DIR=/usr/lib/ssl" >> $GITHUB_ENV
+      #     echo "PKG_CONFIG_PATH=/usr/lib/pkgconfig" >> $GITHUB_ENV
       
       - name: Build project
         run: cargo build --release -p haystack-client

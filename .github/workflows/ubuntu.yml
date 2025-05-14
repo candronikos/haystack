@@ -16,18 +16,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Cache Cargo registry
+      - name: Cache Cargo registry
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-registry-
+
+      # Cache Cargo index
+      - name: Cache Cargo index
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-index-
+
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libssl-dev pkg-config
-          # Ensure the include directory exists
-          #sudo mkdir -p /usr/lib/ssl/include
-          #sudo ln -s /usr/include/openssl /usr/lib/ssl/include
-      
-      # - name: Set environment variables
-      #   run: |
-      #     echo "OPENSSL_DIR=/usr/lib/ssl" >> $GITHUB_ENV
-      #     echo "PKG_CONFIG_PATH=/usr/lib/pkgconfig" >> $GITHUB_ENV
       
       - name: Build project
         run: cargo build --release -p haystack-client
@@ -35,5 +45,5 @@ jobs:
       - name: Upload release binary
         uses: actions/upload-artifact@v4
         with:
-          name: haystack-client
-          path: target/release/
+          name: haystack-client-ubuntu-x64
+          path: target/release/haystack-client

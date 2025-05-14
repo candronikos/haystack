@@ -32,11 +32,12 @@ jobs:
           key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-index-
-
+              
       - name: Install dependencies
         run: |
           choco install openssl
-          set PATH=C:\Program Files\OpenSSL-Win64\bin;%PATH%
+          $env:PATH = "C:\Program Files\OpenSSL-Win64\bin;" + $env:PATH
+        shell: pwsh
 
       - name: Build project
         run: cargo build --release --target x86_64-pc-windows-msvc -p haystack-client

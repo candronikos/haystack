@@ -13,6 +13,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        target: [x86_64-unknown-linux-gnu, x86_64-apple-darwin, x86_64-pc-windows-gnu]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -41,11 +42,9 @@ jobs:
             echo "OPENSSL_DIR=/usr/lib/ssl" >> $GITHUB_ENV
           elif [ "${{ matrix.os }}" == "macos-latest" ]; then
             echo "PKG_CONFIG_PATH=$(brew --prefix openssl)/lib/pkgconfig" >> $GITHUB_ENV
-            echo "OPENSSL_DIR=$(brew --prefix openssl@1.1)" >> $GITHUB_ENV
+            echo "OPENSSL_DIR=$(brew --prefix openssl)" >> $GITHUB_ENV
           elif [ "${{ matrix.os }}" == "windows-latest" ]; then
             echo "OPENSSL_DIR=C:\\Program Files\\OpenSSL-Win64" >> $GITHUB_ENV
-            echo "OPENSSL_LIB_DIR=C:\\Program Files\\OpenSSL-Win64\\lib" >> $GITHUB_ENV
-            echo "OPENSSL_INCLUDE_DIR=C:\\Program Files\\OpenSSL-Win64\\include" >> $GITHUB_ENV
           fi
         shell: bash
         
@@ -74,7 +73,7 @@ jobs:
           if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
             cross build --release --target x86_64-unknown-linux-gnu
           elif [ "${{ matrix.os }}" == "macos-latest" ]; then
-            cross build --release --target x86_64-apple-darwin
+            cargo build --release --target x86_64-apple-darwin
           elif [ "${{ matrix.os }}" == "windows-latest" ]; then
             cross build --release --target x86_64-pc-windows-gnu
           fi
@@ -83,9 +82,5 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: haystack-release-binaries
-          path: |
-            target/x86_64-unknown-linux-gnu/release/haystack-client
-            target/x86_64-apple-darwin/release/haystack-client
-            target/x86_64-pc-windows-gnu/release/haystack-client.exe
-      #     target/x86_64-unknown-freebsd/release/haystack-client
+          name: haystack-release-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/haystack-client*

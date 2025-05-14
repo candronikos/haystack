@@ -21,8 +21,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libssl-dev pkg-config
           # Ensure the include directory exists
-          sudo mkdir -p /usr/lib/ssl/include
-          sudo ln -s /usr/include/openssl /usr/lib/ssl/include
+          #sudo mkdir -p /usr/lib/ssl/include
+          #sudo ln -s /usr/include/openssl /usr/lib/ssl/include
       
       - name: Set environment variables
         run: |

@@ -30,8 +30,6 @@ jobs:
             brew install openssl pkg-config
           elif [ "${{ matrix.os }}" == "windows-latest" ]; then
             choco install openssl.light
-          elif [ "${{ matrix.os }}" == "freebsd" ]; then
-            sudo pkg install -y openssl pkgconf
           fi
         shell: bash
 
@@ -40,18 +38,17 @@ jobs:
         run: |
           if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
             echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig" >> $GITHUB_ENV
-            echo "OPENSSL_DIR=/usr" >> $GITHUB_ENV
+            echo "OPENSSL_DIR=/usr/lib/ssl" >> $GITHUB_ENV
           elif [ "${{ matrix.os }}" == "macos-latest" ]; then
             echo "PKG_CONFIG_PATH=$(brew --prefix openssl)/lib/pkgconfig" >> $GITHUB_ENV
-            echo "OPENSSL_DIR=$(brew --prefix openssl)" >> $GITHUB_ENV
+            echo "OPENSSL_DIR=$(brew --prefix openssl@1.1)" >> $GITHUB_ENV
           elif [ "${{ matrix.os }}" == "windows-latest" ]; then
             echo "OPENSSL_DIR=C:\\Program Files\\OpenSSL-Win64" >> $GITHUB_ENV
-          elif [ "${{ matrix.os }}" == "freebsd" ]; then
-            echo "PKG_CONFIG_PATH=/usr/local/lib/pkgconfig" >> $GITHUB_ENV
-            echo "OPENSSL_DIR=/usr/local" >> $GITHUB_ENV
+            echo "OPENSSL_LIB_DIR=C:\\Program Files\\OpenSSL-Win64\\lib" >> $GITHUB_ENV
+            echo "OPENSSL_INCLUDE_DIR=C:\\Program Files\\OpenSSL-Win64\\include" >> $GITHUB_ENV
           fi
         shell: bash
-
+        
       # Set up Rust
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
@@ -63,13 +60,13 @@ jobs:
       - name: Install cross
         run: cargo install cross
 
-      # Build release binaries for multiple platforms67|
-      - name: Add Rust targets
-        run: |
-          rustup target add x86_64-unknown-linux-gnu
-          rustup target add x86_64-apple-darwin
-          rustup target add x86_64-pc-windows-gnu
-          rustup target add x86_64-unknown-freebsd
+      # # Build release binaries for multiple platforms67|
+      # - name: Add Rust targets
+      #   run: |
+      #     rustup target add x86_64-unknown-linux-gnu
+      #     rustup target add x86_64-apple-darwin
+      #     rustup target add x86_64-pc-windows-gnu
+      # #    rustup target add x86_64-unknown-freebsd
           
       # Build release binaries for multiple platforms
       - name: Build release binaries
@@ -91,4 +88,4 @@ jobs:
             target/x86_64-unknown-linux-gnu/release/haystack-client
             target/x86_64-apple-darwin/release/haystack-client
             target/x86_64-pc-windows-gnu/release/haystack-client.exe
-      #      target/x86_64-unknown-freebsd/release/haystack-client
+      #     target/x86_64-unknown-freebsd/release/haystack-client

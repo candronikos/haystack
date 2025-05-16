@@ -103,35 +103,34 @@ accept-invalid-certs: true
 > Info on `accept-invalid-certs` [here](https://docs.rs/reqwest/0.12.15/reqwest/struct.ClientBuilder.html#method.danger_accept_invalid_certs). If used in production, this should either be set to false or excluded from the config as it will accept any certificate for any site it's connected to.
 
 #### Supported REST Operations
+##### Standard Operations
 - [x] About
 - [x] Close
-- [x] Defs
-  - [x] filter
-  - [x] limit
-- [x] Libs
-  - [x] filter
-  - [x] limit
-- [x] Ops
-  - [x] filter
-  - [x] limit
-- [x] Filetypes
-  - [x] filter
-  - [x] limit
-- [x] Read
-  - [x] By filter
-  - [x] By id
-- [x] Nav
-- [x] WatchSub
-- [x] WatchUnsub
-- [x] WatchPoll
+- [x] Defs: `filter`: (optional), `limit`: (optional)
+- [x] Libs: `filter`: (optional), `limit`: (optional)
+- [x] Ops: `filter`: (optional), `limit`: (optional)
+- [x] Filetypes: `filter`: (optional), `limit`: (optional)
+- [x] Read: `filter` / `id`
+- [x] Nav: `navId`: (optional)
+- [x] WatchSub: `watchDis` / `watchId`, `lease`: (optional)
+- [x] WatchUnsub: `watchId`, `id` / `close`: (optional)
+- [x] WatchPoll: `watchId`, `refresh`: (optional)
+- [x] hisRead: `range`, `ids`: (1+), `timezone`: (optional)
+- [x] hisWrite (zinc str - single & batch): `data`
 - [ ] PointWrite
-- [x] hisRead
-  - [x] Single
-  - [x] Batch
-- [x] hisWrite (Must be valid zinc str)
-  - [x] Single
-  - [x] Batch
 - [ ] Invoke Action
+
+##### Skyspark Operations
+- [ ] backup
+- [ ] evalAll
+- [ ] io
+- [ ] rec
+- [ ] export
+- [ ] link
+- [ ] file
+- [ ] funcShim
+- [ ] upload
+- [ ] ext
 
 ### haystack-client (Library)
 The underlying API library implementing an asynchronous haystack client. API may change and will be documented further once finalised.

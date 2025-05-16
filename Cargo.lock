@@ -1564,6 +1564,7 @@ dependencies = [
  "nu-ansi-term",
  "reedline",
  "regex",
+ "shlex",
  "winapi-util",
  "yansi",
 ]

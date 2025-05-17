@@ -1,0 +1,76 @@
+name: Release for all platforms
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  release:
+    name: Release - ${{ matrix.platform.os-name }}
+    strategy:
+      matrix:
+        platform:
+          - os-name: x86_64-unknown-linux-gnu
+            runs-on: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            
+          - os-name: aarch64-apple-darwin
+            runs-on: macos-latest
+            target: aarch64-apple-darwin
+
+          - os-name: x86_64-apple-darwin
+            runs-on: macos-latest
+            target: x86_64-apple-darwin
+
+          # - os-name: aarch64-unknown-linux-gnu
+          #   runs-on: ubuntu-latest
+          #   target: aarch64-unknown-linux-gnu
+
+          # - os-name: i686-unknown-linux-gnu
+          #   runs-on: ubuntu-latest
+          #   target: i686-unknown-linux-gnu
+
+          - os-name: x86_64-pc-windows-msvc
+            runs-on: windows-latest
+            target: x86_64-pc-windows-msvc
+            ext: .exe
+
+          - os-name: i686-pc-windows-msvc
+            runs-on: windows-latest
+            target: i686-pc-windows-msvc
+            ext: .exe
+
+    runs-on: ${{ matrix.platform.runs-on }}
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Extract version from Cargo.toml
+      - name: Get haystack-client version
+        id: get-version
+        run: |
+          VERSION=$(cargo metadata -q --format-version 1 --no-deps | jq -r '.packages[] | select(.name == "haystack-client") | .version')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+        shell: bash
+
+      # Build project
+      - name: Build binary
+        uses: houseabsolute/actions-rust-cross@v1
+        with:
+          command: build
+          target: ${{ matrix.platform.target }}
+          args: "--locked --release"
+          strip: true
+
+      # Upload release binary
+      - name: Upload release binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: haystack-client-v${{ env.VERSION }}-${{ matrix.platform.target }}${{ matrix.platform.ext || '' }}
+          path: target/${{ matrix.platform.target }}/release/haystack-client${{ matrix.platform.ext || '' }}
+          if-no-files-found: error

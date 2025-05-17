@@ -10,6 +10,10 @@ on:
 
 jobs:
   build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        target: [x86_64-unknown-linux-gnu]
     runs-on: ubuntu-latest
 
     steps:
@@ -38,6 +42,14 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libssl-dev pkg-config
+
+      # Extract version from Cargo.toml
+      - name: Get haystack-client version
+        id: get-version
+        run: |
+          VERSION=$(cargo metadata -q --format-version 1 --no-deps | jq -r '.packages[] | select(.name == "haystack-client") | .version')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+        shell: bash
       
       - name: Build project
         run: cargo build --release -p haystack-client
@@ -45,5 +57,5 @@ jobs:
       - name: Upload release binary
         uses: actions/upload-artifact@v4
         with:
-          name: haystack-client-ubuntu-x64
+          name: haystack-client-v${{ env.VERSION }}-${{ matrix.target }}
           path: target/release/haystack-client

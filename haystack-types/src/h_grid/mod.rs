@@ -324,6 +324,22 @@ impl <'a,T:'a + NumTrait + 'a>HVal<'a,T> for HGrid<'a,T> {
             }
         }
     }
+    fn to_trio(&self, buf: &mut String) -> fmt::Result {
+        match self {
+            HGrid::Grid { meta, col_index, cols, rows } => {
+                let mut row_iter = rows.iter().peekable();
+                
+                while let Some(row) = row_iter.next() {
+                    row.to_trio(self, buf)?;
+                    if row_iter.peek().is_some() {
+                        write!(buf, "---\n")?;
+                    }
+                }
+            },
+            _ => ()
+        };
+        Ok(())
+    }
     fn to_json(&self, _buf: &mut String) -> fmt::Result {
         unimplemented!();
     }

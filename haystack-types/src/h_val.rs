@@ -10,7 +10,7 @@ use nom::IResult;
 use crate::{h_bool::HBool, h_null::HNull, h_na::HNA,
     h_marker::HMarker, h_remove::HRemove, h_number::HNumber,
     h_date::HDate, h_datetime::HDateTime, h_time::HTime,
-    h_coord::HCoord, h_str::HStr, h_uri::HUri, h_ref::HRef, h_dict::HDict,
+    h_coord::HCoord, h_str::{HStr, XHStr}, h_uri::HUri, h_ref::HRef, h_dict::HDict,
     h_list::HList, h_grid::HGrid};
 
 #[derive(Debug,PartialEq)]
@@ -71,6 +71,7 @@ macro_rules! set_trait_eq_method {
 
 pub trait HVal<'a,T: NumTrait + 'a> {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result;
+    fn to_trio(&self, buf: &mut String) -> fmt::Result;
     fn to_json(&self, buf: &mut String) -> fmt::Result;
     fn haystack_type(&self) -> HType;
 
@@ -82,6 +83,7 @@ pub trait HVal<'a,T: NumTrait + 'a> {
     set_trait_get_method!(get_na_val, HNA);
     set_trait_get_method!(get_bool_val, HBool);
     set_trait_get_method!(get_string_val, HStr);
+    set_trait_get_method!(get_xstr_val, XHStr);
     set_trait_get_method!(get_uri_val, HUri);
     set_trait_get_method!(get_coord_val, HCoord<T>);
     set_trait_get_method!(get_datetime_val, HDateTime);

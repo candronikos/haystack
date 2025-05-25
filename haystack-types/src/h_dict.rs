@@ -31,18 +31,25 @@ impl <'a,T: NumTrait + 'a>HVal<'a,T> for HDict<'a,T> {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         write!(buf,"{{")?;
         let inner = &self.inner;
-        for (k,v) in inner.into_iter() {
+        let mut kv_pairs = inner.into_iter()
+            .filter(|(k,v)| v.get_null_val().is_none())
+            .peekable();
+        for (k,v) in kv_pairs.next() {
             match v.haystack_type() {
                 HType::Remove => write!(buf,"-{}",k),
                 HType::Marker => write!(buf,"{}",k),
                 _ => {
                     write!(buf,"{}:",k)?;
                     v.to_zinc(buf)?;
-                    write!(buf,",")
+                    if kv_pairs.peek().is_some() { write!(buf," ")?; };
+                    Ok(())
                 }
             }?;
         }
         write!(buf,"}}")
+    }
+    fn to_trio(&self, buf: &mut String) -> fmt::Result {
+        HVal::<T>::to_zinc(self, buf)
     }
     fn to_json(&self, _buf: &mut String) -> fmt::Result {
         unimplemented!()

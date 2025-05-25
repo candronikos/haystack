@@ -32,6 +32,9 @@ impl <'a,T: NumTrait + 'a>HVal<'a,T> for HRef {
             None => Ok(()),
         }
     }
+    fn to_trio(&self, buf: &mut String) -> fmt::Result {
+        HVal::<T>::to_zinc(self, buf)
+    }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         write!(buf,"r:{}",self.id)?;
         match &self.dis {

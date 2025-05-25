@@ -61,6 +61,32 @@ impl <'a,T: NumTrait + 'a>HRow<'a,T> {
         }
     }
 
+    pub fn to_trio(&self, parent: &HGrid<'a,T>, buf: &mut String) -> fmt::Result {
+        match parent {
+            HGrid::Grid { meta, col_index, cols, rows } => {
+                if !cols.is_empty() {
+                    let mut iter = cols.iter().enumerate().peekable();
+                    while let Some((idx,_c)) = iter.next() {
+                        match self.inner.get(idx) {
+                            Some(v) => match v {
+                                Some(v) => v.to_trio(buf),
+                                _ => Ok(())
+                            },
+                            None => Ok(())
+                        }?;
+                    }
+                }
+            },
+            HGrid::Error { dis, errTrace } => {
+                ()
+            },
+            HGrid::Empty { .. } => {
+                ()
+            }
+        }
+        Ok(())
+    }
+
     pub fn to_zinc(&self, parent: &HGrid<'a,T>, buf: &mut String) -> fmt::Result {
         match parent {
             HGrid::Grid { meta, col_index, cols, rows } => {

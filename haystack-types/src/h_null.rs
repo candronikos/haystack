@@ -18,6 +18,9 @@ impl <'a,T: NumTrait + 'a>HVal<'a,T> for HNull {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         write!(buf,"{}",ZINC)
     }
+    fn to_trio(&self, buf: &mut String) -> fmt::Result {
+        HVal::<T>::to_zinc(self, buf)
+    }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         write!(buf,"{}",JSON)
     }

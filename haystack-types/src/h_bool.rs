@@ -1,8 +1,6 @@
-use num::Float;
 use crate::{HType, HVal, NumTrait};
 use crate::common::Txt;
 use std::fmt::{self,Write,Display};
-use std::str::FromStr;
 
 #[derive(PartialEq,Debug,Clone)]
 pub struct HBool(pub bool);
@@ -23,6 +21,9 @@ impl <'a,T: NumTrait + 'a>HVal<'a,T> for HBool {
             true => write!(buf,"{}",ZINC_TRUE),
             false => write!(buf,"{}",ZINC_FALSE),
         }
+    }
+    fn to_trio(&self, buf: &mut String) -> fmt::Result {
+        HVal::<T>::to_zinc(self, buf)
     }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         match self.0 {

@@ -27,6 +27,9 @@ impl <'a,T: NumTrait + 'a>HVal<'a,T> for HTime {
         self.inner.second(),self.inner.nanosecond())?;
         Ok(())
     }
+    fn to_trio(&self, buf: &mut String) -> fmt::Result {
+        HVal::<T>::to_zinc(self, buf)
+    }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         write!(buf,"h:")?;
         let it: &dyn HVal<T> = self;

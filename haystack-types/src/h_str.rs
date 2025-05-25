@@ -9,7 +9,8 @@ pub struct HStr(pub String);
 
 pub type Str = HStr;
 
-const THIS_TYPE: HType = HType::Str;
+const STR_TYPE: HType = HType::Str;
+const XSTR_TYPE: HType = HType::XStr;
 
 impl HStr {
     pub fn new(s: &str) -> Self {
@@ -36,6 +37,9 @@ impl <'a,T: NumTrait + 'a>HVal<'a,T> for HStr {
         buf.push('\"');
         Ok(())
     }
+    fn to_trio(&self, buf: &mut String) -> fmt::Result {
+        HVal::<T>::to_zinc(self, buf)
+    }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         match self.0.find(":") {
             Some(_) => write!(buf,"s:{}",self.0),
@@ -43,8 +47,34 @@ impl <'a,T: NumTrait + 'a>HVal<'a,T> for HStr {
         }?;
         Ok(())
     }
-    fn haystack_type(&self) -> HType { THIS_TYPE }
+    fn haystack_type(&self) -> HType { STR_TYPE }
 
     set_trait_eq_method!(get_string_val,'a,T);
     set_get_method!(get_string_val, HStr);
+}
+
+#[derive(Debug,PartialEq)]
+pub struct XHStr {
+    xtype: String,
+    xval: HStr,
+}
+
+impl <'a,T: NumTrait + 'a>HVal<'a,T> for XHStr {
+    fn to_zinc(&self, buf: &mut String) -> fmt::Result {
+        write!(buf,"{}(",self.xtype)?;
+        HVal::<T>::to_zinc(&self.xval, buf)?;
+        write!(buf,")")
+    }
+    fn to_trio(&self, buf: &mut String) -> fmt::Result {
+        HVal::<T>::to_zinc(self, buf)
+    }
+    fn to_json(&self, buf: &mut String) -> fmt::Result {
+        write!(buf,"{{ \"_kind\": \"xstr\", \"type\": \"{}\", \"val\": ",self.xtype)?;
+        HVal::<T>::to_zinc(&self.xval, buf)?;
+        write!(buf,"}}")
+    }
+    fn haystack_type(&self) -> HType { XSTR_TYPE }
+
+    set_trait_eq_method!(get_xstr_val,'a,T);
+    set_get_method!(get_xstr_val, XHStr);
 }

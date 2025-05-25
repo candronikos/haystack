@@ -33,6 +33,9 @@ impl <'a,T: NumTrait + 'a>HVal<'a,T> for HList<'a,T> {
         };
         write!(buf,"}}")
     }
+    fn to_trio(&self, buf: &mut String) -> fmt::Result {
+        HVal::<T>::to_zinc(self, buf)
+    }
     fn to_json(&self, _buf: &mut String) -> fmt::Result {
         unimplemented!()
     }

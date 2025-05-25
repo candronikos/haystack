@@ -42,6 +42,9 @@ impl <'a, T: NumTrait + 'a>HVal<'a,T> for HNumber<T> {
             None => write!(buf,"{}",self.val),
         }
     }
+    fn to_trio(&self, buf: &mut String) -> fmt::Result {
+        HVal::<T>::to_zinc(self, buf)
+    }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         match &self.unit {
             Some(unit) =>  write!(buf,"{} {}",self.val,unit),

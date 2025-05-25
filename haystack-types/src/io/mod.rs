@@ -179,10 +179,10 @@ pub mod parse {
         }
 
         fn get_named_tz(input: &str) -> IResult<&str, &str> {
-            recognize(((
+            recognize((
                 take_while1(|c: char| c.is_ascii_uppercase()),
                 take_while(|c: char| is_alphanumeric(c as u8) || c == '/' || c== '-' || c== '_' || c== '+')
-            ))).parse(input)
+            )).parse(input)
         }
 
         fn timezone(input: &str) -> IResult<&str, (String, HOffset)> {
@@ -246,7 +246,7 @@ pub mod parse {
         }
 
         fn coord_deg<T: Float + Display + FromStr>(input: &str) -> IResult<&str, T> {
-            map_res(recognize(((opt(tag("-")),digit1,opt(((tag("."),digit1)))))),|s: &str| s.parse::<T>()).parse(input)
+            map_res(recognize((opt(tag("-")),digit1,opt((tag("."),digit1)))),|s: &str| s.parse::<T>()).parse(input)
         }
 
         pub fn coord<T: Float + Display + FromStr>(input: &str) -> IResult<&str, HCoord<T>> {

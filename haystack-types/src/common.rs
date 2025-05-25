@@ -76,10 +76,10 @@ pub fn unicode_char(ex: char) -> impl Fn(char) -> bool {
 
 pub fn id(input: &str) -> IResult<&str,&str> {
     let lower = |c: char| { c>='a' && c<='z' };
-    recognize(((
+    recognize((
         take_while1(lower),
         many0(alt((alphanumeric1,tag("_"))))
-    ))).parse(input)
+    )).parse(input)
 }
 
 pub trait ZincWriter<'a,T: NumTrait + 'a> {

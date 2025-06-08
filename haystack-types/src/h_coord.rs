@@ -40,14 +40,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_hcoord_new() {
+    fn test_new() {
         let coord = HCoord::new(10.5, 20.5);
         assert_eq!(coord.lat, 10.5);
         assert_eq!(coord.long, 20.5);
     }
 
     #[test]
-    fn test_hcoord_to_zinc() {
+    fn test_to_zinc() {
         let coord = HCoord::new(10.5, 20.5);
         let mut buf = String::new();
         coord.to_zinc(&mut buf).unwrap();
@@ -55,7 +55,7 @@ mod tests {
     }
 
     #[test]
-    fn test_hcoord_to_trio() {
+    fn test_to_trio() {
         let coord = HCoord::new(10.5, 20.5);
         let mut buf = String::new();
         coord.to_trio(&mut buf).unwrap();
@@ -63,7 +63,7 @@ mod tests {
     }
 
     #[test]
-    fn test_hcoord_to_json() {
+    fn test_to_json() {
         let coord = HCoord::new(10.5, 20.5);
         let mut buf = String::new();
         coord.to_json(&mut buf).unwrap();
@@ -71,7 +71,7 @@ mod tests {
     }
 
     #[test]
-    fn test_hcoord_haystack_type() {
+    fn test_haystack_type() {
         let coord = HCoord::new(10.5, 20.5);
         assert_eq!(coord.haystack_type(), HType::Coord);
     }

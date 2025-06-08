@@ -10,7 +10,6 @@ pub struct HStr(pub String);
 pub type Str = HStr;
 
 const STR_TYPE: HType = HType::Str;
-const XSTR_TYPE: HType = HType::XStr;
 
 impl HStr {
     pub fn new(s: &str) -> Self {
@@ -53,28 +52,56 @@ impl <'a,T: NumTrait + 'a>HVal<'a,T> for HStr {
     set_get_method!(get_string_val, HStr);
 }
 
-#[derive(Debug,PartialEq)]
-pub struct XHStr {
-    xtype: String,
-    xval: HStr,
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-impl <'a,T: NumTrait + 'a>HVal<'a,T> for XHStr {
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        write!(buf,"{}(",self.xtype)?;
-        HVal::<T>::to_zinc(&self.xval, buf)?;
-        write!(buf,")")
+    #[test]
+    fn test_new() {
+        let hstr = HStr::new("hello");
+        assert_eq!(hstr.as_str(), "hello");
     }
-    fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        HVal::<T>::to_zinc(self, buf)
-    }
-    fn to_json(&self, buf: &mut String) -> fmt::Result {
-        write!(buf,"{{ \"_kind\": \"xstr\", \"type\": \"{}\", \"val\": ",self.xtype)?;
-        HVal::<T>::to_zinc(&self.xval, buf)?;
-        write!(buf,"}}")
-    }
-    fn haystack_type(&self) -> HType { XSTR_TYPE }
 
-    set_trait_eq_method!(get_xstr_val,'a,T);
-    set_get_method!(get_xstr_val, XHStr);
+    #[test]
+    fn test_into_string() {
+        let hstr = HStr::new("hello");
+        let s = hstr.into_string();
+        assert_eq!(s, "hello");
+    }
+
+    #[test]
+    fn test_clone_into_string() {
+        let hstr = HStr::new("hello");
+        let s = hstr.clone_into_string();
+        assert_eq!(s, "hello");
+    }
+
+    #[test]
+    fn test_to_zinc() {
+        let hstr = HStr::new("hello");
+        let mut buf = String::new();
+        HVal::<f64>::to_zinc(&hstr, &mut buf).unwrap();
+        assert_eq!(buf, "\"hello\"");
+    }
+
+    #[test]
+    fn test_to_trio() {
+        let hstr = HStr::new("hello");
+        let mut buf = String::new();
+        HVal::<f64>::to_trio(&hstr, &mut buf).unwrap();
+        assert_eq!(buf, "\"hello\"");
+    }
+
+    #[test]
+    fn test_to_json() {
+        let hstr = HStr::new("hello");
+        let mut buf = String::new();
+        HVal::<f64>::to_json(&hstr, &mut buf).unwrap();
+        assert_eq!(buf, "hello");
+
+        let hstr_with_colon = HStr::new("key:value");
+        let mut buf_with_colon = String::new();
+        HVal::<f64>::to_json(&hstr_with_colon, &mut buf_with_colon).unwrap();
+        assert_eq!(buf_with_colon, "s:key:value");
+    }
 }

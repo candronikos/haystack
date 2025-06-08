@@ -33,6 +33,9 @@ pub use num::Float;
 mod h_str;
 pub use h_str::Str;
 
+mod h_xstr;
+pub use h_xstr::XStr;
+
 mod h_uri;
 pub use h_uri::Uri;
 

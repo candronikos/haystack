@@ -3,6 +3,7 @@ use crate::io::HBox;
 use crate::{io, NumTrait};
 use std::fmt::{self,Display,Formatter,Debug};
 use core::str::FromStr;
+use std::rc::Rc;
 use num::Float;
 
 use nom::IResult;
@@ -10,7 +11,7 @@ use nom::IResult;
 use crate::{h_bool::HBool, h_null::HNull, h_na::HNA,
     h_marker::HMarker, h_remove::HRemove, h_number::HNumber,
     h_date::HDate, h_datetime::HDateTime, h_time::HTime,
-    h_coord::HCoord, h_str::{HStr, XHStr}, h_uri::HUri, h_ref::HRef, h_dict::HDict,
+    h_coord::HCoord, h_str::HStr, h_xstr::HXStr, h_uri::HUri, h_ref::HRef, h_dict::HDict,
     h_list::HList, h_grid::HGrid};
 
 #[derive(Debug,PartialEq)]
@@ -75,6 +76,20 @@ pub trait HVal<'a,T: NumTrait + 'a> {
     fn to_json(&self, buf: &mut String) -> fmt::Result;
     fn haystack_type(&self) -> HType;
 
+    fn as_hval(&'a self) -> &'a dyn HVal<'a,T>
+    where
+        Self: Sized + 'a,
+    {
+        self as &dyn HVal<T>
+    }
+
+    fn to_hbox(self) -> HBox<'a,T>
+    where
+        Self: Sized + 'a,
+    {
+        Rc::new(self)
+    }
+
     fn _eq(&self, other: &dyn HVal<'a,T>) -> bool;
 
     set_trait_get_method!(get_null_val, HNull);
@@ -83,7 +98,7 @@ pub trait HVal<'a,T: NumTrait + 'a> {
     set_trait_get_method!(get_na_val, HNA);
     set_trait_get_method!(get_bool_val, HBool);
     set_trait_get_method!(get_string_val, HStr);
-    set_trait_get_method!(get_xstr_val, XHStr);
+    set_trait_get_method!(get_xstr_val, HXStr);
     set_trait_get_method!(get_uri_val, HUri);
     set_trait_get_method!(get_coord_val, HCoord<T>);
     set_trait_get_method!(get_datetime_val, HDateTime);

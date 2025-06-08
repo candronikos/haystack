@@ -51,3 +51,68 @@ impl <'a,T: NumTrait + 'a>HVal<'a,T> for HRef {
     set_trait_eq_method!(get_ref_val,'a,T);
     set_get_method!(get_ref_val, HRef);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_href_new() {
+        let href = HRef::new("id123".to_string(), Some("Building 1: \"Main\"".to_string()));
+        assert_eq!(href.id, "id123");
+        assert_eq!(href.dis, Some("Building 1: \"Main\"".to_string()));
+        assert_ne!(href.dis, Some("Building 2: \"Main\"".to_string()));
+    }
+
+    #[test]
+    fn test_href_to_zinc() {
+        let href = HRef::new("id123".to_string(), Some("display".to_string()));
+        let mut buf = String::new();
+        let href_hval = HVal::<f64>::as_hval(&href);
+        href_hval.to_zinc(&mut buf).unwrap();
+        assert_eq!(buf, "@id123 display");
+    }
+
+    #[test]
+    fn test_href_to_zinc_no_dis() {
+        let href = HRef::new("id123".to_string(), None);
+        let mut buf = String::new();
+        let href_hval = HVal::<f64>::as_hval(&href);
+        href_hval.to_zinc(&mut buf).unwrap();
+        assert_eq!(buf, "@id123");
+    }
+
+    #[test]
+    fn test_href_to_trio() {
+        let href = HRef::new("id123".to_string(), Some("display".to_string()));
+        let mut buf = String::new();
+        let href_hval = HVal::<f64>::as_hval(&href);
+        href_hval.to_trio(&mut buf).unwrap();
+        assert_eq!(buf, "@id123 display");
+    }
+
+    #[test]
+    fn test_href_to_json() {
+        let href = HRef::new("id123".to_string(), Some("display".to_string()));
+        let mut buf = String::new();
+        let href_hval = HVal::<f64>::as_hval(&href);
+        href_hval.to_json(&mut buf).unwrap();
+        assert_eq!(buf, "r:id123 display");
+    }
+
+    #[test]
+    fn test_href_to_json_no_dis() {
+        let href = HRef::new("id123".to_string(), None);
+        let mut buf = String::new();
+        let href_hval = HVal::<f64>::as_hval(&href);
+        href_hval.to_json(&mut buf).unwrap();
+        assert_eq!(buf, "r:id123");
+    }
+
+    #[test]
+    fn test_haystack_type() {
+        let href = HRef::new("id123".to_string(), None);
+        let href_hval = HVal::<f64>::as_hval(&href);
+        assert_eq!(href_hval.haystack_type(), HType::Ref);
+    }
+}

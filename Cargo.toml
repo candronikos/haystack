@@ -3,11 +3,7 @@ package.homepage = "https://candronikos.com/projects/haystack-rust/"
 package.repository = "https://github.com/candronikos/haystack"
 members = [
     "haystack-types",
-    #"haystack-db",
     "haystack-client",
-    #"haystack-awk",
-    #"haystack-render",
-    # "haystack-cli",
 ]
 
 resolver = "2"

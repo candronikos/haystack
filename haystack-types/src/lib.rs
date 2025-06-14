@@ -64,3 +64,27 @@ mod h_list;
 pub use h_list::List;
 
 pub mod io;
+
+#[cfg(feature = "lua54")]
+extern crate mlua_54 as mlua;
+#[cfg(feature = "lua53")]
+extern crate mlua_53 as mlua;
+#[cfg(feature = "lua52")]
+extern crate mlua_52 as mlua;
+#[cfg(feature = "lua51")]
+extern crate mlua_51 as mlua;
+#[cfg(feature = "luajit")]
+extern crate mlua_luajit as mlua;
+#[cfg(feature = "luajit52")]
+extern crate mlua_jit52 as mlua;
+#[cfg(feature = "luau")]
+extern crate mlua_u as mlua;
+#[cfg(feature = "luau-jit")]
+extern crate mlua_ujit as mlua;
+#[cfg(feature = "luau-vector4")]
+extern crate mlua_uvector4 as mlua;
+
+#[cfg(feature = "lua")]
+pub mod lua;
+#[cfg(feature = "lua")]
+pub use lua::haystack;

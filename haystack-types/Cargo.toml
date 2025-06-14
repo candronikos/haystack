@@ -10,9 +10,32 @@ keywords = ["haystack", "skyspark", "zinc", "trio"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
+crate-type = ["cdylib", "rlib"]
 name = "haystack_types"
 
+[features]
+lua54        = ["mlua_54", "lua"]
+lua53        = ["mlua_53", "lua"]
+lua52        = ["mlua_52", "lua"]
+lua51        = ["mlua_51", "lua"]
+luajit       = ["mlua_jit", "lua"]
+luajit52     = ["mlua_jit52", "lua"]
+luau         = ["mlua_u", "lua"]
+luau-jit     = ["mlua_ujit", "lua"]
+luau-vector4 = ["mlua_uvector4", "lua"]
+lua          = []
+
 [dependencies]
+mlua_54       = { version = "0.10.5", package = "mlua", features = ["lua54", "module", "async"], optional = true }
+mlua_53       = { version = "0.10.5", package = "mlua", features = ["lua53", "module", "async"], optional = true }
+mlua_52       = { version = "0.10.5", package = "mlua", features = ["lua52", "module", "async"], optional = true }
+mlua_51       = { version = "0.10.5", package = "mlua", features = ["lua51", "module", "async"], optional = true }
+mlua_jit      = { version = "0.10.5", package = "mlua", features = ["luajit", "module", "async"], optional = true }
+mlua_jit52    = { version = "0.10.5", package = "mlua", features = ["luajit52", "module", "async"], optional = true }
+mlua_u        = { version = "0.10.5", package = "mlua", features = ["luau", "module", "async"], optional = true }
+mlua_ujit     = { version = "0.10.5", package = "mlua", features = ["luau-jit", "module", "async"], optional = true }
+mlua_uvector4 = { version = "0.10.5", package = "mlua", features = ["luau-vector4", "module", "async"], optional = true }
+
 url = "2.5"
 chrono = "0.4"
 chrono-tz = "0.9"

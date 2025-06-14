@@ -320,7 +320,7 @@ impl <'a,T:'a + NumTrait + 'a>HVal<'a,T> for HGrid<'a,T> {
                     }
                 }
 
-                write!(buf,"empty\n")
+                write!(buf,"\nempty\n")
             }
         }
     }

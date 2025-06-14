@@ -255,28 +255,23 @@ pub mod parse {
             Ok((input,HCoord::new(lat,long)))
         }
 
-        fn tags<'a,'b,T>(input: &'b str) -> IResult<&'b str,Option<HashMap<String,HBox<'a,T>>>>
+        fn tags<'a,'b,T>(input: &'b str) -> IResult<&'b str,HashMap<String,HBox<'a,T>>>
         where
             T: NumTrait + 'a,
             'a:'b,
         {
-            let (input,res_opt) = opt(separated_list1(
+            let (input,res) = separated_list1(
                 tag(" "),
                 (id, opt(preceded(tag(":"), literal::<'a,'b,T>)))
-            )).parse(input)?;
+            ).parse(input)?;
 
             let mut map: HashMap<String, HBox<'a,T>> = HashMap::new();
-            let map_opt: Option<_>;
-            if let Some(res) = res_opt {
-                res.into_iter().for_each(|(k,v)| {
-                    map.insert(k.to_owned(), v.unwrap_or(Rc::new(crate::h_marker::MARKER) as HBox<'a, T>));
-                });
-                map_opt = Some(map);
-            } else {
-                map_opt = None;
-            }
+            
+            res.into_iter().for_each(|(k,v)| {
+                map.insert(k.to_owned(), v.unwrap_or(Rc::new(crate::h_marker::MARKER) as HBox<'a, T>));
+            });
 
-            Ok((input,map_opt))
+            Ok((input,map))
         }
 
         fn tags_list<'a,'b,T: NumTrait + 'a>(input: &'b str) -> IResult<&'b str,Option<Vec<HBox<'a,T>>>>
@@ -294,7 +289,7 @@ pub mod parse {
             T: NumTrait + 'a,
             'a:'b,
         {
-            let (input,opt_dict) = delimited(tag("{"),tags::<'a,'b,T>,tag("}")).parse(input)?;
+            let (input,opt_dict) = delimited(tag("{"),opt(tags::<'a,'b,T>),tag("}")).parse(input)?;
 
             let dict = match opt_dict {
                 Some(dict) => dict,
@@ -324,7 +319,7 @@ pub mod parse {
             T: NumTrait + 'a,
             'a:'b,
         {
-            let (input,opt_dict) = tags::<'a,'b,T>(input)?;
+            let (input,opt_dict) = opt(tags::<'a,'b,T>).parse(input)?;
 
             let dict = match opt_dict {
                 Some(dict) => dict,
@@ -342,7 +337,10 @@ pub mod parse {
             T: NumTrait + 'a,
             'a:'b,
         {
-            let (input,columns): (_,Vec<(_, Option<HashMap<_,HBox<'a,T>>>)>) = separated_list1(tag(","), separated_pair(id, space1, tags::<T>)).parse(input)?;
+            let (input,columns) = separated_list1(
+                tag(","),
+                (id,opt(preceded(space1, tags::<T>)))
+            ).parse(input)?;
             let columns = columns.into_iter().map(|(id,meta)| (id.to_owned(),meta));
             let columns = columns.collect();
             Ok((input,columns))
@@ -417,7 +415,10 @@ pub mod parse {
 
             // Grid Meta
             let (input,meta) = opt(preceded(space1, grid_meta::<'a,'b,T>)).parse(input)?;
-            let (_, is_empty) = all_consuming(map(terminated(tag("\nempty"), take_while1(|c| c == '\n')), |_| true)).parse(input)?;
+            let (input, _) = tag("\n").parse(input)?;
+            let is_empty_res = all_consuming(terminated(tag::<_, _, ()>("empty"), take_while1(|c| c == '\n')))
+                .parse(input);
+            let is_empty = is_empty_res.is_ok();
             if is_empty {
                 return Ok((input, HGrid::Empty { meta }));
             }
@@ -461,11 +462,9 @@ pub mod parse {
 
                 let res = tags::<f64>(input);
                 if let Ok((_,e)) = res {
-                    let e1_ref = e.as_ref();
                     let mut buf = String::new();
-                    let boxed_element = e1_ref.unwrap();
                     
-                    let v = boxed_element.get("dis").unwrap();
+                    let v = e.get("dis").unwrap();
                     v.to_zinc(&mut buf).unwrap();
                     let rhs = Rc::new(HStr("Fri 31-Jul-2020".to_owned())) as HBox<f64>;
                     assert_eq!(v,&rhs)
@@ -669,6 +668,25 @@ pub mod parse {
                     },
                     _ => panic!("Expected an empty grid with metadata"),
                 }
+            }
+
+            #[test]
+            fn parse_cols() {
+                let input = "col1,col2 meta1,col3 meta2";
+                let result = cols::<f64>(input).unwrap().1;
+
+                assert_eq!(result.len(), 3);
+
+                assert_eq!(result[0].0, "col1");
+                assert!(result[0].1.is_none());
+
+                assert_eq!(result[1].0, "col2");
+                assert!(result[1].1.is_some());
+                assert!(result[1].1.as_ref().unwrap().contains_key("meta1"));
+
+                assert_eq!(result[2].0, "col3");
+                assert!(result[2].1.is_some());
+                assert!(result[2].1.as_ref().unwrap().contains_key("meta2"));
             }
 
             /*

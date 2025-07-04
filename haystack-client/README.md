@@ -88,6 +88,17 @@ haystack-client $DEST watchPoll w-2f8e2739-3c4b3bde --refresh
 haystack-client $DEST defs "name==\\\"testJob\\\"" --limit 1
 ```
 
+## Tests
+The client library crate requires environment variables below be set to work:
+* `TEST_HAYSTACK_SERVER_URL`
+* `TEST_HAYSTACK_SERVER_USER`
+* `TEST_HAYSTACK_SERVER_PASSWORD`
+
+You may set them in an `.env` file and load them using the command below:
+```bash
+export $(cat .env | xargs) && cargo test
+```
+
 ## TODO
 * Implement remaining Haystack OPs
 * Provide options that allow the user to control the structure and format of returned grid. i.e. when creating new watches, allow the user to return the `watchId` only.

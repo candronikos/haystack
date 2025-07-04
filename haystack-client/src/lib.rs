@@ -381,31 +381,16 @@ mod tests {
     use rstest::*;
     use futures::future;
     use std::ops::{Deref, DerefMut};
+    use std::env;
     use super::*;
-
-    // #[fixture]
-    // // TODO: Write test with close op that closes original session
-    // fn client() -> future::Ready<Box<mpsc::Sender<ops::HaystackOpTxRx>>> {
-    //     lazy_static! {
-    //         static ref HS_SESSION: (AbortHandle,mpsc::Sender<ops::HaystackOpTxRx>) = HSession::new(
-    //             "https://analytics.host.docker.internal/api/demo/".to_owned(),
-    //             "su".to_owned(),
-    //             "password".to_owned(),
-    //             true,
-    //             Arc::new(Mutex::new(None)),
-    //             None
-    //         ).unwrap();
-    //     }
-    //     future::ready::<Box<mpsc::Sender<ops::HaystackOpTxRx>>>(Box::new(HS_SESSION.1.clone()))
-    // }
 
     // TODO: Write test with close op that closes original session
     #[fixture]
     async fn client() -> Box<mpsc::Sender<ops::HaystackOpTxRx>> {
         let hs_session: (AbortHandle, mpsc::Sender<ops::HaystackOpTxRx>, Option<String>) = HSession::new(
-                "https://analytics.host.docker.internal/api/demo/".to_owned(),
-                "su".to_owned(),
-                "password".to_owned(),
+                env::var("TEST_HAYSTACK_SERVER_URL").unwrap(),
+                env::var("TEST_HAYSTACK_SERVER_USER").unwrap(),
+                env::var("TEST_HAYSTACK_SERVER_PASSWORD").unwrap(),
                 true,
                 Arc::new(Mutex::new(None)),
                 None
@@ -548,9 +533,9 @@ mod tests {
     async fn spawn_multiple_tasks_in_new_session() {
         use futures::join;
         let (abort_handle,addr, _) = HSession::new(
-            "https://analytics.host.docker.internal/api/demo/".to_owned(),
-            "su".to_owned(),
-            "password".to_owned(),
+            env::var("TEST_HAYSTACK_SERVER_URL").unwrap(),
+            env::var("TEST_HAYSTACK_SERVER_USER").unwrap(),
+            env::var("TEST_HAYSTACK_SERVER_PASSWORD").unwrap(),
             true,
             Arc::new(Mutex::new(None)),
             None

@@ -731,7 +731,7 @@ pub fn cli(is_tty: IsTTY) -> Command {
     cmd
 }
 
-async fn repl_generic<'a, T:NumTrait + 'a>(m_func: MATCH_FUNC_TYPE, matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+async fn repl_generic<'a, T:NumTrait>(m_func: MATCH_FUNC_TYPE, matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
     let Context { abort_handle, sender: client } = context;
     
     let (op, resp) = m_func(&matches)
@@ -744,7 +744,7 @@ async fn repl_generic<'a, T:NumTrait + 'a>(m_func: MATCH_FUNC_TYPE, matches: Arg
             Err(anyhow::anyhow!("Failed to get response: {:?}", e))
         })?;
 
-    Ok(Some(response.get_raw().to_string()))
+    Ok(Some(response.get_raw()))
 }
 
 async fn repl_not_implemented<'a>(matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
@@ -866,7 +866,7 @@ pub struct Context<'a> {
     sender: &'a Sender<HaystackOpTxRx>,
 }
 
-pub async fn eval_subcommand<'a, T:NumTrait + 'a>(get_op: MATCH_FUNC_TYPE, matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
+pub async fn eval_subcommand<'a, T:NumTrait>(get_op: MATCH_FUNC_TYPE, matches: ArgMatches, context: &mut Context<'a>) -> AnyResult<Option<String>> {
     let Context { abort_handle, sender: client } = context;
     
     let (op, resp) = get_op(&matches)
@@ -879,7 +879,7 @@ pub async fn eval_subcommand<'a, T:NumTrait + 'a>(get_op: MATCH_FUNC_TYPE, match
             Err(anyhow::anyhow!("Failed to get response: {:?}", e))
         })?;
     
-    Ok(Some(response.get_raw().to_string()))
+    Ok(Some(response.get_raw()))
 }
 
 pub async fn send_haystack_op<T: NumTrait>(client: &Sender<HaystackOpTxRx>, resp: Receiver<HaystackResponse>, op: HaystackOpTxRx) -> AnyResult<HaystackResponse> {

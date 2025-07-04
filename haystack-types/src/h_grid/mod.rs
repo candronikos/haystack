@@ -1,16 +1,11 @@
 use core::{hash, panic};
-use core::slice::SliceIndex;
-use core::ops::Index;
-use std::rc::Rc;
-use std::slice::Iter;
-use num::Float;
 use crate::h_str::HStr;
-use crate::io::HBox;
+use crate::h_val::HBox;
 use crate::{HType, HVal, NumTrait};
-use std::fmt::{self, write, Display, Write};
-use std::str::FromStr;
+use std::fmt::{self, Write};
 
 use std::collections::HashMap;
+use rpds::Vector;
 
 pub mod h_col;
 pub use h_col::{Col,HCol};
@@ -18,12 +13,16 @@ pub use h_col::{Col,HCol};
 pub mod h_row;
 pub use h_row::{Row,HRow};
 
-pub enum HGrid<'a, T: NumTrait + 'a> {
+use std::rc::Rc;
+use std::cell::{Ref, RefCell};
+
+#[derive(Clone)]
+pub enum HGrid<'a, T: NumTrait + 'a>{
     Grid {
-        meta: HashMap<String, HBox<'a,T>>,
-        col_index: HashMap<String, usize>,
-        cols: Vec<HCol<'a,T>>,
-        rows: Vec<HRow<'a,T>>,
+        meta: Rc<RefCell<HashMap<String, HBox<'a,T>>>>,
+        col_index: Rc<HashMap<String, usize>>,
+        cols: Vector<HCol<'a,T>>,
+        rows: Vec<Rc<Vector<Option<HBox<'a,T>>>>>,
     },
     Error {
         dis: String,
@@ -32,7 +31,7 @@ pub enum HGrid<'a, T: NumTrait + 'a> {
     Empty { meta: Option<HashMap<String, HBox<'a,T>>> },
 }
 
-impl<'a, T: NumTrait + 'a> fmt::Debug for HGrid<'a, T> {
+impl<'a, T: NumTrait> fmt::Debug for HGrid<'a, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             HGrid::Grid { .. } => {
@@ -64,7 +63,7 @@ impl <'a,T: NumTrait + 'a>HGrid<'a,T> {
     pub fn new(g_columns: Option<Vec<HCol<'a,T>>>, grid_rows: Vec<HashMap<String, HBox<'a,T>>>) -> HGrid<'a,T> {
         let meta = HashMap::with_capacity(0);
         let mut col_index: HashMap<String, _> = HashMap::new();
-        let mut cols = Vec::new();
+        let mut cols = Vector::new();
 
         if let Some(columns) = g_columns {
             let mut col_iter = columns.iter();
@@ -72,8 +71,8 @@ impl <'a,T: NumTrait + 'a>HGrid<'a,T> {
                 let len = col_index.len();
                 let c_name = &c.name;
                 col_index.insert(c_name.clone(),len);
+                cols.push_back_mut(c.clone());
             }
-            cols = columns;
         }
 
         let rows = grid_rows.into_iter().map(|mut r| {
@@ -82,13 +81,16 @@ impl <'a,T: NumTrait + 'a>HGrid<'a,T> {
                 if !col_index.contains_key(&col_name) {
                     let len = col_index.len();
                     col_index.insert(col_name,len);
-                    cols.push(Col::new(k.to_string(), None));
+                    cols.push_back_mut(Col::new(k.to_string(), None));
                 }
             }
 
-            let row: Vec<Option<HBox<'a,T>>> = cols.iter().map(|c| r.remove(c.name.as_str())).collect();
-            Row::new(row)
+            let row: Vector<Option<HBox<'a,T>>> = cols.iter().map(|c| r.remove(c.name.as_str())).collect();
+            Rc::from(row)
         }).collect();
+
+        let meta = Rc::new(RefCell::new(meta));
+        let col_index = Rc::new(col_index);
 
         let grid = HGrid::Grid {
             meta,
@@ -103,21 +105,30 @@ impl <'a,T: NumTrait + 'a>HGrid<'a,T> {
     pub fn from_row_vec<'b>(columns: Vec<(String,Option<HashMap<String,HBox<'b,T>>>)>, grid_rows: Vec<Vec<Option<HBox<'b,T>>>>) -> Grid<'b,T> {
         let meta = HashMap::with_capacity(0);
         let mut col_index: HashMap<String, _> = HashMap::new();
-        let mut cols: Vec<HCol<'_, T>> = Vec::new();
+        let mut cols: Vector<HCol<'_, T>> = Vector::new();
 
         for (name,meta) in columns.into_iter() {
             if !col_index.contains_key(name.as_str()) {
                 let len = col_index.len();
                 col_index.insert(name.to_owned(),len);
-                cols.push(Col::new(name.to_owned(), meta));
+                cols.push_back_mut(Col::new(name.to_owned(), meta));
             } else {
                 panic!("Attempting to read grid with multiple columns of the same name")
             }
         }
 
-        let rows: Vec<HRow<'_, T>> = grid_rows.into_iter().map(|r| {
-            Row::new(r)
+        let rows = grid_rows.into_iter().map(|r| {
+            let mut v = Vector::new();
+            
+            r.into_iter().for_each(|val| {
+                v = v.push_back(val)
+            });
+
+            Rc::from(v)
         }).collect();
+
+        let meta = Rc::new(RefCell::new(meta));
+        let col_index = Rc::new(col_index);
 
         HGrid::Grid{ meta, col_index, cols, rows }
     }
@@ -125,9 +136,9 @@ impl <'a,T: NumTrait + 'a>HGrid<'a,T> {
     pub fn add_meta(mut self, meta: HashMap<String, HBox<'a,T>>) -> Result<HGrid<'a,T>,HGridErr> {
         match &mut self {
             HGrid::Grid { meta: orig_meta, .. } => {
-                orig_meta.extend(meta);
+                orig_meta.borrow_mut().extend(meta);
             },
-            HGrid::Error { dis, errTrace } => {
+            HGrid::Error { .. } => {
                 return Err(HGridErr::NotImplemented);
             },
             HGrid::Empty { meta: inner } => {
@@ -157,25 +168,41 @@ impl <'a,T: NumTrait + 'a>HGrid<'a,T> {
         Ok(self)
     }
 
-    pub fn get(&'a self, key: usize) -> Result<&'a Row<'a,T>,HGridErr> {
+    pub fn get(&self, key: usize) -> Result<HRow<'a,T>,HGridErr> {
         match self {
-            HGrid::Grid { rows, .. } => rows.get(key).ok_or(HGridErr::IndexErr),
+            HGrid::Grid { meta, cols, col_index, rows, .. } => {
+                let r = rows.get(key).ok_or(HGridErr::IndexErr)?;
+                let parent = HGrid::Grid {
+                    meta: Rc::clone(meta),
+                    col_index: Rc::clone(col_index),
+                    cols: cols.clone(),
+                    rows: vec![],
+                };
+                Ok(HRow::new(parent, Rc::downgrade(r)))
+            },
             _ => Err(HGridErr::IndexErr),
         }
     }
 
-    pub fn first(&'a self) -> Result<&'a Row<'a,T>,HGridErr> {
+    pub fn len(&self) -> usize {
         match self {
-            HGrid::Grid { rows, .. } => rows.get(0).ok_or(HGridErr::IndexErr),
+            HGrid::Grid { rows, .. } => rows.len(),
+            _ => 0
+        }
+    }
+
+    pub fn first(&'a self) -> Result<HRow<'a,T>,HGridErr> {
+        match self {
+            HGrid::Grid { .. } => self.get(0),
             HGrid::Error { dis, errTrace } => Err(HGridErr::NotImplemented),
             _ => Err(HGridErr::IndexErr),
         }
     }
 
-    pub fn last(&'a self) -> Result<&'a Row<'a,T>,HGridErr> {
-        if let HGrid::Grid { rows, .. } = self {
-            let length = rows.len();
-            rows.get(length - 1).ok_or(HGridErr::IndexErr)
+    pub fn last(&'a self) -> Result<HRow<'a,T>,HGridErr> {
+        if let HGrid::Grid { .. } = self {
+            let length = self.len();
+            self.get(length - 1)
         } else {
             Err(HGridErr::IndexErr)
         }
@@ -189,82 +216,161 @@ impl <'a,T: NumTrait + 'a>HGrid<'a,T> {
         }
     }
 
-    pub fn meta(&'a self) -> &'a HashMap<String, HBox<'a, T>> {
+    pub fn meta(&'a self) -> Rc<RefCell<HashMap<String, HBox<'a, T>>>> {
         match self {
-            HGrid::Grid { meta, .. } => meta,
+            HGrid::Grid { meta, .. } => meta.clone(),
             HGrid::Error { dis, errTrace } => todo!("Not implemented"),
             HGrid::Empty { meta } => todo!("Not implemented"),
         }
     }
 
-    pub fn iter_cols(&'a self) -> Iter<'a, HCol<'a, T>> {
+    /*
+    pub fn iter_cols(&self) -> impl Iterator<Item = &HCol<'a, T>> + '_ {
         match self {
-            HGrid::Grid { cols, .. } => cols.iter(),
-            _ => panic!("Cannot iterate columns on non-Grid variant"),
+            HGrid::Grid { cols, .. } => cols.borrow().iter(),
+            _ => [].iter(),
+        }
+    }
+    */
+    
+    pub fn iter_cols(&self) -> HColIter<'a, T> {
+        match self {
+            HGrid::Grid { cols, .. } => HColIter {
+                cols: Some(cols.clone()),
+                index: 0,
+            },
+            _ => HColIter {
+                cols: None,
+                index: 0,
+            },
         }
     }
 
-    pub fn iter(&'a self) -> Iter<'a, HRow<'a, T>> {
-        match self {
-            HGrid::Grid { rows, .. } => rows.iter(),
-            HGrid::Empty { .. } => Iter::default(),
+    pub fn iter(&self) -> impl Iterator<Item = HRow<'a, T>>
+    where
+        T: Clone + 'a
+    {
+            match self {
+            HGrid::Grid { rows, meta, col_index, cols } => {
+                let parent = HGrid::Grid {
+                    meta:meta.clone(),
+                    col_index:col_index.clone(),
+                    cols:cols.clone(),
+                    rows: vec![] };
+                let static_rows = rows
+                    .iter()
+                    .map(|row| HRow::new(parent.clone(),(Rc::<Vector<Option<Rc<(dyn HVal<'a, T>)>>>>::downgrade(row))))
+                    .collect::<Vec<HRow<'a,T>>>()
+                    .into_iter();
+                static_rows
+            },
+            HGrid::Empty { .. } => panic!("Empty grid"),//Box::new(std::iter::empty()),
             HGrid::Error { dis, errTrace } => {
                 panic!("Cannot iterate rows on Error variant: {:?} {:?}", dis, errTrace)
             }
         }
     }
 
+    /*pub fn iter(&self) -> HGridIter<'a, T> {
+            match self {
+            HGrid::Grid { .. } => HGridIter::new(self),
+            HGrid::Empty { .. } => panic!("Empty grid"),//Box::new(std::iter::empty()),
+            HGrid::Error { dis, errTrace } => {
+                panic!("Cannot iterate rows on Error variant: {:?} {:?}", dis, errTrace)
+            }
+        }
+    }*/
+
     pub fn as_ref(&self) -> &Self {
         self
     }
 }
 
-/*
-impl <'a,T,I>Index<I> for HGrid<'a,T>
-where
-    I: SliceIndex<[HRow<'a, T>]>,
-{
-    type Output = &'a I::Output;
-    // type Output = <I as SliceIndex<[HRow<'a,T>]>>::Output;
+pub struct HColIter<'a, T: NumTrait + 'a> {
+    cols: Option<Vector<HCol<'a, T>>>,
+    index: usize,
+}
 
-    fn index(&self, index: I) -> Self::Output {
-        &self.rows[index]
+impl<'a, T: NumTrait + 'a> Iterator for HColIter<'a, T> {
+    type Item = HCol<'a, T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(ref cols) = self.cols {
+            if self.index < cols.len() {
+                let col = cols[self.index].clone();
+                self.index += 1;
+                Some(col)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
     }
 }
-*/
 
-// impl <'g,'a:'g,T:'a + Float + Display + FromStr>IntoIterator for &'g HGrid<'a,T> {
-//     // type Item = &'a HRow<'a,T>;
-//     type Item = &'a HRow<'a,T>;
-//     type IntoIter = HGridIter<'g,'a,T>;
+// impl <'a,T: NumTrait + 'a,I>Index<I> for HGrid<'a,T>
+// where
+//     I: SliceIndex<[HRow<'a, T>]>,
+// {
+//     type Output = &'a I::Output;
+//     // type Output = <I as SliceIndex<[HRow<'a,T>]>>::Output;
 
-//     fn into_iter(self) -> Self::IntoIter {
-//         HGridIter { index:0, grid:self }
+//     fn index(&self, index: I) -> Self::Output {
+//         &self.rows[index]
 //     }
 // }
 
-// pub struct HGridIter<'g,'a,T> {
-//     index: usize,
-//     grid: &'g HGrid<'a,T>,
-// }
+impl <'a,T: NumTrait + 'a>IntoIterator for &'a HGrid<'a,T> {
+    type Item = HRow<'a,T>;
+    type IntoIter = HGridIter<'a,T>;
 
-// impl <'g,'a:'g,T:'a + Float + Display + FromStr>Iterator for HGridIter<'g,'a,T> {
-//     type Item = &'a HRow<'a,T>;
+    fn into_iter(self) -> Self::IntoIter {
+        HGridIter { index:0, grid:self }
+    }
+}
 
-//     fn next(&mut self) -> Option<Self::Item> {
-//         let grid: &'g HGrid<'a, T> = self.grid;
-//         let ret = grid.get(self.index).ok()?;
-//         Some(ret)
-//     }
-// }
+impl <'a,T: NumTrait + 'a>IntoIterator for &'a mut HGrid<'a,T> {
+    type Item = HRow<'a,T>;
+    type IntoIter = HGridIter<'a,T>;
 
-impl <'a,T:'a + NumTrait + 'a>HVal<'a,T> for HGrid<'a,T> {
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result {
+    fn into_iter(self) -> Self::IntoIter {
+        HGridIter { index:0, grid:self }
+    }
+}
+
+pub struct HGridIter<'a, T: NumTrait + 'a> {
+    index: usize,
+    grid: &'a HGrid<'a,T>,
+}
+
+impl <'a,T: NumTrait + 'a>HGridIter<'a,T> {
+    pub fn new(grid: &'a HGrid<'a,T>) -> Self {
+        HGridIter { index: 0, grid }
+    }
+}
+
+impl <'a,T:NumTrait + 'a>Iterator for HGridIter<'a,T> {
+    type Item = HRow<'a,T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index >= self.grid.len() {
+            return None;
+        }
+        let ret = self.grid.get(self.index).ok()?;
+        self.index += 1;
+        Some(ret)
+    }
+}
+
+impl <'a,T:'a + NumTrait>HVal<'a,T> for HGrid<'a,T> {
+    fn to_zinc<'b>(&self, buf: &'b mut String) -> fmt::Result {
         match self {
-            HGrid::Grid { meta, col_index, cols, rows } => {
+            HGrid::Grid { meta, rows, .. } => {
                 write!(buf,"ver:\"3.0\" ")?;
-                if !meta.is_empty() {
-                    let mut iter = meta.iter().peekable();
+                if !meta.borrow().is_empty() {
+                    let meta_borrow = meta.borrow();
+                    let mut iter = meta_borrow.iter().peekable();
                     while let Some((k,v)) = iter.next() {
                         write!(buf, " {}", k.as_str())?;
                         match v.haystack_type() {
@@ -274,22 +380,21 @@ impl <'a,T:'a + NumTrait + 'a>HVal<'a,T> for HGrid<'a,T> {
                     }
                 }
                 write!(buf, "\n")?;
-                if !cols.is_empty() {
-                    let mut iter = cols.iter().peekable();
-                    while let Some(c) = iter.next() {
-                        c.to_zinc(buf)?;
-                        if let Some(_) = iter.peek() {
-                            write!(buf, ", ")?;
-                        }
+
+                let mut iter = self.iter_cols().peekable();
+                while let Some(c) = iter.next() {
+                    let () = c.to_zinc(buf)?;
+                    if let Some(_) = iter.peek() {
+                        write!(buf, ", ")?;
                     }
                 }
+                
                 write!(buf, "\n")?;
-                if !rows.is_empty() {
-                    let mut iter = rows.iter().peekable();
-                    while let Some(r) = iter.next() {
-                        r.to_zinc(self, buf)?;
-                        write!(buf, "\n")?;
-                    }
+
+                let mut iter = self.iter();
+                while let Some(r) = iter.next() {
+                    r.to_zinc(buf)?;
+                    write!(buf, "\n")?;
                 }
                 Ok(())
             },
@@ -324,13 +429,13 @@ impl <'a,T:'a + NumTrait + 'a>HVal<'a,T> for HGrid<'a,T> {
             }
         }
     }
-    fn to_trio(&self, buf: &mut String) -> fmt::Result {
+    fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result {
         match self {
-            HGrid::Grid { meta, col_index, cols, rows } => {
-                let mut row_iter = rows.iter().peekable();
+            HGrid::Grid { .. } => {
+                let mut row_iter = self.iter().peekable();
                 
                 while let Some(row) = row_iter.next() {
-                    row.to_trio(self, buf)?;
+                    row.to_trio(buf)?;
                     if row_iter.peek().is_some() {
                         write!(buf, "---\n")?;
                     }
@@ -363,22 +468,22 @@ mod tests {
     #[test]
     fn print_grid() {
         let mut grid_meta: HashMap<String,HBox<f64>> = HashMap::new();
-        grid_meta.insert("meta1".into(), Rc::new(MARKER));
-        grid_meta.insert("meta2".into(), Rc::new(REMOVE));
+        grid_meta.insert("meta1".into(), MARKER.to_hbox());
+        grid_meta.insert("meta2".into(), REMOVE.to_hbox());
 
         let mut col_meta: HashMap<String,HBox<f64>> = HashMap::new();
-        col_meta.insert("cmeta1".into(), Rc::new(MARKER));
-        col_meta.insert("cmeta2".into(), Rc::new(REMOVE));
-        col_meta.insert("cmeta3".into(), Rc::new(MARKER));
+        col_meta.insert("cmeta1".into(), MARKER.to_hbox());
+        col_meta.insert("cmeta2".into(), REMOVE.to_hbox());
+        col_meta.insert("cmeta3".into(), MARKER.to_hbox());
 
         let mut row_1: HashMap<String,HBox<f64>> = HashMap::new();
-        row_1.insert("col1".into(), Rc::new(MARKER));
-        row_1.insert("col2".into(), Rc::new(MARKER));
+        row_1.insert("col1".into(), MARKER.to_hbox());
+        row_1.insert("col2".into(), MARKER.to_hbox());
         
 
         let mut row_2: HashMap<String,HBox<f64>> = HashMap::new();
-        row_2.insert("col1".into(), Rc::new(REMOVE));
-        row_2.insert("col3".into(), Rc::new(REMOVE));
+        row_2.insert("col1".into(), REMOVE.to_hbox());
+        row_2.insert("col3".into(), REMOVE.to_hbox());
 
         let mut grid = Grid::new(None,vec![row_1,row_2]);
         grid = grid.add_meta(grid_meta).unwrap();

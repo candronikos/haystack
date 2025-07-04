@@ -1,12 +1,9 @@
-use std::str::FromStr;
-use core::fmt::Display;
-use num::Float;
-use crate::{h_bool::HBool, h_coord::HCoord, h_date::HDate, h_datetime::HDateTime, h_dict::HDict, h_grid::HGrid, h_list::HList, h_marker::HMarker, h_na::HNA, h_null::HNull, h_number::HNumber, h_ref::HRef, h_remove::HRemove, h_str::HStr, h_time::HTime, h_uri::HUri, io::HBox, HVal, NumTrait};
+use crate::{h_bool::HBool, h_coord::HCoord, h_date::HDate, h_datetime::HDateTime, h_dict::HDict, h_grid::HGrid, h_list::HList, h_marker::HMarker, h_na::HNA, h_null::HNull, h_number::HNumber, h_ref::HRef, h_remove::HRemove, h_str::HStr, h_time::HTime, h_uri::HUri, h_val::HBox, HVal, NumTrait};
 
 
 pub trait HCast<'a,FT> 
     where
-        FT: NumTrait + 'a,
+        FT: NumTrait,
         //T: HVal<'a,FT> + ?Sized
     {
     fn get_null(&self) -> Option<&HNull>;
@@ -30,7 +27,6 @@ pub trait HCast<'a,FT>
 impl <'a,FT>HCast<'a,FT> for HBox<'a,FT>
     where
         FT: NumTrait + 'a,
-        //T: HVal<'a,FT> + ?Sized,
     {
     fn get_null(&self) -> Option<&HNull> { self.get_null_val() }
     fn get_marker(&self) -> Option<&HMarker> { self.get_marker_val() }

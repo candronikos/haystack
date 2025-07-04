@@ -1,10 +1,8 @@
-use num::Float;
 use crate::{HType, HVal, NumTrait};
 use crate::common::Txt;
-use std::fmt::{self,Write,Display};
-use std::str::FromStr;
+use std::fmt::{self,Write};
 
-#[derive(PartialEq,Debug)]
+#[derive(Clone,PartialEq,Debug)]
 pub struct HNA;
 
 pub const NA: HNA = HNA {};

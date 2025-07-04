@@ -1,9 +1,7 @@
-use num::Float;
 use crate::{HType, HVal, NumTrait};
-use std::fmt::{self,Display,Write};
-use core::str::FromStr;
+use std::fmt::{self,Write};
 
-#[derive(PartialEq,Debug)]
+#[derive(Clone,PartialEq,Debug)]
 pub struct HCoord<T> {
     lat: T,
     long: T

@@ -1,10 +1,7 @@
 use crate::common::{ZincWriter,ZincReader,JsonWriter,TrioWriter};
-use crate::io::HBox;
 use crate::{io, NumTrait};
 use std::fmt::{self,Display,Formatter,Debug};
-use core::str::FromStr;
-use std::rc::Rc;
-use num::Float;
+use std::rc::{Rc,Weak};
 
 use nom::IResult;
 
@@ -34,6 +31,8 @@ pub enum HType {
     Dict,
     Grid,
 }
+
+pub type HBox<'a,T> = Rc<dyn HVal<'a,T> + 'a>;
 
 impl Display for HType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -71,23 +70,30 @@ macro_rules! set_trait_eq_method {
 }
 
 pub trait HVal<'a,T: NumTrait + 'a> {
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result;
-    fn to_trio(&self, buf: &mut String) -> fmt::Result;
+    fn to_zinc<'b>(&self, buf: &'b mut String) -> fmt::Result;
+    fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result;
     fn to_json(&self, buf: &mut String) -> fmt::Result;
     fn haystack_type(&self) -> HType;
 
     fn as_hval(&'a self) -> &'a dyn HVal<'a,T>
     where
-        Self: Sized + 'a,
+        Self: Sized,
     {
         self as &dyn HVal<T>
     }
 
     fn to_hbox(self) -> HBox<'a,T>
     where
-        Self: Sized + 'a,
+        Self: Sized + 'static,
     {
         Rc::new(self)
+    }
+
+    fn to_owned(&self) -> HBox<'a,T>
+    where
+        Self: Sized + HVal<'a, T> + Clone + 'static,
+    {
+        Rc::new(self.clone())
     }
 
     fn _eq(&self, other: &dyn HVal<'a,T>) -> bool;
@@ -113,7 +119,7 @@ pub trait HVal<'a,T: NumTrait + 'a> {
 
 impl <'a,T: NumTrait + 'a>Display for dyn HVal<'a,T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let self_as_hval: &(dyn HVal<'a, T> + 'a) = self;
+        let self_as_hval: &(dyn HVal<'a, T>) = self;
         write!(f, "{}(",self_as_hval.haystack_type())?;
         let mut buf = String::new();
         HVal::to_zinc(self_as_hval, &mut buf)?;
@@ -143,8 +149,7 @@ impl <'a,T: NumTrait + 'a>ZincWriter<'a,T> for dyn HVal<'a,T> + 'a {
 
 impl <'a,T: NumTrait + 'a>ZincReader<'a,T> for dyn HVal<'a,T> {
     fn parse<'b>(buf: &'b str) -> IResult<&'b str, HBox<'a,T>>
-    where
-        'a: 'b
+    where 'a: 'b
     {
         io::parse::zinc::literal::<T>(buf)
     }

@@ -1,12 +1,10 @@
-use num::Float;
 use crate::{HType, HVal, NumTrait};
-use std::fmt::{self,Write,Display};
-use std::str::FromStr;
+use std::fmt::{self,Write};
 
 use chrono::naive::NaiveTime;
 use chrono::Timelike;
 
-#[derive(Debug,PartialEq)]
+#[derive(Clone,Debug,PartialEq)]
 pub struct HTime {
     inner: NaiveTime,
 }

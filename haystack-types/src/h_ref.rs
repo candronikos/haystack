@@ -1,10 +1,8 @@
-use num::Float;
 use crate::{HType, HVal, NumTrait};
-use std::fmt::{self,Write,Display};
-use std::str::FromStr;
+use std::fmt::{self,Write};
 use crate::common::escape_str;
 
-#[derive(PartialEq)]
+#[derive(Clone,PartialEq)]
 pub struct HRef {
     id: String,
     dis: Option<String>,

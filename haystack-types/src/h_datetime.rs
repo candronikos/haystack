@@ -1,6 +1,3 @@
-use std::str::FromStr;
-use core::fmt::Display;
-use num::Float;
 use crate::{HType, HVal, NumTrait};
 use std::fmt::{self,Write};
 
@@ -8,7 +5,7 @@ use chrono::{NaiveDateTime as DT, NaiveDate};
 use chrono::{Datelike,Timelike};
 use chrono::{FixedOffset, Duration};
 
-#[derive(Debug,PartialEq)]
+#[derive(Clone,Debug,PartialEq)]
 pub struct HDateTime {
     inner: DT,
     // TODO: Implement timezones to work with `chrono_tz`

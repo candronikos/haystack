@@ -1,11 +1,9 @@
-use num::Float;
 use std::collections::HashMap;
-use crate::io::HBox;
-use crate::{HType, HVal, NumTrait};
-use std::fmt::{self,Write,Display};
-use std::str::FromStr;
+use crate::{HType, HVal, NumTrait, h_val::HBox};
+use std::fmt::{self,Write};
 
-pub struct HDict<'a,T> {
+#[derive(Clone)]
+pub struct HDict<'a,T: NumTrait> {
     inner: HashMap<String, HBox<'a,T>>
 }
 
@@ -13,7 +11,7 @@ pub type Dict<'a,T> = HDict<'a,T>;
 
 const THIS_TYPE: HType = HType::Dict;
 
-impl <'a,T: NumTrait + 'a>HDict<'a,T> {
+impl <'a,T: NumTrait>HDict<'a,T> {
     pub fn new() -> HDict<'a,T> {
         HDict { inner: HashMap::new() }
     }
@@ -22,13 +20,17 @@ impl <'a,T: NumTrait + 'a>HDict<'a,T> {
         HDict { inner: map }
     }
 
+    pub fn set(&mut self, key: String, value: HBox<'a,T>) -> Option<HBox<'a,T>> {
+        self.inner.insert(key, value)
+    }
+
     pub fn get(&self, key: &str) -> Option<&HBox<'a,T>> {
         self.inner.get(key)
     }
 }
 
 impl <'a,T: NumTrait + 'a>HVal<'a,T> for HDict<'a,T> {
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result {
+    fn to_zinc<'b>(&self, buf: &'b mut String) -> fmt::Result {
         write!(buf,"{{")?;
         let inner = &self.inner;
         let mut kv_pairs = inner.into_iter()
@@ -48,7 +50,7 @@ impl <'a,T: NumTrait + 'a>HVal<'a,T> for HDict<'a,T> {
         }
         write!(buf,"}}")
     }
-    fn to_trio(&self, buf: &mut String) -> fmt::Result {
+    fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result {
         HVal::<T>::to_zinc(self, buf)
     }
     fn to_json(&self, _buf: &mut String) -> fmt::Result {

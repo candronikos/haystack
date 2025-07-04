@@ -1,11 +1,11 @@
-use std::{fmt::{self, Display, Write}, str::{FromStr, SplitWhitespace}};
+use std::{fmt::{self, Display, Write, Debug}, str::{FromStr, SplitWhitespace}};
 
 use anyhow::{anyhow, Context, Error, Result};
 
 use nom::Err;
 use tokio::sync::oneshot;
 
-use haystack_types::{self as hs_types, HCast, Float};
+use haystack_types::{self as hs_types, Float, NumTrait};
 
 #[derive(Debug)]
 pub enum FStr<'a> {
@@ -575,12 +575,15 @@ pub enum HaystackResponse {
     Raw(String),
 }
 
-impl <'a>HaystackResponse {
-    pub fn get_raw(self) -> FStr<'a> {
+impl HaystackResponse {
+    pub fn get_raw(self) -> String {
         let HaystackResponse::Raw(body) = self;
-        FStr::String(body)
+        body
     }
-    pub fn as_result<T: Float + Display + FromStr>(self) -> Result<HaystackResponse> {
+    pub fn as_result<T>(self) -> Result<HaystackResponse>
+    where
+        T: NumTrait + Debug
+    {
         match self {
             HaystackResponse::Raw(ref body) => {
                 match hs_types::io::parse::zinc::grid_err::<T>(body.as_str()) {

@@ -2,6 +2,7 @@ use crate::{HVal,HType};
 use std::fmt::{self,Write,Display,Formatter};
 use num::Float;
 use std::str::FromStr;
+use std::fmt::Debug;
 
 #[derive(Clone,PartialEq,Debug)]
 pub struct HUnit(String);
@@ -19,8 +20,8 @@ pub struct HNumber<T: Display> {
 }
 
 pub type Number<T> = HNumber<T>;
-pub trait NumTrait: Float + Display + FromStr {}
-impl<T> NumTrait for T where T: Float + Display + FromStr {}
+pub trait NumTrait: Float + Display + Debug + FromStr {}
+impl<T> NumTrait for T where T: Float + Display + Debug + FromStr {}
 //impl<'a,T> NumTrait for T where T: 'a + Float + Display + FromStr {}
 
 const THIS_TYPE: HType = HType::Number;

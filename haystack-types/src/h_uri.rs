@@ -1,12 +1,9 @@
-use core::str::FromStr;
-use core::fmt::Display;
-use num::Float;
 use crate::{HType, HVal, NumTrait};
 use std::fmt::{self,Write};
 
 use url::{Url,ParseError as UrlParseError};
 
-#[derive(Debug,PartialEq)]
+#[derive(Clone,Debug,PartialEq)]
 pub struct HUri(Url);
 
 pub type Uri = HUri;

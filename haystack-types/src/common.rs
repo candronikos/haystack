@@ -4,10 +4,8 @@ use nom::character::complete::alphanumeric1;
 use nom::combinator::recognize;
 use nom::bytes::complete::tag;
 use nom::branch::alt;
-use num::Float;
-use core::str::FromStr;
 use std::fmt::{self,Display,Formatter};
-use crate::{h_val::HVal, io::HBox, NumTrait};
+use crate::{h_val::{HBox}, NumTrait};
 use nom::{IResult, Parser};
 
 #[derive(Debug,PartialEq)]

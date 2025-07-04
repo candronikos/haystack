@@ -13,7 +13,7 @@ use crate::{HVal, h_bool::HBool, h_null::HNull, h_na::HNA, h_marker::HMarker,
     h_remove::HRemove, h_number::{NumTrait,HNumber,HUnit}, h_ref::HRef,
     h_date::HDate, h_datetime::{HDateTime,HOffset}, h_time::HTime,
     h_coord::HCoord, h_str::HStr, h_uri::HUri, h_dict::HDict,
-    h_list::HList, h_grid::HGrid};
+    h_list::HList, h_grid::HGrid, h_val::HBox};
 
 use crate::common::*;
 
@@ -23,8 +23,6 @@ use core::str::FromStr;
 use std::rc::Rc;
 use num::Float;
 
-pub type HBox<'a,T> = Rc<dyn HVal<'a,T> + 'a>;
-
 pub mod parse {
     use nom::sequence::delimited;
     use nom::combinator::map_res;
@@ -32,7 +30,7 @@ pub mod parse {
 
     macro_rules! into_box {
         ( $fn: expr, $num_type: ty, $lt: lifetime ) => {
-            map($fn,| hval | { Rc::new(hval) as HBox<$lt, $num_type>})
+            map($fn,| hval | { Rc::new(hval) as HBox<$lt, $num_type> })
         }
     }
 
@@ -41,29 +39,26 @@ pub mod parse {
 
         use super::*;
 
-        pub fn literal<'a,'b,T>(input: &'b str) -> IResult<&'b str, HBox<'a,T>>
-        where
-            T: NumTrait + 'a,
-            'a:'b
-        {
+        pub fn literal<'out,T: NumTrait + 'out>(input: &str) -> IResult<&str, HBox<'out,T>> {
             alt((
-                into_box!(na,T,'a),
-                into_box!(null,T,'a),
-                into_box!(marker,T,'a),
-                into_box!(remove,T,'a),
-                into_box!(boolean,T,'a),
-                into_box!(reference, T,'a),
-                into_box!(string,T,'a),
-                into_box!(uri,T,'a),
-                into_box!(datetime,T,'a),
-                into_box!(date,T,'a),
-                into_box!(time,T,'a),
-                into_box!(number,T,'a),
-                into_box!(coord,T,'a),
+                into_box!(na,T,'out),
+                into_box!(null,T,'out),
+                into_box!(marker,T,'out),
+                into_box!(remove,T,'out),
+                into_box!(boolean,T,'out),
+                into_box!(reference, T,'out),
+                into_box!(string,T,'out),
+                into_box!(uri,T,'out),
+                into_box!(datetime,T,'out),
+                into_box!(date,T,'out),
+                into_box!(time,T,'out),
+                into_box!(number::<T>,T,'out),
+                into_box!(coord::<T>,T,'out),
                 // TODO: Implement tests for collection types
-                into_box!(dict,T,'a),
-                into_box!(list,T,'a),
-                into_box!(delimited(tag("<<"),grid::<T>,tag(">>")),T,'a),
+                into_box!(dict::<T>,T,'out),
+                into_box!(list::<T>,T,'out),
+                into_box!(delimited(tag("<<"),grid::<T>,tag(">>")),T,'out),
+                // TODO: Implement x string type
                 // TODO: Implement symbol type
             )).parse(input)
         }
@@ -245,51 +240,39 @@ pub mod parse {
             )))
         }
 
-        fn coord_deg<T: Float + Display + FromStr>(input: &str) -> IResult<&str, T> {
+        fn coord_deg<'out, T: NumTrait + 'out>(input: &str) -> IResult<&str, T> {
             map_res(recognize((opt(tag("-")),digit1,opt((tag("."),digit1)))),|s: &str| s.parse::<T>()).parse(input)
         }
 
-        pub fn coord<T: Float + Display + FromStr>(input: &str) -> IResult<&str, HCoord<T>> {
+        pub fn coord<'out, T: NumTrait + 'out>(input: &str) -> IResult<&str, HCoord<T>> {
             let (input,(lat,long)) = (delimited(tag("C("),coord_deg,tag(",")),terminated(coord_deg,tag(")"))).parse(input)?;
     
             Ok((input,HCoord::new(lat,long)))
         }
 
-        fn tags<'a,'b,T>(input: &'b str) -> IResult<&'b str,HashMap<String,HBox<'a,T>>>
-        where
-            T: NumTrait + 'a,
-            'a:'b,
-        {
+        fn tags<'out, T: NumTrait + 'out>(input: &str) -> IResult<&str,HashMap<String,HBox<'out,T>>> {
             let (input,res) = separated_list1(
                 tag(" "),
-                (id, opt(preceded(tag(":"), literal::<'a,'b,T>)))
+                (id, opt(preceded(tag(":"), literal::<T>)))
             ).parse(input)?;
 
-            let mut map: HashMap<String, HBox<'a,T>> = HashMap::new();
+            let mut map: HashMap<String, HBox<'out,T>> = HashMap::new();
             
             res.into_iter().for_each(|(k,v)| {
-                map.insert(k.to_owned(), v.unwrap_or(Rc::new(crate::h_marker::MARKER) as HBox<'a, T>));
+                map.insert(k.to_owned(), v.unwrap_or(Rc::new(HMarker) as HBox<'out, T>));
             });
 
             Ok((input,map))
         }
 
-        fn tags_list<'a,'b,T: NumTrait + 'a>(input: &'b str) -> IResult<&'b str,Option<Vec<HBox<'a,T>>>>
-        where
-            T: NumTrait + 'a,
-            'a:'b,
-        {
-            let (input,res) = opt(separated_list1((take_while(AsChar::is_space),tag(","),take_while(AsChar::is_space)),literal::<'a,'b,T>)).parse(input)?;
+        fn tags_list<'out,T: NumTrait + 'out>(input: &str) -> IResult<&str,Option<Vec<HBox<'out,T>>>> {
+            let (input,res) = opt(separated_list1((take_while(AsChar::is_space),tag(","),take_while(AsChar::is_space)),literal::<T>)).parse(input)?;
 
             Ok((input,res))
         }
 
-        pub fn dict<'a,'b,T>(input: &'b str) -> IResult<&'b str, HDict<'a,T>>
-        where
-            T: NumTrait + 'a,
-            'a:'b,
-        {
-            let (input,opt_dict) = delimited(tag("{"),opt(tags::<'a,'b,T>),tag("}")).parse(input)?;
+        pub fn dict<'out,T: NumTrait + 'out>(input: &str) -> IResult<&str, HDict<'out,T>> {
+            let (input,opt_dict) = delimited(tag("{"),opt(tags::<T>),tag("}")).parse(input)?;
 
             let dict = match opt_dict {
                 Some(dict) => dict,
@@ -299,12 +282,8 @@ pub mod parse {
             Ok((input,HDict::from_map(dict)))
         }
 
-        pub fn list<'a,'b, T>(input: &'b str) -> IResult<&'b str, HList<'a,T>>
-        where
-            T: NumTrait + 'a,
-            'a:'b,
-        {
-            let (input,opt_vec) = delimited(tag("["),tags_list::<'a,'b,T>,tag("]")).parse(input)?;
+        pub fn list<'out, T: NumTrait + 'out>(input: &str) -> IResult<&str, HList<'out,T>> {
+            let (input,opt_vec) = delimited(tag("["),tags_list::<T>,tag("]")).parse(input)?;
 
             let vec = match opt_vec {
                 Some(vec) => vec,
@@ -314,12 +293,8 @@ pub mod parse {
             Ok((input,HList::from_vec(vec)))
         }
 
-        pub fn grid_meta<'a,'b,T>(input: &'b str) -> IResult<&'b str, HashMap<String,HBox<'a,T>>>
-        where
-            T: NumTrait + 'a,
-            'a:'b,
-        {
-            let (input,opt_dict) = opt(tags::<'a,'b,T>).parse(input)?;
+        pub fn grid_meta<'out,T: NumTrait + 'out>(input: &str) -> IResult<&str, HashMap<String,HBox<'out,T>>> {
+            let (input,opt_dict) = opt(tags::<T>).parse(input)?;
 
             let dict = match opt_dict {
                 Some(dict) => dict,
@@ -332,11 +307,7 @@ pub mod parse {
             Ok((input,dict))
         }
 
-        pub fn cols<'a,'b,T>(input: &'b str) -> IResult<&'b str, Vec<(String,Option<HashMap<String,HBox<'a,T>>>)>>
-        where
-            T: NumTrait + 'a,
-            'a:'b,
-        {
+        pub fn cols<'out,T: NumTrait + 'out>(input: &str) -> IResult<&str, Vec<(String,Option<HashMap<String,HBox<'out,T>>>)>> {
             let (input,columns) = separated_list1(
                 tag(","),
                 (id,opt(preceded(space1, tags::<T>)))
@@ -346,13 +317,9 @@ pub mod parse {
             Ok((input,columns))
         }
 
-        pub fn grid_err<'a,'b,T>(input: &'b str) -> IResult<&'b str, HGrid<T>>
-        where
-            T: NumTrait + 'a,
-            'a: 'b,
-        {
+        pub fn grid_err<'out,T: NumTrait + 'out>(input: &str) -> IResult<&str, HGrid<T>> {
             let (input,_) = tag("ver:\"3.0\"")(input)?;
-            let (input,meta) = delimited(space1, grid_meta::<'a,'b,T>, tag("\n")).parse(input)?;
+            let (input,meta) = delimited(space1, grid_meta::<T>, tag("\n")).parse(input)?;
             let (_, is_empty) = all_consuming(map(terminated(tag("empty"), take_while1(|c| c == '\n')), |_| true)).parse(input)?;
             if is_empty || meta.contains_key("err") {
                 //let dis = meta.get("dis").unwrap().get_string_val().unwrap().into_string();
@@ -406,15 +373,11 @@ pub mod parse {
             }))
         }
 
-        pub fn grid<'a,'b, T>(input: &'b str) -> IResult<&'b str, HGrid<'a,T>>
-        where 
-            'a: 'b,
-            T: NumTrait + 'a,
-        {
+        pub fn grid<'out, T: NumTrait + 'out>(input: &str) -> IResult<&str, HGrid<'out,T>> {
             let (input,version) = delimited(tag("ver:\""), recognize(double), tag("\"")).parse(input)?;
 
             // Grid Meta
-            let (input,meta) = opt(preceded(space1, grid_meta::<'a,'b,T>)).parse(input)?;
+            let (input,meta) = opt(preceded(space1, grid_meta::<T>)).parse(input)?;
             let (input, _) = tag("\n").parse(input)?;
             let is_empty_res = all_consuming(terminated(tag::<_, _, ()>("empty"), take_while1(|c| c == '\n')))
                 .parse(input);
@@ -740,7 +703,7 @@ pub mod parse {
         Ok((input,HUnit::new(unit_str.to_owned())))
     }
 
-    pub fn number<T: Float + Display + FromStr>(input: &str) -> IResult<&str, HNumber<T>> {
+    pub fn number<'out, T: NumTrait + 'out>(input: &str) -> IResult<&str, HNumber<T>> {
         use std::slice;
 
         let start = input;

@@ -1,17 +1,16 @@
-use num::Float;
-use crate::io::HBox;
-use crate::{HCast, HType, HVal, NumTrait};
-use std::fmt::{self,Write,Display};
-use std::str::FromStr;
+use crate::h_val::HBox;
+use crate::{HCast, HType, NumTrait};
+use std::fmt::{self,Write};
 
 use std::collections::HashMap;
 
-pub struct HCol<'a,T: NumTrait + 'a> {
+#[derive(Clone)]
+pub struct HCol<'a,T: NumTrait> {
     pub name: String,
     meta: HashMap<String, HBox<'a,T>>
 }
 
-impl<'a, T: NumTrait + 'a> fmt::Debug for HCol<'a, T> {
+impl<'a, T: NumTrait> fmt::Debug for HCol<'a, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("HCol")
             .field("name", &self.name)
@@ -22,7 +21,7 @@ impl<'a, T: NumTrait + 'a> fmt::Debug for HCol<'a, T> {
 
 pub type Col<'a,T> = HCol<'a,T>;
 
-impl <'a,T: NumTrait + 'a>HCol<'a,T> {
+impl <'a,T: NumTrait>HCol<'a,T> {
     pub fn new(name: String, meta: Option<HashMap<String, HBox<'a,T>>>) -> Self {
         Self {
             name,
@@ -31,7 +30,7 @@ impl <'a,T: NumTrait + 'a>HCol<'a,T> {
     }
 }
 
-impl <'a,T: NumTrait + 'a>HCol<'a,T> {
+impl <'a,T: NumTrait>HCol<'a,T> {
     // pub fn name<'a>(&'a self) -> &'a str {
     //     &self.name
     // }

@@ -1,11 +1,8 @@
-use num::Float;
 use crate::h_str::HStr;
 use crate::{HType, HVal, NumTrait};
-use crate::common::{escape_str};
-use std::fmt::{self,Write,Display};
-use std::str::FromStr;
+use std::fmt::{self,Write};
 
-#[derive(Debug,PartialEq)]
+#[derive(Clone,Debug,PartialEq)]
 pub struct HXStr {
     xtype: String,
     xval: HStr,

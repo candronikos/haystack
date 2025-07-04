@@ -1,10 +1,9 @@
-use num::Float;
-use crate::io::HBox;
+use crate::h_val::HBox;
 use crate::{HType, HVal, NumTrait};
-use std::fmt::{self,Write,Display};
-use std::str::FromStr;
+use std::fmt::{self,Write};
 use std::ops::Index;
 
+#[derive(Clone)]
 pub struct HList<'a,T> {
     inner: Vec<HBox<'a,T>>
 }
@@ -13,7 +12,7 @@ pub type List<'a,T> = HList<'a,T>;
 
 const THIS_TYPE: HType = HType::List;
 
-impl <'a,T: NumTrait + 'a>HList<'a,T> {
+impl <'a,T: NumTrait>HList<'a,T> {
     pub fn new() -> HList<'a,T> {
         HList { inner: Vec::new() }
     }
@@ -23,8 +22,8 @@ impl <'a,T: NumTrait + 'a>HList<'a,T> {
     }
 }
 
-impl <'a,T: NumTrait + 'a>HVal<'a,T> for HList<'a,T> {
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result {
+impl <'a,T: NumTrait>HVal<'a,T> for HList<'a,T> {
+    fn to_zinc<'b >(&self, buf: &'b mut String) -> fmt::Result {
         write!(buf,"[")?;
         let inner = &self.inner;
         let mut elements = inner.into_iter().peekable();
@@ -35,7 +34,7 @@ impl <'a,T: NumTrait + 'a>HVal<'a,T> for HList<'a,T> {
         };
         write!(buf,"]")
     }
-    fn to_trio(&self, buf: &mut String) -> fmt::Result {
+    fn to_trio<'b >(&self, buf: &'b mut String) -> fmt::Result {
         HVal::<T>::to_zinc(self, buf)
     }
     fn to_json(&self, _buf: &mut String) -> fmt::Result {

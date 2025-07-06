@@ -90,4 +90,4 @@ extern crate mlua_uvector4 as mlua;
 #[cfg(feature = "lua")]
 pub mod lua;
 #[cfg(feature = "lua")]
-pub use lua::{haystack, HWrapper, LuaFloat};
+pub use lua::{haystack, H, LuaFloat};

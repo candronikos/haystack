@@ -9,11 +9,11 @@ use crate::{io, HGrid, HRow, HVal, NumTrait};
 
 pub type LuaFloat = f64;
 
-pub struct HWrapper<T> {
+pub struct H<T> {
     pub inner: Rc<T>
 }
 
-impl<T> HWrapper<T> {
+impl<T> H<T> {
     pub fn new(inner: T) -> Self {
         Self { inner: Rc::new(inner) as Rc<T> }
     }
@@ -23,7 +23,7 @@ impl<T> HWrapper<T> {
     }
 }
 
-impl<'a, T> Deref for HWrapper<T> {
+impl<'a, T> Deref for H<T> {
     type Target = Rc<T>;
 
     fn deref(&self) -> &Self::Target {
@@ -43,7 +43,7 @@ pub fn haystack(lua: &Lua) -> LuaResult<LuaTable> {
         let (_, grid) = io::parse::zinc::grid::<LuaFloat>
           .parse(args.as_str())
           .or_else(|e| Err(LuaError::RuntimeError(e.to_string())))?;
-        Ok(HWrapper::new(grid))
+        Ok(H::new(grid))
       })?
   )?;
 
@@ -52,7 +52,7 @@ pub fn haystack(lua: &Lua) -> LuaResult<LuaTable> {
   Ok(hs_table)
 }
 
-impl <'a: 'static>UserData for HWrapper<HGrid<'a, LuaFloat>> {
+impl <'a: 'static>UserData for H<HGrid<'a, LuaFloat>> {
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {
       methods.add_meta_method(MetaMethod::ToString, |_, this, ()| {
         let mut out = String::new();
@@ -65,14 +65,14 @@ impl <'a: 'static>UserData for HWrapper<HGrid<'a, LuaFloat>> {
         let tmp_idx: usize = if idx.is_positive() { idx as usize - 1 } else { this.len() - (idx*-1) as usize };
 
         match this.get(tmp_idx) {
-          Ok(row) => Ok(HWrapper::new(row.to_dict())),
-          Err(_) => Err(LuaError::RuntimeError(format!("Row index {} out of bounds", idx))),
+          Ok(row) => Ok(Some(H::new(row.to_dict()))),
+          Err(_) => Ok(None),
         }
       });
     }
 }
 
-impl<'a, T: NumTrait> UserData for HWrapper<HDict<'a, T>> {
+impl<'a, T: NumTrait> UserData for H<HDict<'a, T>> {
   fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {
     methods.add_meta_method(MetaMethod::ToString, |_, this, ()| {
       let mut out = String::new();

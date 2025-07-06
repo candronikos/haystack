@@ -12,8 +12,8 @@ use nom::error::{Error, ErrorKind};
 use crate::{HVal, h_bool::HBool, h_null::HNull, h_na::HNA, h_marker::HMarker,
     h_remove::HRemove, h_number::{NumTrait,HNumber,HUnit}, h_ref::HRef,
     h_date::HDate, h_datetime::{HDateTime,HOffset}, h_time::HTime,
-    h_coord::HCoord, h_str::HStr, h_uri::HUri, h_dict::HDict,
-    h_list::HList, h_grid::HGrid, h_val::HBox};
+    h_coord::HCoord, h_str::HStr, h_xstr::HXStr, h_uri::HUri, h_symbol::HSymbol,
+    h_dict::HDict, h_list::HList, h_grid::HGrid, h_val::HBox};
 
 use crate::common::*;
 
@@ -47,7 +47,9 @@ pub mod parse {
                 into_box!(remove,T,'out),
                 into_box!(boolean,T,'out),
                 into_box!(reference, T,'out),
+                into_box!(symbol, T,'out),
                 into_box!(string,T,'out),
+                into_box!(xstring,T,'out),
                 into_box!(uri,T,'out),
                 into_box!(datetime,T,'out),
                 into_box!(date,T,'out),
@@ -58,8 +60,6 @@ pub mod parse {
                 into_box!(dict::<T>,T,'out),
                 into_box!(list::<T>,T,'out),
                 into_box!(delimited(tag("<<"),grid::<T>,tag(">>")),T,'out),
-                // TODO: Implement x string type
-                // TODO: Implement symbol type
             )).parse(input)
         }
 
@@ -111,6 +111,17 @@ pub mod parse {
             Ok((input,HStr(string_literal)))
         }
 
+        pub fn xstring(input: &str) -> IResult<&str, HXStr> {
+            let (input,_x_type) = recognize((
+                take_while1(|c: char| c.is_ascii_uppercase()),
+                take_while(|c: char| c.is_ascii_alphanumeric() || c == '_')
+            )).parse(input)?;
+
+            let (input,x_val) = delimited(tag(")"),string,tag(")")).parse(input)?;
+
+            Ok((input,HXStr::new(_x_type.to_owned(), x_val.into_string())))
+        }
+
         pub fn uri(input: &str) -> IResult<&str, HUri> {
             let (input,_) = tag("`")(input)?;
             let mut it = iterator(input, alt((
@@ -159,6 +170,11 @@ pub mod parse {
                 opt(preceded(tag(" "), string)),
             )).parse(input)?;
             Ok((input,HRef::new(ref_str.to_owned(), dis_str.map(|s| s.into_string()))))
+        }
+
+        fn symbol(input: &str) -> IResult<&str, HSymbol> {
+            let (input,symbol_str) = ref_chars_body('^')(input)?;
+            Ok((input,HSymbol::new(symbol_str.to_owned())))
         }
 
         fn get_2_digits(input: &str) -> IResult<&str, &str> {

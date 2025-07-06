@@ -7,6 +7,7 @@ use nom::branch::alt;
 use std::fmt::{self,Display,Formatter};
 use crate::{h_val::{HBox}, NumTrait};
 use nom::{IResult, Parser};
+use std::fmt::Write;
 
 #[derive(Debug,PartialEq)]
 pub enum Txt<'a> {
@@ -46,7 +47,29 @@ impl <'a>Display for Txt<'a> {
     }
 }
 
-pub fn escape_str(c: char, buf: &mut String) -> fmt::Result {
+pub fn zinc_escape_str(c: char, buf: &mut String) -> fmt::Result {
+    if c < ' ' || c == '"' || c == '\\' || c == '$' {
+        buf.push('\\');
+        match c {
+            '\x08' => buf.push('b'),
+            '\x0C' => buf.push('f'),
+            '\n' => buf.push('n'),
+            '\r' => buf.push('r'),
+            '\t' => buf.push('t'),
+            '\\' |
+            '\"' |
+            '$' => buf.push(c),
+            _ => {
+                write!(buf,"u{:04x}", c as usize)?;
+            }
+        };
+    } else {
+        buf.push(c);
+    }
+    Ok(())
+}
+
+pub fn escape_str_no_escape_unicode(c: char, buf: &mut String) -> fmt::Result {
     if c < ' ' || c == '"' || c == '\\' {
         buf.push('\\');
         match c {
@@ -56,14 +79,34 @@ pub fn escape_str(c: char, buf: &mut String) -> fmt::Result {
             '"' => buf.push('"'),
             '\\' => buf.push('\\'),
             _ => {
-                buf.push_str("u00");
-                let tmp = std::char::from_u32(0xf).ok_or(fmt::Error)?;
-                if c < tmp { buf.push('0') }
-                buf.push_str(&format!("{:X}", c.to_digit(16).ok_or(fmt::Error)?));
+                write!(buf,"u{:04x}", c as usize)?;
             }
         };
     } else {
         buf.push(c);
+    }
+    Ok(())
+}
+
+pub fn escape_str_escape_unicode(c: char, buf: &mut String) -> fmt::Result {
+    if c < ' ' || c == '"' || c == '\\' {
+        buf.push('\\');
+        match c {
+            '\n' => buf.push('n'),
+            '\r' => buf.push('r'),
+            '\t' => buf.push('t'),
+            '"' => buf.push('"'),
+            '\\' => buf.push('\\'),
+            _ => {
+                write!(buf,"u{:04x}", c as usize)?;
+            }
+        };
+    } else {
+        if c > '\x7F' {
+            write!(buf,"\\u{:04x}", c as usize)?;
+        } else {
+            buf.push(c);
+        }
     }
     Ok(())
 }

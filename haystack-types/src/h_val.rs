@@ -9,7 +9,7 @@ use crate::{h_bool::HBool, h_null::HNull, h_na::HNA,
     h_marker::HMarker, h_remove::HRemove, h_number::HNumber,
     h_date::HDate, h_datetime::HDateTime, h_time::HTime,
     h_coord::HCoord, h_str::HStr, h_xstr::HXStr, h_uri::HUri, h_ref::HRef, h_dict::HDict,
-    h_list::HList, h_grid::HGrid};
+    h_list::HList, h_grid::HGrid, h_symbol::HSymbol};
 
 #[derive(Debug,PartialEq)]
 pub enum HType {
@@ -22,6 +22,7 @@ pub enum HType {
     Str,
     Uri,
     Ref,
+    Symbol,
     Date,
     Time,
     DateTime,
@@ -112,6 +113,7 @@ pub trait HVal<'a,T: NumTrait + 'a> {
     set_trait_get_method!(get_time_val, HTime);
     set_trait_get_method!(get_number_val, HNumber<T>);
     set_trait_get_method!(get_ref_val, HRef);
+    set_trait_get_method!(get_symbol_val, HSymbol);
     set_trait_get_method!(get_dict_val, HDict,'a,T);
     set_trait_get_method!(get_list_val, HList,'a,T);
     set_trait_get_method!(get_grid_val, HGrid,'a,T);

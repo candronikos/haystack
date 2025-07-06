@@ -42,6 +42,9 @@ pub use h_uri::Uri;
 mod h_ref;
 pub use h_ref::Ref;
 
+mod h_symbol;
+pub use h_symbol::Symbol;
+
 mod h_date;
 pub use h_date::Date;
 

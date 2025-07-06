@@ -1,6 +1,6 @@
 use crate::{HType, HVal, NumTrait};
 use std::fmt::{self,Write};
-use crate::common::escape_str;
+use crate::common::{zinc_escape_str, escape_str_no_escape_unicode as escape_str};
 
 #[derive(Clone,PartialEq)]
 pub struct HRef {
@@ -24,7 +24,7 @@ impl <'a,T: NumTrait + 'a>HVal<'a,T> for HRef {
         match &self.dis {
             Some(dis) => {
                 buf.push(' ');
-                dis.chars().try_for_each(|c| { escape_str(c,buf) })?;
+                dis.chars().try_for_each(|c| { zinc_escape_str(c,buf) })?;
                 Ok(())
             },
             None => Ok(()),

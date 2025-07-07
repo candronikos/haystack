@@ -27,5 +27,23 @@ impl <'a: 'static>UserData for H<HList<'a, LuaFloat>> {
     methods.add_meta_method(MetaMethod::Len, |_, this, ()| {
       Ok(this.len())
     });
+
+    methods.add_method("is_empty", |_, this, ()| {
+      Ok(this.is_empty())
+    });
+
+    methods.add_method("first", |_, this, ()| {
+      match this.first() {
+        Some(element) => Ok(Some(HAny::from_hval(element.clone()))),
+        None => Ok(None),
+      }
+    });
+
+    methods.add_method("last", |_, this, ()| {
+      match this.last() {
+        Some(element) => Ok(Some(HAny::from_hval(element.clone()))),
+        None => Ok(None),
+      }
+    });
   }
 }

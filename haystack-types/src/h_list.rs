@@ -32,6 +32,14 @@ impl <'a,T: NumTrait>HList<'a,T> {
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
+
+    pub fn first(&self) -> Option<&HBox<'a,T>> {
+        self.inner.first()
+    }
+
+    pub fn last(&self) -> Option<&HBox<'a,T>> {
+        self.inner.last()
+    }
 }
 
 impl <'a,T: NumTrait>HVal<'a,T> for HList<'a,T> {

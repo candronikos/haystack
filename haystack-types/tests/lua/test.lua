@@ -14,10 +14,10 @@ haystackVersion,projName,serverName,serverBootTime,serverTime,productName,produc
 -- zinc_str = "ver:\"3.0\"\na m:1,b\n1,2\n"
 TestGrid = {}
   function TestGrid:setup()
-    self.about_grid = hs.io.grid.from_zinc(zinc_str)
-    self.empty_grid = hs.io.grid.from_zinc("ver:\"3.0\"\nempty\n")
+    self.about_grid = hs.io.parse.grid.zinc(zinc_str)
+    self.empty_grid = hs.io.parse.grid.zinc("ver:\"3.0\"\nempty\n")
   end
-  function TestGrid:test_from_zinc()
+  function TestGrid:test_parse_zinc()
     lu.assertEquals(self.about_grid[1].haystackVersion, "3.9.15.3111")
     lu.assertEquals(self.about_grid[1].projName, "demo")
     lu.assertEquals(self.about_grid[1].serverName, "0f2e2bae5e16")
@@ -39,6 +39,7 @@ TestGrid = {}
   function TestGrid:test_len()
     lu.assertEquals(#self.about_grid, 1)
     lu.assertNotEquals(#self.about_grid, 2)
+    lu.assertEquals(#self.empty_grid, 0)
   end
   function TestGrid:test_is_empty()
     lu.assertEquals(self.about_grid:is_empty(),false)
@@ -58,6 +59,38 @@ TestGrid = {}
   end
 
 TestList = {}
+function TestList:setup()
+  self.list = hs.io.parse.list.zinc("[1,2,\"hello\"]")
+  self.empty_list = hs.io.parse.list.zinc("[]")
+end
+function TestList:test_parse_zinc()
+  lu.assertEquals(self.list[1], 1)
+  lu.assertEquals(self.list[2], 2)
+  lu.assertEquals(self.list[3], "hello")
+end
+function TestList:test_index()
+  lu.assertNotEquals(self.list[1], nil)
+  lu.assertNotEquals(self.list[2], nil)
+  lu.assertNotEquals(self.list[3], nil)
+  lu.assertEquals(self.list[4], nil)
+  lu.assertEquals(self.empty_list[1], nil)
+end
+function TestList:test_len()
+  lu.assertEquals(#self.list, 3)
+  lu.assertEquals(#self.empty_list, 0)
+end
+function TestList:test_is_empty()
+  lu.assertEquals(self.list:is_empty(),false)
+  lu.assertEquals(self.empty_list:is_empty(),true)
+end
+function TestList:test_first()
+  lu.assertNotEquals(self.list:first(),nil)
+  lu.assertEquals(self.empty_list:first(),nil)
+end
+function TestList:test_last()
+  lu.assertNotEquals(self.list:last(),nil)
+  lu.assertEquals(self.empty_list:last(),nil)
+end
 
 --[[ grid = hs.io.grid.from_zinc(zinc_str)
 print("Print Grid")

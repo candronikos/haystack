@@ -1,4 +1,5 @@
 use core::{hash, panic};
+use crate::h_dict::HDict;
 use crate::h_str::HStr;
 use crate::h_val::HBox;
 use crate::{HType, HVal, NumTrait};
@@ -19,7 +20,7 @@ use std::cell::{Ref, RefCell};
 #[derive(Clone)]
 pub enum HGrid<'a, T: NumTrait + 'a>{
     Grid {
-        meta: Rc<RefCell<HashMap<String, HBox<'a,T>>>>,
+        meta: RefCell<HDict<'a,T>>,
         col_index: Rc<HashMap<String, usize>>,
         cols: Vector<HCol<'a,T>>,
         rows: Vec<Rc<Vector<Option<HBox<'a,T>>>>>,
@@ -54,7 +55,19 @@ pub type Grid<'a,T> = HGrid<'a,T>;
 pub enum HGridErr {
     NotFound,
     IndexErr,
-    NotImplemented
+    NotImplemented,
+    AddMetaFailed,
+}
+
+impl fmt::Display for HGridErr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            HGridErr::NotFound => write!(f, "Error: Not Found"),
+            HGridErr::IndexErr => write!(f, "Error: Index Out of Bounds"),
+            HGridErr::NotImplemented => write!(f, "Error: Not Implemented"),
+            HGridErr::AddMetaFailed => write!(f, "Error: Failed to add grid metadata"),
+        }
+    }
 }
 
 const THIS_TYPE: HType = HType::Grid;
@@ -89,7 +102,7 @@ impl <'a,T: NumTrait + 'a>HGrid<'a,T> {
             Rc::from(row)
         }).collect();
 
-        let meta = Rc::new(RefCell::new(meta));
+        let meta = RefCell::new(HDict::from_map(meta));
         let col_index = Rc::new(col_index);
 
         let grid = HGrid::Grid {
@@ -127,7 +140,7 @@ impl <'a,T: NumTrait + 'a>HGrid<'a,T> {
             Rc::from(v)
         }).collect();
 
-        let meta = Rc::new(RefCell::new(meta));
+        let meta = RefCell::new(HDict::from_map(meta));
         let col_index = Rc::new(col_index);
 
         HGrid::Grid{ meta, col_index, cols, rows }
@@ -173,7 +186,7 @@ impl <'a,T: NumTrait + 'a>HGrid<'a,T> {
             HGrid::Grid { meta, cols, col_index, rows, .. } => {
                 let r = rows.get(key).ok_or(HGridErr::IndexErr)?;
                 let parent = HGrid::Grid {
-                    meta: Rc::clone(meta),
+                    meta: RefCell::new(meta.borrow().clone()),
                     col_index: Rc::clone(col_index),
                     cols: cols.clone(),
                     rows: vec![],
@@ -191,7 +204,7 @@ impl <'a,T: NumTrait + 'a>HGrid<'a,T> {
         }
     }
 
-    pub fn first(&'a self) -> Result<HRow<'a,T>,HGridErr> {
+    pub fn first(&self) -> Result<HRow<'a,T>,HGridErr> {
         match self {
             HGrid::Grid { .. } => self.get(0),
             HGrid::Error { dis, errTrace } => Err(HGridErr::NotImplemented),
@@ -199,7 +212,7 @@ impl <'a,T: NumTrait + 'a>HGrid<'a,T> {
         }
     }
 
-    pub fn last(&'a self) -> Result<HRow<'a,T>,HGridErr> {
+    pub fn last(&self) -> Result<HRow<'a,T>,HGridErr> {
         if let HGrid::Grid { .. } = self {
             let length = self.len();
             self.get(length - 1)
@@ -216,11 +229,18 @@ impl <'a,T: NumTrait + 'a>HGrid<'a,T> {
         }
     }
 
-    pub fn meta(&'a self) -> Rc<RefCell<HashMap<String, HBox<'a, T>>>> {
+    pub fn meta(&self) -> HDict<'a, T> {
         match self {
-            HGrid::Grid { meta, .. } => meta.clone(),
+            HGrid::Grid { meta, .. } => meta.borrow().clone(),
             HGrid::Error { dis, errTrace } => todo!("Not implemented"),
             HGrid::Empty { meta } => todo!("Not implemented"),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        match self {
+            HGrid::Grid { rows, .. } => rows.is_empty(),
+            _ => true,
         }
     }
 
@@ -270,16 +290,6 @@ impl <'a,T: NumTrait + 'a>HGrid<'a,T> {
             }
         }
     }
-
-    /*pub fn iter(&self) -> HGridIter<'a, T> {
-            match self {
-            HGrid::Grid { .. } => HGridIter::new(self),
-            HGrid::Empty { .. } => panic!("Empty grid"),//Box::new(std::iter::empty()),
-            HGrid::Error { dis, errTrace } => {
-                panic!("Cannot iterate rows on Error variant: {:?} {:?}", dis, errTrace)
-            }
-        }
-    }*/
 
     pub fn as_ref(&self) -> &Self {
         self
@@ -451,7 +461,7 @@ impl <'a,T:'a + NumTrait>HVal<'a,T> for HGrid<'a,T> {
     fn haystack_type(&self) -> HType { THIS_TYPE }
 
     fn _eq(&self, other: &dyn HVal<'a,T>) -> bool { false }
-    set_get_method!(get_grid_val, HGrid<'a,T>);
+    set_get_method!(get_grid_val,HGrid,'a,T);
 }
 
 #[cfg(test)]

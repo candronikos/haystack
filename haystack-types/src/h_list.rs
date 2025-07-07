@@ -20,6 +20,18 @@ impl <'a,T: NumTrait>HList<'a,T> {
     pub fn from_vec(vec: Vec<HBox<'a,T>>) -> HList<'a,T> {
         HList { inner: vec }
     }
+
+    pub fn get(&self, index: usize) -> Option<&HBox<'a,T>> {
+        self.inner.get(index)
+    }
+
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
 }
 
 impl <'a,T: NumTrait>HVal<'a,T> for HList<'a,T> {
@@ -43,7 +55,7 @@ impl <'a,T: NumTrait>HVal<'a,T> for HList<'a,T> {
     fn haystack_type(&self) -> HType { THIS_TYPE }
 
     fn _eq(&self, other: &dyn HVal<'a,T>) -> bool { false }
-    set_get_method!(get_list_val, HList<'a,T>);
+    set_get_method!(get_list_val,HList,'a,T);
 }
 
 impl<'a, T> Index<usize> for HList<'a, T> {

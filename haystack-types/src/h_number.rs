@@ -13,7 +13,7 @@ impl HUnit {
     }
 }
 
-#[derive(PartialEq,Debug)]
+#[derive(PartialEq,Debug,Clone)]
 pub struct HNumber<T: Display> {
     val: T,
     unit: Option<HUnit>

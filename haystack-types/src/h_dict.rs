@@ -24,8 +24,28 @@ impl <'a,T: NumTrait>HDict<'a,T> {
         self.inner.insert(key, value)
     }
 
+    pub fn merge(&mut self, other: HDict<'a,T>) {
+        self.inner.extend(other.inner);
+    }
+
+    pub fn extend(&mut self, other: HashMap<String, HBox<'a,T>>) {
+        self.inner.extend(other);
+    }
+
     pub fn get(&self, key: &str) -> Option<&HBox<'a,T>> {
         self.inner.get(key)
+    }
+
+    pub fn into_map(self) -> HashMap<String, HBox<'a,T>> {
+        self.inner
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &HBox<'a,T>)> {
+        self.inner.iter()
     }
 }
 
@@ -59,7 +79,8 @@ impl <'a,T: NumTrait + 'a>HVal<'a,T> for HDict<'a,T> {
     fn haystack_type(&self) -> HType { THIS_TYPE }
 
     fn _eq(&self, other: &dyn HVal<'a,T>) -> bool { false }
-    set_get_method!(get_dict_val, HDict<'a,T>);
+    set_get_method!(get_dict_val,HDict,'a,T);
+
 }
 
 #[cfg(test)]

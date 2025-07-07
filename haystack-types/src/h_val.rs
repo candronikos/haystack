@@ -45,8 +45,8 @@ macro_rules! set_get_method {
     ( $name: ident,$tt: ty ) => {
         fn $name(&self) -> Option<&$tt> { Some(self) }
     };
-    ( $name: ident,$tt: ty, $lt: lifetime ) => {
-        fn $name(&self) -> Option<&$tt<$lt>> { Some(self) }
+    ( $name:ident, $tt:ident, $lt:lifetime, $t:ty ) => {
+        fn $name(&self) -> Option<&$tt<$lt,$t>> { Some(self) }
     };
 }
 
@@ -55,7 +55,7 @@ macro_rules! set_trait_get_method {
         fn $name(&self) -> Option<&$tt> { None }
     };
     ( $name:ident, $tt:ident, $lt:lifetime, $t:ty ) => {
-        fn $name(&$lt self) -> Option<&$lt $tt<$lt,$t>> { None }
+        fn $name(&self) -> Option<&$tt<$lt,$t>> { None }
     };
 }
 

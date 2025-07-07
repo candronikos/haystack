@@ -21,7 +21,7 @@ pub trait HCast<'a,FT>
     fn get_ref(&self) -> Option<&HRef>;
     fn get_dict(&'a self) -> Option<&'a HDict<'a,FT>>;
     fn get_list(&'a self) -> Option<&'a HList<'a,FT>>;
-    fn get_grid(&'a self) -> Option<&'a HGrid<'a,FT>>;
+    fn get_grid<'b:'a>(&'b self) -> Option<&'b HGrid<'b,FT>>;
 }
 
 impl <'a,FT>HCast<'a,FT> for HBox<'a,FT>
@@ -43,5 +43,5 @@ impl <'a,FT>HCast<'a,FT> for HBox<'a,FT>
     fn get_ref(&self) -> Option<&HRef> { self.get_ref_val() }
     fn get_dict(&'a self) -> Option<&'a HDict<'a,FT>> { self.get_dict_val() }
     fn get_list(&'a self) -> Option<&'a HList<'a,FT>> { self.get_list_val() }
-    fn get_grid(&'a self) -> Option<&'a HGrid<'a,FT>> { self.get_grid_val() }
+    fn get_grid<'b:'a>(&'b self) -> Option<&'b HGrid<'b,FT>> { self.get_grid_val() }
 }

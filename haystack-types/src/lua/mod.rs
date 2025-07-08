@@ -116,7 +116,6 @@ pub fn create_lua_data(lua: &Lua, value: HBox<'static,LuaFloat>) -> LuaResult<Va
       HType::List => lua.create_userdata(H::new(value.get_list_val().unwrap().clone()))?,
       HType::Dict => lua.create_userdata(H::new(value.get_dict_val().unwrap().clone()))?,
       HType::Grid => lua.create_userdata(H::new(value.get_grid_val().unwrap().clone()))?,
-      _ => todo!()
     };
 
     Ok(Value::UserData(l_type))

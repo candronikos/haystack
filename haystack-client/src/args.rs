@@ -177,7 +177,7 @@ fn cmd_his_read(op:&OP) -> Command {
         .arg(Arg::new("ids")
             .action(ArgAction::Append)
             .num_args(1..)
-            .required(true)
+            .required(IsTTY::new().stdin)
             .help("Ref identifier/s of historised point"))
         .arg(Arg::new("timezone")
             .long("timezone")
@@ -290,15 +290,39 @@ fn match_his_read(sub_m: &ArgMatches) -> AnyResult<(HaystackOpTxRx, Receiver<Hay
     let range_opt = sub_m.get_one::<String>("range");
     let range = range_opt.map(|s| s.as_str())
         .ok_or_else(|| anyhow::anyhow!("hisRead op must have range"))?;
-    let id_count = sub_m.get_many::<String>("ids")
-        .ok_or_else(|| anyhow::anyhow!("Failed to get ids"))?
-        .count();
+    let stdin_ids: String;
+
+    let ids = match sub_m.get_many::<String>("ids") {
+        Some(ids) => ids.map(|s| s.to_string()).collect(),
+        None => {
+            match IsTTY::new().stdin {
+                true => {
+                    Err(anyhow::anyhow!("hisRead op must have ids"))?
+                },
+                false => {
+                    let mut stdin = io::stdin();
+                    let mut buf: Vec<u8> = Vec::new();
+
+                    stdin.read_to_end(&mut buf)
+                        .map_err(|e| anyhow::anyhow!("Failed to read from stdin: {}", e))?;
+                    stdin_ids = String::from_utf8(buf)
+                        .map_err(|e| anyhow::anyhow!("Failed to convert stdin to UTF-8 string: {}", e))?;
+
+                    stdin_ids.split_whitespace()
+                        .map(|s| s.to_string())
+                        .collect::<Vec<String>>()                       
+                }
+            }
+        }   
+    };
+    let id_count = ids.len();
+
     match id_count {
         0 => {
             Err(anyhow::anyhow!("hisRead op must have ids"))?
         },
         1 => {
-            let id = sub_m.get_one::<String>("ids")
+            let id = ids.first()
                 .ok_or_else(|| anyhow::anyhow!("Failed to get id"))?;
             HaystackOpTxRx::his_read(id.as_str(),range)
                 .or_else(|e| {
@@ -306,10 +330,8 @@ fn match_his_read(sub_m: &ArgMatches) -> AnyResult<(HaystackOpTxRx, Receiver<Hay
                 })
         },
         _ => {
-            let ids = sub_m.get_many::<String>("ids")
-               .ok_or_else(|| anyhow::anyhow!("Failed to get ids"))?;
             let timezone = sub_m.get_one::<String>("timezone").map(|s| s.as_str());
-            HaystackOpTxRx::his_read_multi(ids.map(|s| s.as_str()), range, timezone)
+            HaystackOpTxRx::his_read_multi(ids.iter().map(|s| s.as_str()), range, timezone)
                .or_else(|e| {
                    Err(anyhow::anyhow!("Failed to create hisRead op: {:?}", e))
                })
@@ -364,7 +386,6 @@ fn match_libs(matches: &ArgMatches) -> Result<(HaystackOpTxRx, Receiver<Haystack
 
 fn match_read(sub_m: &ArgMatches) -> Result<(HaystackOpTxRx, Receiver<HaystackResponse>), Error> {
     if let Some(filter) = sub_m.get_one::<String>("filter") {
-        println!("Filter: {:?}", filter);
         HaystackOpTxRx::read(FStr::Str(filter.as_str()), sub_m.get_one::<usize>("limit").map(|v| *v))
             .or_else(|e| {
                 Err(anyhow::anyhow!("Failed to create read op: {:?}", e))

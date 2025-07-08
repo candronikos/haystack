@@ -4,8 +4,8 @@ use crate::common::{zinc_escape_str, escape_str_no_escape_unicode as escape_str}
 
 #[derive(Clone,PartialEq)]
 pub struct HRef {
-    id: String,
-    dis: Option<String>,
+    pub id: String,
+    pub dis: Option<String>,
 }
 
 pub type Ref = HRef;

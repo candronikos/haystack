@@ -29,6 +29,12 @@ impl HStr {
     pub fn as_str(&self) -> &str {
         &self.0
     }
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 impl <'a,T: NumTrait + 'a>HVal<'a,T> for HStr {

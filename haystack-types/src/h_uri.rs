@@ -28,6 +28,9 @@ impl HUri {
         write!(buf,"u:{}",self.0)?;
         Ok(())
     }
+    pub fn to_owned_string(&self) -> String {
+        self.0.to_string()
+    }
 }
 
 impl <'a,T: NumTrait + 'a>HVal<'a,T> for HUri {

@@ -1,8 +1,7 @@
 use mlua::prelude::*;
-use mlua::{Lua, UserData, MetaMethod, Error as LuaError, Result as LuaResult, Table as LuaTable};
-use crate::lua::lany::HAny;
-use crate::{Dict, HRow, HVal, NumTrait};
-use crate::lua::{H,LuaFloat};
+use mlua::{Lua, Value, UserData, MetaMethod, Error as LuaError, Result as LuaResult, Table as LuaTable};
+use crate::{Dict, HRow, HVal, NumTrait, h_val::HType};
+use crate::lua::{create_lua_data, LuaFloat, H};
 
 impl<'a: 'static> UserData for H<Dict<'a, LuaFloat>> {
   fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {
@@ -13,25 +12,15 @@ impl<'a: 'static> UserData for H<Dict<'a, LuaFloat>> {
       Ok(out)
     });
 
-    methods.add_meta_method(MetaMethod::Index, |_, this, (key,): (String,)| {
+    methods.add_meta_method(MetaMethod::Index, |lua, this, (key,): (String,)| {
       let res = match this.get(&key) {
-        Some(value) => Some(HAny::from_hval(value.clone())),
+        Some(value) => {
+          Some(create_lua_data(lua, value.clone())?)
+        },
         None => None,
       };
 
       Ok(res)
     });
-
-    /*
-    methods.add_method("keys", |_, this, ()| {
-      let keys: Vec<String> = this.keys().cloned().collect();
-      Ok(keys)
-    });
-
-    methods.add_method("values", |_, this, ()| {
-      let values: Vec<HVal> = this.values().cloned().collect();
-      Ok(values)
-    });
-    */
   }
 }

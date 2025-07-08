@@ -3,12 +3,28 @@ use std::rc::Rc;
 
 use chrono::format::parse;
 use mlua::prelude::*;
-use mlua::{Lua, UserData, MetaMethod, Error as LuaError, Result as LuaResult, Table as LuaTable};
+use mlua::{Value,Lua, UserData, MetaMethod, Error as LuaError, Result as LuaResult, Table as LuaTable};
 use nom::Parser;
+use crate::h_val::HBox;
 use crate::io::parse::zinc::dict;
-use crate::{io, HGrid, HRow, HVal, NumTrait};
+use crate::{io, HGrid, HRow, HType, HVal, NumTrait};
 
-mod lany;
+//mod lany;
+mod lnull;
+mod lmarker;
+mod lremove;
+mod lbool;
+mod lnumber;
+mod lna;
+mod ldatetime;
+mod ldate;
+mod ltime;
+mod lcoord;
+mod lstr;
+mod lxstr;
+mod lref;
+mod lsymbol;
+mod luri;
 mod lgrid;
 mod llist;
 mod ldict;
@@ -24,30 +40,28 @@ impl<T> H<T> {
         Self { inner: Rc::new(inner) as Rc<T> }
     }
 
-    fn get_ref(&self) -> Rc<T> {
-        self.inner.clone()
+    fn get_ref(&self) -> &T {
+        self.inner.as_ref()
     }
 }
 
 impl<'a, T> Deref for H<T> {
-    type Target = Rc<T>;
+    type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.inner
+        self.inner.as_ref()
     }
 }
 
 #[mlua::lua_module]
 pub fn haystack(lua: &Lua) -> LuaResult<LuaTable> {
-  let hs_table = lua.create_table()?;
-  let io_table = lua.create_table()?;
-  let parse_table = lua.create_table()?;
-  let grid_table = lua.create_table()?;
-  let list_table = lua.create_table()?;
-  let dict_table = lua.create_table()?;
+    let hs_table = lua.create_table()?;
+    let io_table = lua.create_table()?;
+    let parse_table = lua.create_table()?;
+    let zinc_table = lua.create_table()?;
 
-    grid_table.set(
-        "zinc",
+    zinc_table.set(
+        "grid",
         lua.create_function(|_, args: String| {
         let (_, grid) = io::parse::zinc::grid::<LuaFloat>
             .parse(args.as_str())
@@ -56,8 +70,8 @@ pub fn haystack(lua: &Lua) -> LuaResult<LuaTable> {
         })?
     )?;
 
-    list_table.set(
-        "zinc",
+    zinc_table.set(
+        "list",
         lua.create_function(|_, args: String| {
         let (_, grid) = io::parse::zinc::list::<LuaFloat>
             .parse(args.as_str())
@@ -66,8 +80,8 @@ pub fn haystack(lua: &Lua) -> LuaResult<LuaTable> {
         })?
     )?;
 
-    dict_table.set(
-        "zinc",
+    zinc_table.set(
+        "dict",
         lua.create_function(|_, args: String| {
         let (_, grid) = io::parse::zinc::dict::<LuaFloat>
             .parse(args.as_str())
@@ -76,10 +90,34 @@ pub fn haystack(lua: &Lua) -> LuaResult<LuaTable> {
         })?
     )?;
 
-    parse_table.set("list",list_table)?;
-    parse_table.set("dict",dict_table)?;
-    parse_table.set("grid",grid_table)?;
+    parse_table.set("zinc",zinc_table)?;
     io_table.set("parse",parse_table)?;
     hs_table.set("io",io_table,)?;
     Ok(hs_table)
+}
+
+pub fn create_lua_data(lua: &Lua, value: HBox<'static,LuaFloat>) -> LuaResult<Value> {
+    let l_type = match value.haystack_type() {
+      HType::Null => lua.create_userdata(H::new(crate::h_null::HNull))?,
+      HType::Marker => lua.create_userdata(H::new(crate::h_marker::HMarker))?,
+      HType::Remove => lua.create_userdata(H::new(crate::h_remove::HRemove))?,
+      HType::NA => lua.create_userdata(H::new(crate::h_na::HNA))?,
+      HType::Bool => lua.create_userdata(H::new(value.get_bool_val().unwrap().clone()))?,
+      HType::Number => lua.create_userdata(H::new(value.get_number_val().unwrap().clone()))?,
+      HType::Str => lua.create_userdata(H::new(value.get_string_val().unwrap().clone()))?,
+      HType::Uri => lua.create_userdata(H::new(value.get_uri_val().unwrap().clone()))?,
+      HType::Ref => lua.create_userdata(H::new(value.get_ref_val().unwrap().clone()))?,
+      HType::Symbol => lua.create_userdata(H::new(value.get_symbol_val().unwrap().clone()))?,
+      HType::Date => lua.create_userdata(H::new(value.get_date_val().unwrap().clone()))?,
+      HType::Time => lua.create_userdata(H::new(value.get_time_val().unwrap().clone()))?,
+      HType::DateTime => lua.create_userdata(H::new(value.get_datetime_val().unwrap().clone()))?,
+      HType::Coord => lua.create_userdata(H::new(value.get_coord_val().unwrap().clone()))?,
+      HType::XStr => lua.create_userdata(H::new(value.get_xstr_val().unwrap().clone()))?,
+      HType::List => lua.create_userdata(H::new(value.get_list_val().unwrap().clone()))?,
+      HType::Dict => lua.create_userdata(H::new(value.get_dict_val().unwrap().clone()))?,
+      HType::Grid => lua.create_userdata(H::new(value.get_grid_val().unwrap().clone()))?,
+      _ => todo!()
+    };
+
+    Ok(Value::UserData(l_type))
 }

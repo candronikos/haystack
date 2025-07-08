@@ -90,11 +90,11 @@ pub trait HVal<'a,T: NumTrait + 'a> {
         Rc::new(self)
     }
 
-    fn to_owned(&self) -> HBox<'a,T>
+    fn to_owned(&self) -> Self
     where
         Self: Sized + HVal<'a, T> + Clone + 'static,
     {
-        Rc::new(self.clone())
+        self.clone()
     }
 
     fn _eq(&self, other: &dyn HVal<'a,T>) -> bool;

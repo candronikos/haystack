@@ -1,3 +1,14 @@
+--[[
+  haystack-types/tests/lua/test.lua
+
+  This file contains unit tests for the Haystack Lua types library.
+  It tests the parsing of Zinc formatted data into grids and lists,
+  and verifies the functionality of various methods on these types.
+  
+  To run the tests ensure `luaunit` is installed and use the command:
+  lua haystack-types/tests/lua/test.lua
+--]]
+  
 local lu = require('luaunit')
 hs = require("haystack")
 
@@ -103,6 +114,21 @@ TestString = {}
   function TestString:test_len()
     lu.assertEquals(#self.obj, 5)
     lu.assertEquals(#self.empty_str, 0)
+  end
+
+TestNumber = {}
+  function TestNumber:setup()
+    self.obj = hs.io.parse.zinc.list("[-1.0,5, 10kWh,2.5kW]")
+  end
+  function TestNumber:test_members()
+    lu.assertEquals(self.obj[1].value, -1.0)
+    lu.assertEquals(self.obj[1].unit, nil)
+    lu.assertEquals(self.obj[2].value, 5.0)
+    lu.assertEquals(self.obj[2].unit, nil)
+    lu.assertEquals(self.obj[3].value, 10.0)
+    lu.assertEquals(self.obj[3].unit, "kWh")
+    lu.assertEquals(self.obj[4].value, 2.5)
+    lu.assertEquals(self.obj[4].unit, "kW")
   end
 
 os.exit( lu.LuaUnit.run() )

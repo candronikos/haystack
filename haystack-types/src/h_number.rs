@@ -11,6 +11,10 @@ impl HUnit {
     pub fn new(unit: String) -> HUnit {
         HUnit(unit)
     }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 #[derive(PartialEq,Debug,Clone)]

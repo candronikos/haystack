@@ -17,6 +17,10 @@ impl LuaUserData for H<HNumber<LuaFloat>> {
       Ok(buf)
     });
 
+    methods.add_method("tonumber", |_, this, ()| {
+      Ok(this.val())
+    });
+
     methods.add_meta_method(LuaMetaMethod::Eq, |_, _this, other: LuaValue| {
       match other {
         LuaValue::UserData(ud) => {

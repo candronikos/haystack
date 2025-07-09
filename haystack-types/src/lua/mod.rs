@@ -5,6 +5,7 @@ use chrono::format::parse;
 use mlua::prelude::*;
 use mlua::{Value,Lua, UserData, MetaMethod, Error as LuaError, Result as LuaResult, Table as LuaTable};
 use nom::Parser;
+use crate::h_number::HNumber;
 use crate::h_val::HBox;
 use crate::io::parse::zinc::dict;
 use crate::{io, HGrid, HRow, HType, HVal, NumTrait};
@@ -60,6 +61,7 @@ pub fn haystack(lua: &Lua) -> LuaResult<LuaTable> {
     let parse_table = lua.create_table()?;
     let zinc_table = lua.create_table()?;
 
+    setup_tonumber_override(lua)?;
     zinc_table.set(
         "grid",
         lua.create_function(|_, args: String| {
@@ -119,4 +121,27 @@ pub fn create_lua_data(lua: &Lua, value: HBox<'static,LuaFloat>) -> LuaResult<Va
     };
 
     Ok(Value::UserData(l_type))
+}
+
+pub fn setup_tonumber_override(lua: &Lua) -> LuaResult<()> {
+    let globals = lua.globals();
+    
+    let original_tonumber: LuaFunction = globals.get("tonumber")?;
+    
+    let enhanced_tonumber = lua.create_function(move |lua, value: LuaValue| {
+        match value {
+            LuaValue::UserData(ud) => {
+                if let Ok(hnumber) = ud.borrow::<H<HNumber<LuaFloat>>>() {
+                    Ok(LuaValue::Number(hnumber.val()))
+                } else {
+                    Ok(LuaValue::Nil)
+                }
+            },
+            _ => LuaFunction::call::<LuaValue>(&original_tonumber, value)
+        }
+    })?;
+    
+    globals.set("tonumber", enhanced_tonumber)?;
+    
+    Ok(())
 }

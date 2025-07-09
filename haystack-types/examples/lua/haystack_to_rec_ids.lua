@@ -3,7 +3,6 @@ Parses a zinc grid of records and transforms it into a list of record IDs.
 
 Usage:
   As one line
-  * haystack-client default hisRead 2025-01-01,2025-06-30 `haystack-client default read --filter "point and (power or energy) and equipRef->siteMeter" | lua haystack_to_rec_ids.lua`
   * haystack-client default read --filter "point and (power or energy) and equipRef->siteMeter" | lua haystack_to_rec_ids.lua | haystack-client default hisRead 2025-01-20
 
   As a script

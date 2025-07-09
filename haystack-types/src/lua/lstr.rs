@@ -11,19 +11,21 @@ impl <'a: 'static>UserData for H<HStr> {
 
     methods.add_meta_method(MetaMethod::Eq, |_, this, other: Value| {
       match other {
-        Value::UserData(ud) => {
-          if let Ok(rhs) = ud.borrow::<HStr>() {
-            Ok(this.0 == rhs.0)
-          } else {
-            Ok(false)
-          }
-        }
-        Value::String(s) => {
-          Ok(s.as_bytes() == this.0.as_bytes())
-        }
-        _ => Ok(false)
-      }
-    });
+          mlua::Value::String(lua_str) => {
+              match lua_str.to_str() {
+                Ok(other_str) => Ok(this.as_str() == &*other_str),
+                Err(_) => Ok(false),
+              }
+          },
+          mlua::Value::UserData(user_data) => {
+              if let Ok(other_hstr) = user_data.borrow::<H<HStr>>() {
+                  Ok(this.as_str() == other_hstr.as_str())
+              } else {
+                  Ok(false)
+              }
+          },
+          _ => Ok(false),
+      }    });
 
     methods.add_meta_method(MetaMethod::Len, |_, this, ()| {
       Ok(this.len())
@@ -32,5 +34,25 @@ impl <'a: 'static>UserData for H<HStr> {
     methods.add_method("is_empty", |_, this, ()| {
       Ok(this.is_empty())
     });
+  }
+}
+
+impl FromLua for H<HStr> {
+  fn from_lua(value: Value, _lua: &Lua) -> LuaResult<Self> {
+    match value {
+      Value::String(lua_str) => {
+        let str_value = lua_str.to_str()?;
+        Ok(H::new(HStr::new((&*str_value).to_owned())))
+      },
+      Value::UserData(user_data) => {
+        let hstr = user_data.borrow::<H<HStr>>()?;
+        Ok(H::new(hstr.get_ref().clone()))
+      },
+      _ => Err(LuaError::FromLuaConversionError {
+        from: value.type_name(),
+        to: "HStr".to_owned(),
+        message: Some("expected string or HStr".to_string()),
+      }),
+    }
   }
 }

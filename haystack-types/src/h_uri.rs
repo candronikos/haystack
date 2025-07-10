@@ -1,9 +1,9 @@
 use crate::{HType, HVal, NumTrait};
-use std::fmt::{self,Write};
+use std::fmt::{self, Write};
 
-use url::{Url,ParseError as UrlParseError};
+use url::{ParseError as UrlParseError, Url};
 
-#[derive(Clone,Debug,PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct HUri(Url);
 
 pub type Uri = HUri;
@@ -25,7 +25,7 @@ impl HUri {
         self.to_zinc(buf)
     }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
-        write!(buf,"u:{}",self.0)?;
+        write!(buf, "u:{}", self.0)?;
         Ok(())
     }
     pub fn to_owned_string(&self) -> String {
@@ -33,7 +33,7 @@ impl HUri {
     }
 }
 
-impl <'a,T: NumTrait + 'a>HVal<'a,T> for HUri {
+impl<'a, T: NumTrait + 'a> HVal<'a, T> for HUri {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         self.to_zinc(buf)
     }
@@ -43,7 +43,9 @@ impl <'a,T: NumTrait + 'a>HVal<'a,T> for HUri {
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         self.to_json(buf)
     }
-    fn haystack_type(&self) -> HType { THIS_TYPE }
+    fn haystack_type(&self) -> HType {
+        THIS_TYPE
+    }
 
     set_trait_eq_method!(get_uri_val,'a,T);
     set_get_method!(get_uri_val, HUri);

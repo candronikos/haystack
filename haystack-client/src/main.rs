@@ -4,7 +4,7 @@ use base64::write;
 //use clap::App;
 use clap::Parser;
 
-use futures::future::{Abortable, AbortHandle};
+use futures::future::{AbortHandle, Abortable};
 use haystack_types::NumTrait;
 use haystackclientlib::ops::FStr;
 use reedline_repl_rs::yansi::Paint;
@@ -13,17 +13,17 @@ use url::Url;
 
 use std::env;
 use std::process::exit;
-use std::sync::{Arc};
+use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use haystackclientlib::{HSession,ops::HaystackOpTxRx};
+use haystackclientlib::{HSession, ops::HaystackOpTxRx};
 
+use anyhow::{Context, Error, Result as AnyResult, anyhow};
+use dialoguer::{Confirm, Password, Result as DialoguerResult};
 use dirs::config_dir;
-use std::fs::{create_dir};
+use std::fs::create_dir;
 use std::io::{self, Read, Write};
 use std::path::Path;
-use dialoguer::{Confirm, Password, Result as DialoguerResult};
-use anyhow::{anyhow, Context, Error, Result as AnyResult};
 
 use saphyr::{LoadableYamlNode, Yaml, YamlEmitter, YamlLoader};
 
@@ -32,7 +32,7 @@ const CONFIG_FILE_NAME: &str = "config.yaml";
 const HISTORY_FILE_NAME: &str = "history.txt";
 
 mod args;
-use args::{cli, get_haystack_op, repl, send_haystack_op, Destination, IsTTY};
+use args::{Destination, IsTTY, cli, get_haystack_op, repl, send_haystack_op};
 
 type NUMBER = f64;
 
@@ -42,12 +42,12 @@ struct ConnInfo {
     password: String,
     url: Url,
     accept_invalid_certs: bool,
-    bearer: Option<String>
+    bearer: Option<String>,
 }
 
 struct SessionConf {
     try_reuse: bool,
-    update_cache: bool
+    update_cache: bool,
 }
 
 struct Settings {
@@ -61,7 +61,7 @@ impl Settings {
     }
 
     fn default() -> Self {
-        let conn:Option<ConnInfo> = None;
+        let conn: Option<ConnInfo> = None;
         let session: SessionConf = SessionConf {
             try_reuse: true,
             update_cache: true,
@@ -69,33 +69,43 @@ impl Settings {
         Self { conn, session }
     }
 
-    fn update_from_yaml(&self, yaml: Vec<Yaml>) -> Result<(),Error> {
-        let conf = yaml[0].as_mapping()
+    fn update_from_yaml(&self, yaml: Vec<Yaml>) -> Result<(), Error> {
+        let conf = yaml[0]
+            .as_mapping()
             .ok_or_else(|| anyhow::anyhow!("Failed to get hash from config.yaml"))?;
         conf;
         Ok(())
     }
 }
 
-fn get_credentials(args: &clap::ArgMatches, config: &Option<Vec<Yaml>>, env_dest: Option<Destination> ) -> AnyResult<ConnInfo,Error> {
-    let destination: Option<&Destination> = args
-        .get_one("destination").or(env_dest.as_ref());
+fn get_credentials(
+    args: &clap::ArgMatches,
+    config: &Option<Vec<Yaml>>,
+    env_dest: Option<Destination>,
+) -> AnyResult<ConnInfo, Error> {
+    let destination: Option<&Destination> = args.get_one("destination").or(env_dest.as_ref());
     let arg_user: Option<String> = args.get_one::<&str>("username").map(|s| s.to_string());
     let arg_pass: Option<String> = args.get_one::<&str>("password").map(|s| s.to_string());
-    let arg_accept_invalid_certs: Option<bool> = args.get_one::<bool>("accept-invalid-certs").map(|s| *s);
+    let arg_accept_invalid_certs: Option<bool> =
+        args.get_one::<bool>("accept-invalid-certs").map(|s| *s);
 
     let cur_config = match config {
         Some(config) => {
             if let Some(destination) = destination {
                 match destination {
                     Destination::Url(url) => Ok(ConnInfo {
-                            username: arg_user.ok_or(anyhow::anyhow!("Username not provided"))?,
-                            password: arg_pass.ok_or(anyhow::anyhow!("Password not provided"))?,
-                            accept_invalid_certs: arg_accept_invalid_certs.ok_or(anyhow!("Should never happen. Unable to resolve for 'arg_accept_invalid_certs'"))?,
-                            url: url.clone(),
-                            bearer: None,
-                        }),
-                    Destination::Host { username: host_user, host } => {
+                        username: arg_user.ok_or(anyhow::anyhow!("Username not provided"))?,
+                        password: arg_pass.ok_or(anyhow::anyhow!("Password not provided"))?,
+                        accept_invalid_certs: arg_accept_invalid_certs.ok_or(anyhow!(
+                            "Should never happen. Unable to resolve for 'arg_accept_invalid_certs'"
+                        ))?,
+                        url: url.clone(),
+                        bearer: None,
+                    }),
+                    Destination::Host {
+                        username: host_user,
+                        host,
+                    } => {
                         config.iter()
                         .find(|e| {
                             e["name"].as_str().unwrap() == host.to_string().as_str()
@@ -116,8 +126,14 @@ fn get_credentials(args: &clap::ArgMatches, config: &Option<Vec<Yaml>>, env_dest
                             let url = Url::parse(url_str)?;//.or_else(|_| anyhow::anyhow!("Failed to parse URL from config file"))?;
                             Ok(ConnInfo { username, password, url, accept_invalid_certs, bearer: None, })
                         })
-                    },
-                    Destination::Env { url, username, password, accept_invalid_certs, auth_info } => {
+                    }
+                    Destination::Env {
+                        url,
+                        username,
+                        password,
+                        accept_invalid_certs,
+                        auth_info,
+                    } => {
                         let url = url.clone();
                         let username = arg_user
                             .or_else(|| Some(username.clone()))
@@ -128,34 +144,37 @@ fn get_credentials(args: &clap::ArgMatches, config: &Option<Vec<Yaml>>, env_dest
                         let accept_invalid_certs = arg_accept_invalid_certs
                             .or_else(|| Some(*accept_invalid_certs))
                             .ok_or_else(|| anyhow::anyhow!("Should never happen. Unable to resolve for 'accept_invalid_certs'"))?;
-                        Ok(ConnInfo { username, password, url, accept_invalid_certs, bearer: None, })
+                        Ok(ConnInfo {
+                            username,
+                            password,
+                            url,
+                            accept_invalid_certs,
+                            bearer: None,
+                        })
                     }
                 }
             } else {
                 return Err(anyhow::anyhow!("Destination not provided"));
             }
-        },
-        None => {
-            destination
+        }
+        None => destination
             .ok_or_else(|| anyhow::anyhow!("Destination not provided"))
-            .and_then(|dest| {
-                match dest {
-                    Destination::Url(url) => Ok(ConnInfo {
-                            username: arg_user.ok_or(anyhow::anyhow!("Username not provided"))?,
-                            password: arg_pass.ok_or(anyhow::anyhow!("Password not provided"))?,
-                            url: url.clone(),
-                            accept_invalid_certs: arg_accept_invalid_certs.ok_or(anyhow!("Should never happen. Unable to resolve for 'arg_accept_invalid_certs'"))?,
-                            bearer: None,
-                        }),
-                    Destination::Host { username: host_user, host } => {
-                        Err(anyhow::anyhow!("Config file does not exist!"))
-                    },
-                    _ => {
-                        Err(anyhow::anyhow!("Config file does not exist!"))
-                    }
-                }
-            })
-        },
+            .and_then(|dest| match dest {
+                Destination::Url(url) => Ok(ConnInfo {
+                    username: arg_user.ok_or(anyhow::anyhow!("Username not provided"))?,
+                    password: arg_pass.ok_or(anyhow::anyhow!("Password not provided"))?,
+                    url: url.clone(),
+                    accept_invalid_certs: arg_accept_invalid_certs.ok_or(anyhow!(
+                        "Should never happen. Unable to resolve for 'arg_accept_invalid_certs'"
+                    ))?,
+                    bearer: None,
+                }),
+                Destination::Host {
+                    username: host_user,
+                    host,
+                } => Err(anyhow::anyhow!("Config file does not exist!")),
+                _ => Err(anyhow::anyhow!("Config file does not exist!")),
+            }),
     };
     cur_config
 }
@@ -168,7 +187,7 @@ async fn main() -> AnyResult<()> {
         Ok(session) => Some(session),
         Err(_) => None,
     };
-    
+
     let matches = cli(is_tty).get_matches();
     // TODO: Handle situations where config_dir doesn't find a directory
     let user_config_dir = config_dir().context("Config directory error")?;
@@ -194,7 +213,9 @@ async fn main() -> AnyResult<()> {
                 .show_default(true)
                 .wait_for_newline(true)
                 .interact()?;
-            if should_exit_program { return Result::Ok(()) }
+            if should_exit_program {
+                return Result::Ok(());
+            }
         }
     }
 
@@ -204,37 +225,41 @@ async fn main() -> AnyResult<()> {
         let mut hs_config_file_string = String::new();
         hs_config_file_handle.read_to_string(&mut hs_config_file_string)?;
         //let mut config: Vec<Yaml> = Vec::new();
-        config = Some(
-            Yaml::load_from_str(&hs_config_file_string)?
-        );
+        config = Some(Yaml::load_from_str(&hs_config_file_string)?);
     };
 
     let mut env_config: Option<Destination> = None;
     if let Some(s) = env_config_opt {
         let e_conf_vec = Yaml::load_from_str(&s)?;
-        let e_conf = e_conf_vec.get(0)
+        let e_conf = e_conf_vec
+            .get(0)
             .ok_or_else(|| anyhow::anyhow!("Failed to get env config"))?;
-        let url = e_conf["url"].as_str()
+        let url = e_conf["url"]
+            .as_str()
             .ok_or_else(|| anyhow::anyhow!("Failed to get URL from env config"))?;
-        let username = e_conf["username"].as_str()
+        let username = e_conf["username"]
+            .as_str()
             .ok_or_else(|| anyhow::anyhow!("Failed to get username from env config"))?;
-        let password = e_conf["password"].as_str()
+        let password = e_conf["password"]
+            .as_str()
             .ok_or_else(|| anyhow::anyhow!("Failed to get password from env config"))?;
-        let accept_invalid_certs = e_conf["accept-invalid-certs"].as_bool()
+        let accept_invalid_certs = e_conf["accept-invalid-certs"]
+            .as_bool()
             .or(Some(false))
-            .ok_or_else(|| anyhow::anyhow!("Should never happen. Unable to resolve for 'accept_invalid_certs'"))?;
-        let auth_info = e_conf["auth-info"].as_str()
+            .ok_or_else(|| {
+                anyhow::anyhow!("Should never happen. Unable to resolve for 'accept_invalid_certs'")
+            })?;
+        let auth_info = e_conf["auth-info"]
+            .as_str()
             .ok_or_else(|| anyhow::anyhow!("Failed to get auth-info from env config"))?;
 
-        env_config = Some(
-            Destination::Env {
-                url: Url::parse(url)?,
-                username: username.to_string(),
-                password: password.to_string(),
-                accept_invalid_certs: accept_invalid_certs,
-                auth_info: Some(auth_info.to_string()),
-            }
-        );
+        env_config = Some(Destination::Env {
+            url: Url::parse(url)?,
+            username: username.to_string(),
+            password: password.to_string(),
+            accept_invalid_certs: accept_invalid_certs,
+            auth_info: Some(auth_info.to_string()),
+        });
     }
 
     let conn_info = get_credentials(&matches, &config, env_config)?;
@@ -245,61 +270,83 @@ async fn main() -> AnyResult<()> {
         conn_info.password.to_owned(),
         conn_info.accept_invalid_certs.to_owned(),
         Arc::new(Mutex::new(None)),
-        None
-    ).await.or_else(|e| {
-        Err(anyhow::anyhow!("Failed to create HSession: {:?}", e))
-    })?;
+        None,
+    )
+    .await
+    .or_else(|e| Err(anyhow::anyhow!("Failed to create HSession: {:?}", e)))?;
 
-    match &matches.subcommand().ok_or_else(|| anyhow::anyhow!("Failed to parse subcommands"))? {
+    match &matches
+        .subcommand()
+        .ok_or_else(|| anyhow::anyhow!("Failed to parse subcommands"))?
+    {
         ("repl", _) => {
             let _ = repl::<NUMBER>(&mut client, &abort_client, history_file)
-                .run_async().await;
+                .run_async()
+                .await;
 
             let (close_op, close_resp) = HaystackOpTxRx::close();
-        },
+        }
         ("auth", _) => {
             let mut conf_yaml = saphyr::Mapping::new();
-                //conf_yaml.insert("name".to_string(), conn_info.bearer.unwrap_or_default());
-                conf_yaml.insert(Yaml::value_from_str("url"), Yaml::Value(saphyr::Scalar::String(std::borrow::Cow::Owned((&conn_info).url.clone().to_string()))));
-                conf_yaml.insert(Yaml::value_from_str("username"), Yaml::Value(saphyr::Scalar::String(std::borrow::Cow::Owned((&conn_info).username.clone()))));
-                conf_yaml.insert(Yaml::value_from_str("password"), Yaml::Value(saphyr::Scalar::String(std::borrow::Cow::Owned((&conn_info).password.clone()))));
-                conf_yaml.insert(Yaml::value_from_str("accept-invalid-certs"), Yaml::Value(saphyr::Scalar::Boolean((&conn_info).accept_invalid_certs)));
-                if let Some(bearer) = auth_token {
-                    conf_yaml.insert(Yaml::value_from_str("auth-info"), Yaml::Value(saphyr::Scalar::String(std::borrow::Cow::Owned(bearer))));
-                } else {
-                    Err(anyhow::anyhow!("Failed to get auth token"))?;
-                }
-                let mut buffer = String::new();
-                YamlEmitter::new(&mut buffer)
-                    .dump(&Yaml::Mapping(conf_yaml))
-                    .or_else(|e| {
-                        Err(anyhow::anyhow!("Failed to write YAML: {:?}", e))
-                    })?;
-                println!("{}", buffer);
-                return Ok(());
-        },
+            //conf_yaml.insert("name".to_string(), conn_info.bearer.unwrap_or_default());
+            conf_yaml.insert(
+                Yaml::value_from_str("url"),
+                Yaml::Value(saphyr::Scalar::String(std::borrow::Cow::Owned(
+                    (&conn_info).url.clone().to_string(),
+                ))),
+            );
+            conf_yaml.insert(
+                Yaml::value_from_str("username"),
+                Yaml::Value(saphyr::Scalar::String(std::borrow::Cow::Owned(
+                    (&conn_info).username.clone(),
+                ))),
+            );
+            conf_yaml.insert(
+                Yaml::value_from_str("password"),
+                Yaml::Value(saphyr::Scalar::String(std::borrow::Cow::Owned(
+                    (&conn_info).password.clone(),
+                ))),
+            );
+            conf_yaml.insert(
+                Yaml::value_from_str("accept-invalid-certs"),
+                Yaml::Value(saphyr::Scalar::Boolean((&conn_info).accept_invalid_certs)),
+            );
+            if let Some(bearer) = auth_token {
+                conf_yaml.insert(
+                    Yaml::value_from_str("auth-info"),
+                    Yaml::Value(saphyr::Scalar::String(std::borrow::Cow::Owned(bearer))),
+                );
+            } else {
+                Err(anyhow::anyhow!("Failed to get auth token"))?;
+            }
+            let mut buffer = String::new();
+            YamlEmitter::new(&mut buffer)
+                .dump(&Yaml::Mapping(conf_yaml))
+                .or_else(|e| Err(anyhow::anyhow!("Failed to write YAML: {:?}", e)))?;
+            println!("{}", buffer);
+            return Ok(());
+        }
         (cmd, sub_m) => {
             let (op, resp) = get_haystack_op(*cmd, *sub_m) //(&matches)
                 .or_else(|e| {
                     Err(anyhow::anyhow!("Failed to get haystack op: {:?}", e))
                 })?;
 
-            let response = send_haystack_op::<NUMBER>(&mut client, resp, op).await?
+            let response = send_haystack_op::<NUMBER>(&mut client, resp, op)
+                .await?
                 .as_result::<NUMBER>()?;
-        
+
             print!("{}", response.get_raw());
         }
     };
 
     let (close_op, close_resp) = HaystackOpTxRx::close();
-    client.send(close_op).await
-        .or_else(|e| {
-            Err(anyhow::anyhow!("Failed to send close request: {:?}", e))
-        })?;
-    let _ = close_resp.await?
-        .as_result::<NUMBER>()?;
+    client
+        .send(close_op)
+        .await
+        .or_else(|e| Err(anyhow::anyhow!("Failed to send close request: {:?}", e)))?;
+    let _ = close_resp.await?.as_result::<NUMBER>()?;
 
     // TODO: Check if the response is an error
     Result::Ok(())
 }
-

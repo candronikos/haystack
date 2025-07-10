@@ -1,8 +1,8 @@
+use crate::common::zinc_escape_str;
 use crate::{HType, HVal, NumTrait};
-use crate::common::{zinc_escape_str};
-use std::fmt::{self,Write};
+use std::fmt::{self, Write};
 
-#[derive(Clone,Debug,PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct HStr(pub String);
 
 pub type Str = HStr;
@@ -37,10 +37,10 @@ impl HStr {
     }
 }
 
-impl <'a,T: NumTrait + 'a>HVal<'a,T> for HStr {
+impl<'a, T: NumTrait + 'a> HVal<'a, T> for HStr {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         buf.push('\"');
-        self.0.chars().try_for_each(|c| { zinc_escape_str(c,buf) })?;
+        self.0.chars().try_for_each(|c| zinc_escape_str(c, buf))?;
         buf.push('\"');
         Ok(())
     }
@@ -51,10 +51,12 @@ impl <'a,T: NumTrait + 'a>HVal<'a,T> for HStr {
         if let Some(_) = self.0.find(":") {
             write!(buf, "s:")?;
         }
-        write!(buf,"{}",self.0)?;
+        write!(buf, "{}", self.0)?;
         Ok(())
     }
-    fn haystack_type(&self) -> HType { STR_TYPE }
+    fn haystack_type(&self) -> HType {
+        STR_TYPE
+    }
 
     set_trait_eq_method!(get_string_val,'a,T);
     set_get_method!(get_string_val, HStr);

@@ -1,8 +1,8 @@
-use crate::{HType, HVal, NumTrait};
 use crate::common::Txt;
-use std::fmt::{self,Write};
+use crate::{HType, HVal, NumTrait};
+use std::fmt::{self, Write};
 
-#[derive(PartialEq,Debug,Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct HBool(pub bool);
 
 pub type Bool = HBool;
@@ -18,8 +18,8 @@ const THIS_TYPE: HType = HType::Bool;
 impl HBool {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         match self.0 {
-            true => write!(buf,"{}",ZINC_TRUE),
-            false => write!(buf,"{}",ZINC_FALSE),
+            true => write!(buf, "{}", ZINC_TRUE),
+            false => write!(buf, "{}", ZINC_FALSE),
         }
     }
     fn to_trio(&self, buf: &mut String) -> fmt::Result {
@@ -27,13 +27,13 @@ impl HBool {
     }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         match self.0 {
-            true => write!(buf,"{}",JSON_TRUE),
-            false => write!(buf,"{}",JSON_FALSE),
+            true => write!(buf, "{}", JSON_TRUE),
+            false => write!(buf, "{}", JSON_FALSE),
         }
     }
 }
 
-impl <'a,T: NumTrait + 'a>HVal<'a,T> for HBool {
+impl<'a, T: NumTrait + 'a> HVal<'a, T> for HBool {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         self.to_zinc(buf)
     }
@@ -43,7 +43,9 @@ impl <'a,T: NumTrait + 'a>HVal<'a,T> for HBool {
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         self.to_json(buf)
     }
-    fn haystack_type(&self) -> HType { THIS_TYPE }
+    fn haystack_type(&self) -> HType {
+        THIS_TYPE
+    }
 
     set_trait_eq_method!(get_bool_val,'a,T);
     set_get_method!(get_bool_val, HBool);

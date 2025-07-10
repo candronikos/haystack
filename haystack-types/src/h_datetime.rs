@@ -1,23 +1,23 @@
 use crate::{HType, HVal, NumTrait};
-use std::fmt::{self,Write};
+use std::fmt::{self, Write};
 
-use chrono::{NaiveDateTime as DT, NaiveDate};
-use chrono::{Datelike,Timelike};
-use chrono::{FixedOffset, Duration};
+use chrono::{Datelike, Timelike};
+use chrono::{Duration, FixedOffset};
+use chrono::{NaiveDate, NaiveDateTime as DT};
 
-#[derive(Clone,Debug,PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct HDateTime {
     inner: DT,
     // TODO: Implement timezones to work with `chrono_tz`
     // tz: (chrono_tz::Tz, HOffset)
-    tz: (String, HOffset)
+    tz: (String, HOffset),
 }
 
-#[derive(Clone,Debug,PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum HOffset {
     Fixed(chrono::FixedOffset),
     Variable(chrono::Duration),
-    Utc
+    Utc,
 }
 
 pub type DateTime = HDateTime;
@@ -25,9 +25,17 @@ pub type DateTime = HDateTime;
 const THIS_TYPE: HType = HType::DateTime;
 
 impl HDateTime {
-    pub fn new(year: i32, month: u32, day: u32, hour: u32, min: u32, sec: u32, nano: u32, tz: (String /* chrono_tz::Tz*/, HOffset)) -> Self {
-        let inner = NaiveDate::from_ymd(year, month, day)
-            .and_hms_nano(hour, min, sec, nano);
+    pub fn new(
+        year: i32,
+        month: u32,
+        day: u32,
+        hour: u32,
+        min: u32,
+        sec: u32,
+        nano: u32,
+        tz: (String /* chrono_tz::Tz*/, HOffset),
+    ) -> Self {
+        let inner = NaiveDate::from_ymd(year, month, day).and_hms_nano(hour, min, sec, nano);
 
         Self { inner, tz }
     }
@@ -35,20 +43,32 @@ impl HDateTime {
         self.inner
     }
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        write!(buf,"{:0>4}-{:0>2}-{:0>2}T",self.inner.year(),self.inner.month(),self.inner.day())?;
-        write!(buf,"{:0>2}:{:0>2}:{:0>2}.{}",self.inner.hour(),self.inner.minute(),self.inner.second(),
-        self.inner.nanosecond())
+        write!(
+            buf,
+            "{:0>4}-{:0>2}-{:0>2}T",
+            self.inner.year(),
+            self.inner.month(),
+            self.inner.day()
+        )?;
+        write!(
+            buf,
+            "{:0>2}:{:0>2}:{:0>2}.{}",
+            self.inner.hour(),
+            self.inner.minute(),
+            self.inner.second(),
+            self.inner.nanosecond()
+        )
     }
     fn to_trio(&self, buf: &mut String) -> fmt::Result {
         self.to_zinc(buf)
     }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
-        write!(buf,"t:")?;
+        write!(buf, "t:")?;
         self.to_zinc(buf)
     }
 }
 
-impl <'a,T: NumTrait + 'a>HVal<'a,T> for HDateTime {
+impl<'a, T: NumTrait + 'a> HVal<'a, T> for HDateTime {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         self.to_zinc(buf)
     }
@@ -58,7 +78,9 @@ impl <'a,T: NumTrait + 'a>HVal<'a,T> for HDateTime {
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         self.to_json(buf)
     }
-    fn haystack_type(&self) -> HType { THIS_TYPE }
+    fn haystack_type(&self) -> HType {
+        THIS_TYPE
+    }
 
     set_trait_eq_method!(get_datetime_val,'a,T);
     set_get_method!(get_datetime_val, HDateTime);
@@ -111,14 +133,20 @@ mod tests {
 
     #[test]
     fn test_with_fixed_offset() {
-        let tz = ("FixedOffset".to_string(), HOffset::Fixed(FixedOffset::east(3600)));
+        let tz = (
+            "FixedOffset".to_string(),
+            HOffset::Fixed(FixedOffset::east(3600)),
+        );
         let datetime = HDateTime::new(2023, 10, 5, 14, 30, 45, 0, tz.clone());
         assert_eq!(datetime.tz, tz);
     }
 
     #[test]
     fn test_with_variable_offset() {
-        let tz = ("VariableOffset".to_string(), HOffset::Variable(Duration::hours(2)));
+        let tz = (
+            "VariableOffset".to_string(),
+            HOffset::Variable(Duration::hours(2)),
+        );
         let datetime = HDateTime::new(2023, 10, 5, 14, 30, 45, 0, tz.clone());
         assert_eq!(datetime.tz, tz);
     }

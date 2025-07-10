@@ -1,33 +1,35 @@
 use crate::{HType, HVal, NumTrait};
-use std::fmt::{self,Write};
+use std::fmt::{self, Write};
 
-#[derive(Clone,PartialEq,Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct HCoord<T> {
     lat: T,
-    long: T
+    long: T,
 }
 
 pub type Coord<T> = HCoord<T>;
 
 const THIS_TYPE: HType = HType::Coord;
 
-impl <T>HCoord<T> {
+impl<T> HCoord<T> {
     pub fn new(lat: T, long: T) -> HCoord<T> {
         HCoord { lat, long }
     }
 }
 
-impl <'a,T: NumTrait + 'a>HVal<'a,T> for HCoord<T> {
+impl<'a, T: NumTrait + 'a> HVal<'a, T> for HCoord<T> {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        write!(buf,"C({},{})",self.lat,self.long)
+        write!(buf, "C({},{})", self.lat, self.long)
     }
     fn to_trio(&self, buf: &mut String) -> fmt::Result {
         HVal::<T>::to_zinc(self, buf)
     }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
-        write!(buf,"c:{},{}",self.lat,self.long)
+        write!(buf, "c:{},{}", self.lat, self.long)
     }
-    fn haystack_type(&self) -> HType { THIS_TYPE }
+    fn haystack_type(&self) -> HType {
+        THIS_TYPE
+    }
 
     set_trait_eq_method!(get_coord_val,'a,T);
     set_get_method!(get_coord_val, HCoord<T>);

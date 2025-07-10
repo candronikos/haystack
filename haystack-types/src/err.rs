@@ -1,3 +1,3 @@
 pub enum HError {
-    ParseZincErr
+    ParseZincErr,
 }

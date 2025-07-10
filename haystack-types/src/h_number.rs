@@ -1,10 +1,10 @@
-use crate::{HVal,HType};
-use std::fmt::{self,Write,Display,Formatter};
+use crate::{HType, HVal};
 use num::Float;
-use std::str::FromStr;
 use std::fmt::Debug;
+use std::fmt::{self, Display, Formatter, Write};
+use std::str::FromStr;
 
-#[derive(Clone,PartialEq,Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct HUnit(String);
 
 impl HUnit {
@@ -17,10 +17,10 @@ impl HUnit {
     }
 }
 
-#[derive(PartialEq,Debug,Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct HNumber<T: Display> {
     val: T,
-    unit: Option<HUnit>
+    unit: Option<HUnit>,
 }
 
 pub type Number<T> = HNumber<T>;
@@ -30,7 +30,7 @@ impl<T> NumTrait for T where T: Float + Display + Debug + FromStr {}
 
 const THIS_TYPE: HType = HType::Number;
 
-impl <T: Float + Display>Number<T> {
+impl<T: Float + Display> Number<T> {
     pub fn new(num: T, unit: Option<HUnit>) -> Self {
         HNumber { val: num, unit }
     }
@@ -44,11 +44,11 @@ impl <T: Float + Display>Number<T> {
     }
 }
 
-impl <'a, T: NumTrait + 'a>HVal<'a,T> for HNumber<T> {
+impl<'a, T: NumTrait + 'a> HVal<'a, T> for HNumber<T> {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         match &self.unit {
-            Some(unit) =>  write!(buf,"{}{}",self.val,unit),
-            None => write!(buf,"{}",self.val),
+            Some(unit) => write!(buf, "{}{}", self.val, unit),
+            None => write!(buf, "{}", self.val),
         }
     }
     fn to_trio(&self, buf: &mut String) -> fmt::Result {
@@ -56,11 +56,13 @@ impl <'a, T: NumTrait + 'a>HVal<'a,T> for HNumber<T> {
     }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         match &self.unit {
-            Some(unit) =>  write!(buf,"{} {}",self.val,unit),
-            None => write!(buf,"{}",self.val),
+            Some(unit) => write!(buf, "{} {}", self.val, unit),
+            None => write!(buf, "{}", self.val),
         }
     }
-    fn haystack_type(&self) -> HType { THIS_TYPE }
+    fn haystack_type(&self) -> HType {
+        THIS_TYPE
+    }
 
     set_trait_eq_method!(get_number_val,'a,T);
     set_get_method!(get_number_val, HNumber<T>);

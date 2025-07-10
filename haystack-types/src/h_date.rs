@@ -1,10 +1,10 @@
 use crate::{HType, HVal, NumTrait};
-use std::fmt::{self,Write};
+use std::fmt::{self, Write};
 
-use chrono::naive::NaiveDate;
 use chrono::Datelike;
+use chrono::naive::NaiveDate;
 
-#[derive(Clone,Debug,PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct HDate {
     inner: NaiveDate,
 }
@@ -15,24 +15,29 @@ const THIS_TYPE: HType = HType::Date;
 
 impl HDate {
     pub fn new(year: i32, month: u32, day: u32) -> Self {
-        Self { inner: NaiveDate::from_ymd(year, month, day) }
+        Self {
+            inner: NaiveDate::from_ymd(year, month, day),
+        }
     }
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        write!(buf,"{:0>4}-{:0>2}-{:0>2}",
+        write!(
+            buf,
+            "{:0>4}-{:0>2}-{:0>2}",
             self.inner.year(),
             self.inner.month(),
-            self.inner.day())
+            self.inner.day()
+        )
     }
     fn to_trio(&self, buf: &mut String) -> fmt::Result {
         self.to_zinc(buf)
     }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
-        write!(buf,"d:")?;
+        write!(buf, "d:")?;
         self.to_zinc(buf)
     }
 }
 
-impl <'a,T: NumTrait + 'a>HVal<'a,T> for HDate {
+impl<'a, T: NumTrait + 'a> HVal<'a, T> for HDate {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         self.to_zinc(buf)
     }
@@ -42,7 +47,9 @@ impl <'a,T: NumTrait + 'a>HVal<'a,T> for HDate {
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         self.to_json(buf)
     }
-    fn haystack_type(&self) -> HType { THIS_TYPE }
+    fn haystack_type(&self) -> HType {
+        THIS_TYPE
+    }
 
     set_trait_eq_method!(get_date_val,'a,T);
     set_get_method!(get_date_val, HDate);

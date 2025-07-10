@@ -2,11 +2,11 @@ mod err;
 pub use err::HError;
 
 mod common;
-pub use common::{Txt,ZincReader,ZincWriter};
+pub use common::{Txt, ZincReader, ZincWriter};
 
 #[macro_use]
 mod h_val;
-pub use h_val::{HVal,HType};
+pub use h_val::{HType, HVal};
 
 mod cast;
 pub use cast::*;
@@ -27,7 +27,7 @@ mod h_na;
 pub use h_na::NA;
 
 mod h_number;
-pub use h_number::{Number, NumTrait, HUnit as Unit};
+pub use h_number::{HUnit as Unit, NumTrait, Number};
 pub use num::Float;
 
 mod h_str;
@@ -58,7 +58,7 @@ mod h_coord;
 pub use h_coord::Coord;
 
 mod h_grid;
-pub use h_grid::{HGrid,HCol,HRow};
+pub use h_grid::{HCol, HGrid, HRow};
 
 mod h_dict;
 pub use h_dict::Dict;
@@ -68,18 +68,18 @@ pub use h_list::List;
 
 pub mod io;
 
-#[cfg(feature = "lua54")]
-extern crate mlua_54 as mlua;
-#[cfg(feature = "lua53")]
-extern crate mlua_53 as mlua;
-#[cfg(feature = "lua52")]
-extern crate mlua_52 as mlua;
 #[cfg(feature = "lua51")]
 extern crate mlua_51 as mlua;
-#[cfg(feature = "luajit")]
-extern crate mlua_luajit as mlua;
+#[cfg(feature = "lua52")]
+extern crate mlua_52 as mlua;
+#[cfg(feature = "lua53")]
+extern crate mlua_53 as mlua;
+#[cfg(feature = "lua54")]
+extern crate mlua_54 as mlua;
 #[cfg(feature = "luajit52")]
 extern crate mlua_jit52 as mlua;
+#[cfg(feature = "luajit")]
+extern crate mlua_luajit as mlua;
 #[cfg(feature = "luau")]
 extern crate mlua_u as mlua;
 #[cfg(feature = "luau-jit")]
@@ -90,4 +90,4 @@ extern crate mlua_uvector4 as mlua;
 #[cfg(feature = "lua")]
 pub mod lua;
 #[cfg(feature = "lua")]
-pub use lua::{haystack, H, LuaFloat};
+pub use lua::{H, LuaFloat, haystack};

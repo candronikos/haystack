@@ -1,45 +1,64 @@
-use nom::{IResult,Parser};
-use nom::bytes::complete::{tag,take,take_while,take_while1};
 use nom::branch::alt;
-use nom::multi::separated_list1;
-use nom::combinator::{map,opt,verify,recognize,success,value,iterator};
-use nom::character::complete::{digit1,char as nom_char,space1};
-use nom::character::{is_digit,is_alphanumeric};
-use nom::sequence::{preceded,terminated,separated_pair};
-use nom::number::complete::double;
+use nom::bytes::complete::{tag, take, take_while, take_while1};
+use nom::character::complete::{char as nom_char, digit1, space1};
+use nom::character::{is_alphanumeric, is_digit};
+use nom::combinator::{iterator, map, opt, recognize, success, value, verify};
 use nom::error::{Error, ErrorKind};
+use nom::multi::separated_list1;
+use nom::number::complete::double;
+use nom::sequence::{preceded, separated_pair, terminated};
+use nom::{IResult, Parser};
 
-use crate::{HVal, h_bool::HBool, h_null::HNull, h_na::HNA, h_marker::HMarker,
-    h_remove::HRemove, h_number::{NumTrait,HNumber,HUnit}, h_ref::HRef,
-    h_date::HDate, h_datetime::{HDateTime,HOffset}, h_time::HTime,
-    h_coord::HCoord, h_str::HStr, h_xstr::HXStr, h_uri::HUri, h_symbol::HSymbol,
-    h_dict::HDict, h_list::HList, h_grid::HGrid, h_val::HBox};
+use crate::{
+    HVal,
+    h_bool::HBool,
+    h_coord::HCoord,
+    h_date::HDate,
+    h_datetime::{HDateTime, HOffset},
+    h_dict::HDict,
+    h_grid::HGrid,
+    h_list::HList,
+    h_marker::HMarker,
+    h_na::HNA,
+    h_null::HNull,
+    h_number::{HNumber, HUnit, NumTrait},
+    h_ref::HRef,
+    h_remove::HRemove,
+    h_str::HStr,
+    h_symbol::HSymbol,
+    h_time::HTime,
+    h_uri::HUri,
+    h_val::HBox,
+    h_xstr::HXStr,
+};
 
 use crate::common::*;
 
-use std::collections::HashMap;
 use core::fmt::Display;
 use core::str::FromStr;
-use std::rc::Rc;
 use num::Float;
+use std::collections::HashMap;
+use std::rc::Rc;
 
 pub mod parse {
-    use nom::sequence::delimited;
-    use nom::combinator::map_res;
     use super::*;
+    use nom::combinator::map_res;
+    use nom::sequence::delimited;
 
     macro_rules! into_box {
         ( $fn: expr, $num_type: ty, $lt: lifetime ) => {
-            map($fn,| hval | { Rc::new(hval) as HBox<$lt, $num_type> })
-        }
+            map($fn, |hval| Rc::new(hval) as HBox<$lt, $num_type>)
+        };
     }
 
     pub mod zinc {
-        use nom::{character::complete::newline, combinator::all_consuming, error::ParseError, AsChar, Err};
+        use nom::{
+            AsChar, Err, character::complete::newline, combinator::all_consuming, error::ParseError,
+        };
 
         use super::*;
 
-        pub fn literal<'out,T: NumTrait + 'out>(input: &str) -> IResult<&str, HBox<'out,T>> {
+        pub fn literal<'out, T: NumTrait + 'out>(input: &str) -> IResult<&str, HBox<'out, T>> {
             alt((
                 into_box!(na,T,'out),
                 into_box!(null,T,'out),
@@ -60,151 +79,183 @@ pub mod parse {
                 into_box!(dict::<T>,T,'out),
                 into_box!(list::<T>,T,'out),
                 into_box!(delimited(tag("<<"),grid::<T>,tag(">>")),T,'out),
-            )).parse(input)
+            ))
+            .parse(input)
         }
 
         pub fn boolean(input: &str) -> IResult<&str, HBool> {
-            alt((
-                value(HBool(true),tag("T")),
-                value(HBool(false),tag("F"))
-            )).parse(input)
+            alt((value(HBool(true), tag("T")), value(HBool(false), tag("F")))).parse(input)
         }
 
         pub fn null(input: &str) -> IResult<&str, HNull> {
             use crate::h_null::NULL;
-            map(tag("N"), |_s: &str| { NULL }).parse(input)
+            map(tag("N"), |_s: &str| NULL).parse(input)
         }
 
         pub fn na(input: &str) -> IResult<&str, HNA> {
             use crate::h_na::NA;
-            map(tag("NA"), |_s: &str| { NA }).parse(input)
+            map(tag("NA"), |_s: &str| NA).parse(input)
         }
 
         pub fn marker(input: &str) -> IResult<&str, HMarker> {
             use crate::h_marker::MARKER;
-            map(tag("M"), |_s: &str| { MARKER }).parse(input)
+            map(tag("M"), |_s: &str| MARKER).parse(input)
         }
 
         pub fn remove(input: &str) -> IResult<&str, HRemove> {
             use crate::h_remove::REMOVE;
-            map(tag("R"), |_s: &str| { REMOVE }).parse(input)
+            map(tag("R"), |_s: &str| REMOVE).parse(input)
         }
 
         pub fn string(input: &str) -> IResult<&str, HStr> {
-            let (input,_) = tag("\"")(input)?;
-            let mut it = iterator(input, alt((
-                value("\x08", tag("\\b")),
-                value("\x0C", tag("\\f")),
-                value("\n", tag("\\n")),
-                value("\r", tag("\\r")),
-                value("\t", tag("\\t")),
-                value("\"", tag("\\\"")),
-                value("\\", tag("\\\\")),
-                value("$", tag("\\$")),
-                take_while1(unicode_char('"')),
-            )));
+            let (input, _) = tag("\"")(input)?;
+            let mut it = iterator(
+                input,
+                alt((
+                    value("\x08", tag("\\b")),
+                    value("\x0C", tag("\\f")),
+                    value("\n", tag("\\n")),
+                    value("\r", tag("\\r")),
+                    value("\t", tag("\\t")),
+                    value("\"", tag("\\\"")),
+                    value("\\", tag("\\\\")),
+                    value("$", tag("\\$")),
+                    take_while1(unicode_char('"')),
+                )),
+            );
 
-            let string_literal = it.by_ref().fold(String::new(),|mut acc, input| { acc.push_str(input); acc });
-            let (input,()) = it.finish()?;
-            let (input,_) = tag("\"")(input)?;
+            let string_literal = it.by_ref().fold(String::new(), |mut acc, input| {
+                acc.push_str(input);
+                acc
+            });
+            let (input, ()) = it.finish()?;
+            let (input, _) = tag("\"")(input)?;
 
-            Ok((input,HStr(string_literal)))
+            Ok((input, HStr(string_literal)))
         }
 
         pub fn xstring(input: &str) -> IResult<&str, HXStr> {
-            let (input,_x_type) = recognize((
+            let (input, _x_type) = recognize((
                 take_while1(|c: char| c.is_ascii_uppercase()),
-                take_while(|c: char| c.is_ascii_alphanumeric() || c == '_')
-            )).parse(input)?;
+                take_while(|c: char| c.is_ascii_alphanumeric() || c == '_'),
+            ))
+            .parse(input)?;
 
-            let (input,x_val) = delimited(tag(")"),string,tag(")")).parse(input)?;
+            let (input, x_val) = delimited(tag(")"), string, tag(")")).parse(input)?;
 
-            Ok((input,HXStr::new(_x_type.to_owned(), x_val.into_string())))
+            Ok((input, HXStr::new(_x_type.to_owned(), x_val.into_string())))
         }
 
         pub fn uri(input: &str) -> IResult<&str, HUri> {
-            let (input,_) = tag("`")(input)?;
-            let mut it = iterator(input, alt((
-                value(":", tag("\\:")),
-                value("/", tag("\\/")),
-                value("#", tag("\\#")),
-                value("\"", tag("\\\"")),
-                value("[", tag("\\[")),
-                value("]", tag("\\]")),
-                value("@", tag("\\@")),
-                value("`", tag("\\`")),
-                value("&", tag("\\&")),
-                value("=", tag("\\=")),
-                value(";", tag("\\;")),
-                value("\\", tag("\\\\")),
-                take_while1(unicode_char('`')),
-            )));
+            let (input, _) = tag("`")(input)?;
+            let mut it = iterator(
+                input,
+                alt((
+                    value(":", tag("\\:")),
+                    value("/", tag("\\/")),
+                    value("#", tag("\\#")),
+                    value("\"", tag("\\\"")),
+                    value("[", tag("\\[")),
+                    value("]", tag("\\]")),
+                    value("@", tag("\\@")),
+                    value("`", tag("\\`")),
+                    value("&", tag("\\&")),
+                    value("=", tag("\\=")),
+                    value(";", tag("\\;")),
+                    value("\\", tag("\\\\")),
+                    take_while1(unicode_char('`')),
+                )),
+            );
 
-            let url_literal = it.by_ref().fold(String::new(),|mut acc, input| { acc.push_str(input); acc });
-            let (input,()) = it.finish()?;
-            let (input,_) = tag("`")(input)?;
+            let url_literal = it.by_ref().fold(String::new(), |mut acc, input| {
+                acc.push_str(input);
+                acc
+            });
+            let (input, ()) = it.finish()?;
+            let (input, _) = tag("`")(input)?;
 
             let uri_res = HUri::new(&url_literal);
-            let uri = uri_res.or(Err(nom::Err::Error(Error{ input: input, code: ErrorKind::Digit })))?;
-            Ok((input,uri))
+            let uri = uri_res.or(Err(nom::Err::Error(Error {
+                input: input,
+                code: ErrorKind::Digit,
+            })))?;
+            Ok((input, uri))
         }
 
-        pub fn ref_chars_body<I>(prefix:char) -> impl FnMut(I) -> IResult<I,I>
+        pub fn ref_chars_body<I>(prefix: char) -> impl FnMut(I) -> IResult<I, I>
         where
             I: nom::Input + Clone,
             <I as nom::Input>::Item: nom::AsChar + Copy,
         {
-            
-        move |input| preceded(nom::character::complete::char::<I, nom::error::Error<I>>(prefix), take_while1(|c: <I as nom::Input>::Item| {
-            let c = c.as_char();
-            c.is_ascii_alphanumeric() || match c {
-                '_' | ':' | '-' | '.' | '~' => true,
-                _ => false
+            move |input| {
+                preceded(
+                    nom::character::complete::char::<I, nom::error::Error<I>>(prefix),
+                    take_while1(|c: <I as nom::Input>::Item| {
+                        let c = c.as_char();
+                        c.is_ascii_alphanumeric()
+                            || match c {
+                                '_' | ':' | '-' | '.' | '~' => true,
+                                _ => false,
+                            }
+                    }),
+                )
+                .parse(input)
             }
-        })).parse(input)
         }
 
         fn reference(input: &str) -> IResult<&str, HRef> {
-            let (input,(ref_str,dis_str)) = ((
-                ref_chars_body('@'),
-                opt(preceded(tag(" "), string)),
-            )).parse(input)?;
-            Ok((input,HRef::new(ref_str.to_owned(), dis_str.map(|s| s.into_string()))))
+            let (input, (ref_str, dis_str)) =
+                ((ref_chars_body('@'), opt(preceded(tag(" "), string)))).parse(input)?;
+            Ok((
+                input,
+                HRef::new(ref_str.to_owned(), dis_str.map(|s| s.into_string())),
+            ))
         }
 
         fn symbol(input: &str) -> IResult<&str, HSymbol> {
-            let (input,symbol_str) = ref_chars_body('^')(input)?;
-            Ok((input,HSymbol::new(symbol_str.to_owned())))
+            let (input, symbol_str) = ref_chars_body('^')(input)?;
+            Ok((input, HSymbol::new(symbol_str.to_owned())))
         }
 
         fn get_2_digits(input: &str) -> IResult<&str, &str> {
-            verify(take(2usize),|s: &str| s.chars().all(|c| char::is_digit(c,10))).parse(input)
+            verify(take(2usize), |s: &str| {
+                s.chars().all(|c| char::is_digit(c, 10))
+            })
+            .parse(input)
         }
 
         fn get_offset(input: &str) -> IResult<&str, (i32, u32, u32)> {
             ((
-                alt((value(-1,nom_char('-')),value(1,nom_char('+')))),
-                map(get_2_digits, |s| u32::from_str_radix(s,10).unwrap()),
-                preceded(tag(":"), map(get_2_digits, |s| u32::from_str_radix(s,10).unwrap()))
-            )).parse(input)
+                alt((value(-1, nom_char('-')), value(1, nom_char('+')))),
+                map(get_2_digits, |s| u32::from_str_radix(s, 10).unwrap()),
+                preceded(
+                    tag(":"),
+                    map(get_2_digits, |s| u32::from_str_radix(s, 10).unwrap()),
+                ),
+            ))
+                .parse(input)
         }
 
         fn get_named_tz(input: &str) -> IResult<&str, &str> {
             recognize((
                 take_while1(|c: char| c.is_ascii_uppercase()),
-                take_while(|c: char| is_alphanumeric(c as u8) || c == '/' || c== '-' || c== '_' || c== '+')
-            )).parse(input)
+                take_while(|c: char| {
+                    is_alphanumeric(c as u8) || c == '/' || c == '-' || c == '_' || c == '+'
+                }),
+            ))
+            .parse(input)
         }
 
         fn timezone(input: &str) -> IResult<&str, (String, HOffset)> {
-            use chrono_tz::{Tz, UTC};
             use chrono::offset::FixedOffset;
+            use chrono_tz::{Tz, UTC};
 
             let (input, (first, second)) = alt((
                 (recognize(get_offset), preceded(tag(" "), get_named_tz)),
                 (tag("Z"), preceded(tag(" "), get_named_tz)),
                 (tag("Z"), success("")),
-            )).parse(input)?;
+            ))
+            .parse(input)?;
 
             // TODO: Implement with TZ instead of String
             let timezone: (String, HOffset) = match first {
@@ -214,129 +265,197 @@ pub mod parse {
                     _ => {
                         // let t = Tz::from_str(second).unwrap();
                         // (t, HOffset::Variable(chrono::Duration::minutes(1 * 60 + 1)))
-                        (second.to_owned(), HOffset::Variable(chrono::Duration::minutes(1 * 60 + 1)))
+                        (
+                            second.to_owned(),
+                            HOffset::Variable(chrono::Duration::minutes(1 * 60 + 1)),
+                        )
                     }
                 },
                 _ => {
-                    let (_,(sign,hours,minutes)) = get_offset(first)?;
+                    let (_, (sign, hours, minutes)) = get_offset(first)?;
                     // (Tz::from_str(second).unwrap(), HOffset::Fixed(FixedOffset::east(sign * (hours as i32 * 3600 + minutes as i32 * 60))))
-                    (second.to_owned(), HOffset::Fixed(FixedOffset::east(sign * (hours as i32 * 3600 + minutes as i32 * 60))))
+                    (
+                        second.to_owned(),
+                        HOffset::Fixed(FixedOffset::east(
+                            sign * (hours as i32 * 3600 + minutes as i32 * 60),
+                        )),
+                    )
                 }
             };
 
-            Ok((input,timezone))
+            Ok((input, timezone))
         }
 
         pub fn datetime(input: &str) -> IResult<&str, HDateTime> {
             let start = input;
             let (input, (yr, mo, day, hr, min, sec, nano, tz)) = (
-                terminated(map(take(4usize), |s| i32::from_str_radix(s,10)),tag("-")),
-                terminated(map(take(2usize), |s| u32::from_str_radix(s,10)),tag("-")),
-                terminated(map(take(2usize), |s| u32::from_str_radix(s,10)),tag("T")),
-                terminated(map(take(2usize), |s| u32::from_str_radix(s,10)),tag(":")),
-                terminated(map(take(2usize), |s| u32::from_str_radix(s,10)),tag(":")),
-                map(take(2usize), |s| u32::from_str_radix(s,10)),
-                opt(preceded(tag("."),map(digit1, |s| u32::from_str_radix(s,10)))),
-                timezone
-            ).parse(start)?;
+                terminated(map(take(4usize), |s| i32::from_str_radix(s, 10)), tag("-")),
+                terminated(map(take(2usize), |s| u32::from_str_radix(s, 10)), tag("-")),
+                terminated(map(take(2usize), |s| u32::from_str_radix(s, 10)), tag("T")),
+                terminated(map(take(2usize), |s| u32::from_str_radix(s, 10)), tag(":")),
+                terminated(map(take(2usize), |s| u32::from_str_radix(s, 10)), tag(":")),
+                map(take(2usize), |s| u32::from_str_radix(s, 10)),
+                opt(preceded(
+                    tag("."),
+                    map(digit1, |s| u32::from_str_radix(s, 10)),
+                )),
+                timezone,
+            )
+                .parse(start)?;
 
-            let yr = yr.or(Err(nom::Err::Error(Error{ input: start, code: ErrorKind::Digit })))?;
-            let mo = mo.or(Err(nom::Err::Error(Error{ input: start, code: ErrorKind::Digit })))?;
-            let day = day.or(Err(nom::Err::Error(Error{ input: start, code: ErrorKind::Digit })))?;
-            let hr = hr.or(Err(nom::Err::Error(Error{ input: start, code: ErrorKind::Digit })))?;
-            let min = min.or(Err(nom::Err::Error(Error{ input: start, code: ErrorKind::Digit })))?;
-            let sec = sec.or(Err(nom::Err::Error(Error{ input: start, code: ErrorKind::Digit })))?;
+            let yr = yr.or(Err(nom::Err::Error(Error {
+                input: start,
+                code: ErrorKind::Digit,
+            })))?;
+            let mo = mo.or(Err(nom::Err::Error(Error {
+                input: start,
+                code: ErrorKind::Digit,
+            })))?;
+            let day = day.or(Err(nom::Err::Error(Error {
+                input: start,
+                code: ErrorKind::Digit,
+            })))?;
+            let hr = hr.or(Err(nom::Err::Error(Error {
+                input: start,
+                code: ErrorKind::Digit,
+            })))?;
+            let min = min.or(Err(nom::Err::Error(Error {
+                input: start,
+                code: ErrorKind::Digit,
+            })))?;
+            let sec = sec.or(Err(nom::Err::Error(Error {
+                input: start,
+                code: ErrorKind::Digit,
+            })))?;
 
-            Ok((input, HDateTime::new(
-                yr, mo, day, hr, min, sec,
-                if let Some(nano) = nano {
-                    nano.or(Err(nom::Err::Error(Error{ input: start, code: ErrorKind::Digit })))?
-                } else { 0 },
-                tz
-            )))
+            Ok((
+                input,
+                HDateTime::new(
+                    yr,
+                    mo,
+                    day,
+                    hr,
+                    min,
+                    sec,
+                    if let Some(nano) = nano {
+                        nano.or(Err(nom::Err::Error(Error {
+                            input: start,
+                            code: ErrorKind::Digit,
+                        })))?
+                    } else {
+                        0
+                    },
+                    tz,
+                ),
+            ))
         }
 
         fn coord_deg<'out, T: NumTrait + 'out>(input: &str) -> IResult<&str, T> {
-            map_res(recognize((opt(tag("-")),digit1,opt((tag("."),digit1)))),|s: &str| s.parse::<T>()).parse(input)
+            map_res(
+                recognize((opt(tag("-")), digit1, opt((tag("."), digit1)))),
+                |s: &str| s.parse::<T>(),
+            )
+            .parse(input)
         }
 
         pub fn coord<'out, T: NumTrait + 'out>(input: &str) -> IResult<&str, HCoord<T>> {
-            let (input,(lat,long)) = (delimited(tag("C("),coord_deg,tag(",")),terminated(coord_deg,tag(")"))).parse(input)?;
-    
-            Ok((input,HCoord::new(lat,long)))
+            let (input, (lat, long)) = (
+                delimited(tag("C("), coord_deg, tag(",")),
+                terminated(coord_deg, tag(")")),
+            )
+                .parse(input)?;
+
+            Ok((input, HCoord::new(lat, long)))
         }
 
-        fn tags<'out, T: NumTrait + 'out>(input: &str) -> IResult<&str,HashMap<String,HBox<'out,T>>> {
-            let (input,res) = separated_list1(
-                tag(" "),
-                (id, opt(preceded(tag(":"), literal::<T>)))
-            ).parse(input)?;
+        fn tags<'out, T: NumTrait + 'out>(
+            input: &str,
+        ) -> IResult<&str, HashMap<String, HBox<'out, T>>> {
+            let (input, res) =
+                separated_list1(tag(" "), (id, opt(preceded(tag(":"), literal::<T>))))
+                    .parse(input)?;
 
-            let mut map: HashMap<String, HBox<'out,T>> = HashMap::new();
-            
-            res.into_iter().for_each(|(k,v)| {
+            let mut map: HashMap<String, HBox<'out, T>> = HashMap::new();
+
+            res.into_iter().for_each(|(k, v)| {
                 map.insert(k.to_owned(), v.unwrap_or(Rc::new(HMarker) as HBox<'out, T>));
             });
 
-            Ok((input,map))
+            Ok((input, map))
         }
 
-        fn tags_list<'out,T: NumTrait + 'out>(input: &str) -> IResult<&str,Option<Vec<HBox<'out,T>>>> {
-            let (input,res) = opt(separated_list1((take_while(AsChar::is_space),tag(","),take_while(AsChar::is_space)),literal::<T>)).parse(input)?;
+        fn tags_list<'out, T: NumTrait + 'out>(
+            input: &str,
+        ) -> IResult<&str, Option<Vec<HBox<'out, T>>>> {
+            let (input, res) = opt(separated_list1(
+                (
+                    take_while(AsChar::is_space),
+                    tag(","),
+                    take_while(AsChar::is_space),
+                ),
+                literal::<T>,
+            ))
+            .parse(input)?;
 
-            Ok((input,res))
+            Ok((input, res))
         }
 
-        pub fn dict<'out,T: NumTrait + 'out>(input: &str) -> IResult<&str, HDict<'out,T>> {
-            let (input,opt_dict) = delimited(tag("{"),opt(tags::<T>),tag("}")).parse(input)?;
+        pub fn dict<'out, T: NumTrait + 'out>(input: &str) -> IResult<&str, HDict<'out, T>> {
+            let (input, opt_dict) = delimited(tag("{"), opt(tags::<T>), tag("}")).parse(input)?;
 
             let dict = match opt_dict {
                 Some(dict) => dict,
-                None => HashMap::new()
+                None => HashMap::new(),
             };
 
-            Ok((input,HDict::from_map(dict)))
+            Ok((input, HDict::from_map(dict)))
         }
 
-        pub fn list<'out, T: NumTrait + 'out>(input: &str) -> IResult<&str, HList<'out,T>> {
-            let (input,opt_vec) = delimited(tag("["),tags_list::<T>,tag("]")).parse(input)?;
+        pub fn list<'out, T: NumTrait + 'out>(input: &str) -> IResult<&str, HList<'out, T>> {
+            let (input, opt_vec) = delimited(tag("["), tags_list::<T>, tag("]")).parse(input)?;
 
             let vec = match opt_vec {
                 Some(vec) => vec,
-                None => Vec::new()
+                None => Vec::new(),
             };
 
-            Ok((input,HList::from_vec(vec)))
+            Ok((input, HList::from_vec(vec)))
         }
 
-        pub fn grid_meta<'out,T: NumTrait + 'out>(input: &str) -> IResult<&str, HashMap<String,HBox<'out,T>>> {
-            let (input,opt_dict) = opt(tags::<T>).parse(input)?;
+        pub fn grid_meta<'out, T: NumTrait + 'out>(
+            input: &str,
+        ) -> IResult<&str, HashMap<String, HBox<'out, T>>> {
+            let (input, opt_dict) = opt(tags::<T>).parse(input)?;
 
             let dict = match opt_dict {
                 Some(dict) => dict,
-                None => Err(nom::Err::Error(Error{
+                None => Err(nom::Err::Error(Error {
                     input: input,
-                    code: ErrorKind::Tag
-                }))?
+                    code: ErrorKind::Tag,
+                }))?,
             };
 
-            Ok((input,dict))
+            Ok((input, dict))
         }
 
-        pub fn cols<'out,T: NumTrait + 'out>(input: &str) -> IResult<&str, Vec<(String,Option<HashMap<String,HBox<'out,T>>>)>> {
-            let (input,columns) = separated_list1(
-                tag(","),
-                (id,opt(preceded(space1, tags::<T>)))
-            ).parse(input)?;
-            let columns = columns.into_iter().map(|(id,meta)| (id.to_owned(),meta));
+        pub fn cols<'out, T: NumTrait + 'out>(
+            input: &str,
+        ) -> IResult<&str, Vec<(String, Option<HashMap<String, HBox<'out, T>>>)>> {
+            let (input, columns) =
+                separated_list1(tag(","), (id, opt(preceded(space1, tags::<T>)))).parse(input)?;
+            let columns = columns.into_iter().map(|(id, meta)| (id.to_owned(), meta));
             let columns = columns.collect();
-            Ok((input,columns))
+            Ok((input, columns))
         }
 
-        pub fn grid_err<'out,T: NumTrait + 'out>(input: &str) -> IResult<&str, HGrid<T>> {
-            let (input,_) = tag("ver:\"3.0\"")(input)?;
-            let (input,meta) = delimited(space1, grid_meta::<T>, tag("\n")).parse(input)?;
-            let (_, is_empty) = all_consuming(map(terminated(tag("empty"), take_while1(|c| c == '\n')), |_| true)).parse(input)?;
+        pub fn grid_err<'out, T: NumTrait + 'out>(input: &str) -> IResult<&str, HGrid<T>> {
+            let (input, _) = tag("ver:\"3.0\"")(input)?;
+            let (input, meta) = delimited(space1, grid_meta::<T>, tag("\n")).parse(input)?;
+            let (_, is_empty) = all_consuming(map(
+                terminated(tag("empty"), take_while1(|c| c == '\n')),
+                |_| true,
+            ))
+            .parse(input)?;
             if is_empty || meta.contains_key("err") {
                 //let dis = meta.get("dis").unwrap().get_string_val().unwrap().into_string();
                 let dis = match meta.get("dis") {
@@ -345,18 +464,20 @@ pub mod parse {
                         if let Some(s) = v.get_string_val() {
                             s.clone_into_string()
                         } else {
-                            return Err(nom::Err::Error(Error{
+                            return Err(nom::Err::Error(Error {
                                 input: input,
-                                code: ErrorKind::Tag
-                            }))
+                                code: ErrorKind::Tag,
+                            }));
                         }
-                    },
-                    None => return Err(nom::Err::Error(Error{
-                        input: input,
-                        code: ErrorKind::Tag
-                    }))
+                    }
+                    None => {
+                        return Err(nom::Err::Error(Error {
+                            input: input,
+                            code: ErrorKind::Tag,
+                        }));
+                    }
                 };
-                
+
                 // meta.get("errTrace").map(|s| s.get_string_val().unwrap().into_string())
                 let errTrace = match meta.get("errTrace") {
                     Some(v) => {
@@ -364,64 +485,68 @@ pub mod parse {
                         if let Some(s) = v.get_string_val() {
                             Some(s.clone_into_string())
                         } else {
-                            return Err(nom::Err::Error(Error{
+                            return Err(nom::Err::Error(Error {
                                 input: input,
-                                code: ErrorKind::Tag
-                            }))
+                                code: ErrorKind::Tag,
+                            }));
                         }
-                    },
-                    None => return Err(nom::Err::Error(Error{
-                        input: input,
-                        code: ErrorKind::Tag
-                    }))
+                    }
+                    None => {
+                        return Err(nom::Err::Error(Error {
+                            input: input,
+                            code: ErrorKind::Tag,
+                        }));
+                    }
                 };
 
-                let err = HGrid::Error {
-                    dis, errTrace,
-                };
+                let err = HGrid::Error { dis, errTrace };
                 return Ok((input, err));
-                
             }
 
-            Err(nom::Err::Error(Error{
+            Err(nom::Err::Error(Error {
                 input: input,
-                code: ErrorKind::Tag
+                code: ErrorKind::Tag,
             }))
         }
 
-        pub fn grid<'out, T: NumTrait + 'out>(input: &str) -> IResult<&str, HGrid<'out,T>> {
-            let (input,version) = delimited(tag("ver:\""), recognize(double), tag("\"")).parse(input)?;
+        pub fn grid<'out, T: NumTrait + 'out>(input: &str) -> IResult<&str, HGrid<'out, T>> {
+            let (input, version) =
+                delimited(tag("ver:\""), recognize(double), tag("\"")).parse(input)?;
 
             // Grid Meta
-            let (input,meta) = opt(preceded(space1, grid_meta::<T>)).parse(input)?;
+            let (input, meta) = opt(preceded(space1, grid_meta::<T>)).parse(input)?;
             let (input, _) = tag("\n").parse(input)?;
-            let is_empty_res = all_consuming(terminated(tag::<_, _, ()>("empty"), take_while1(|c| c == '\n')))
-                .parse(input);
+            let is_empty_res = all_consuming(terminated(
+                tag::<_, _, ()>("empty"),
+                take_while1(|c| c == '\n'),
+            ))
+            .parse(input);
             let is_empty = is_empty_res.is_ok();
             if is_empty {
                 return Ok((input, HGrid::Empty { meta }));
             }
-            
+
             // Cols
-            let (input,columns) = terminated(cols::<T>, tag("\n")).parse(input)?;
+            let (input, columns) = terminated(cols::<T>, tag("\n")).parse(input)?;
 
             // Rows
             let row_width = columns.len();
-            let (input,rows) = separated_list1(
+            let (input, rows) = separated_list1(
                 tag("\n"),
                 verify(
-                    separated_list1(tag(","),opt(literal::<T>)),
-                    |v: &Vec<Option<HBox<T>>>| v.len()==row_width
-                )
-            ).parse(input)?;
+                    separated_list1(tag(","), opt(literal::<T>)),
+                    |v: &Vec<Option<HBox<T>>>| v.len() == row_width,
+                ),
+            )
+            .parse(input)?;
 
-            let mut grid = HGrid::from_row_vec(columns,rows);
+            let mut grid = HGrid::from_row_vec(columns, rows);
 
             if let Some(meta) = meta {
                 grid = grid.add_meta(meta).unwrap();
             }
 
-            Ok((input,grid))
+            Ok((input, grid))
         }
 
         #[cfg(test)]
@@ -431,8 +556,8 @@ pub mod parse {
 
             #[test]
             fn parse_unicode_char() {
-                let hello: IResult<&str,&str> = take_while(unicode_char('"'))("Hello\n\r\t\"\\");
-                assert_eq!(hello,Ok(("\n\r\t\"\\","Hello")));
+                let hello: IResult<&str, &str> = take_while(unicode_char('"'))("Hello\n\r\t\"\\");
+                assert_eq!(hello, Ok(("\n\r\t\"\\", "Hello")));
             }
 
             #[test]
@@ -440,13 +565,13 @@ pub mod parse {
                 let input = "dis:\"Fri 31-Jul-2020\" view:\"chart\" title:\"Line\" chartNoScroll chartLegend:\"hide\" hisStart:2020-07-31T00:00:00-04:00 New_York hisEnd:2020-08-01T00:00:00-04:00 New_York hisLimit:10000";
 
                 let res = tags::<f64>(input);
-                if let Ok((_,e)) = res {
+                if let Ok((_, e)) = res {
                     let mut buf = String::new();
-                    
+
                     let v = e.get("dis").unwrap();
                     v.to_zinc(&mut buf).unwrap();
                     let rhs = Rc::new(HStr("Fri 31-Jul-2020".to_owned())) as HBox<f64>;
-                    assert_eq!(v,&rhs)
+                    assert_eq!(v, &rhs)
                 } else {
                     panic!("Failed to parse separated list")
                 }
@@ -454,109 +579,145 @@ pub mod parse {
 
             #[test]
             fn parse_string_02() {
-                assert_eq!(string("\"He\\tllo\""),Ok(("",HStr("He\tllo".to_owned()))));
+                assert_eq!(string("\"He\\tllo\""), Ok(("", HStr("He\tllo".to_owned()))));
             }
 
             #[test]
             fn parse_bool() {
-                assert_eq!(boolean("T").unwrap(),("",HBool(true)));
-                assert_eq!(boolean("F").unwrap(),("",HBool(false)),);
+                assert_eq!(boolean("T").unwrap(), ("", HBool(true)));
+                assert_eq!(boolean("F").unwrap(), ("", HBool(false)),);
             }
 
             #[test]
             fn parse_null() {
-                assert_eq!(null("N").unwrap(),("",crate::h_null::NULL));
+                assert_eq!(null("N").unwrap(), ("", crate::h_null::NULL));
             }
 
             #[test]
             fn parse_na() {
-                assert_eq!(na("NA").unwrap(),("",crate::h_na::NA));
+                assert_eq!(na("NA").unwrap(), ("", crate::h_na::NA));
             }
 
             #[test]
             fn parse_marker() {
-                assert_eq!(marker("M").unwrap(),("",crate::h_marker::MARKER));
+                assert_eq!(marker("M").unwrap(), ("", crate::h_marker::MARKER));
             }
 
             #[test]
             fn parse_remove() {
-                assert_eq!(remove("R").unwrap(),("",crate::h_remove::REMOVE));
+                assert_eq!(remove("R").unwrap(), ("", crate::h_remove::REMOVE));
             }
 
             #[test]
             fn parse_datetime() {
                 // TODO: Implement with Haystack Timezones so they're valid with the `chrono` library
                 // let tz_obj = (chrono_tz::Tz::from_str("America/Los_Angeles").unwrap(), HOffset::Fixed(chrono::offset::FixedOffset::east(-1 * 8 * 3600)));
-                let tz_obj = ("America/Los_Angeles".to_owned(), HOffset::Fixed(chrono::offset::FixedOffset::east(-1 * 8 * 3600)));
-                assert_eq!(datetime("2010-11-28T07:23:02.773-08:00 America/Los_Angeles").unwrap(),("",HDateTime::new(2010,11,28,7,23,2,773,tz_obj)));
+                let tz_obj = (
+                    "America/Los_Angeles".to_owned(),
+                    HOffset::Fixed(chrono::offset::FixedOffset::east(-1 * 8 * 3600)),
+                );
+                assert_eq!(
+                    datetime("2010-11-28T07:23:02.773-08:00 America/Los_Angeles").unwrap(),
+                    ("", HDateTime::new(2010, 11, 28, 7, 23, 2, 773, tz_obj))
+                );
             }
 
             #[test]
             fn parse_coord() {
-                assert_eq!(coord("C(1.5,-9)").unwrap(),("",HCoord::new(1.5,-9f64)));
+                assert_eq!(coord("C(1.5,-9)").unwrap(), ("", HCoord::new(1.5, -9f64)));
             }
 
             #[test]
             fn coerce_na2hval() {
                 use crate::h_na::NA;
-                let (_,v) = literal::<f64>("NA").unwrap();
+                let (_, v) = literal::<f64>("NA").unwrap();
                 let lhs = v.get_na();
-                assert_eq!(lhs,Some(&NA))
+                assert_eq!(lhs, Some(&NA))
             }
 
             macro_rules! assert_literal {
                 ( $val: literal, $get: ident, $rhs: expr ) => {
                     let v = literal::<f64>($val).unwrap();
                     let lhs = v.1.$get();
-                    assert_eq!(lhs,Some(&$rhs));
-                }
+                    assert_eq!(lhs, Some(&$rhs));
+                };
             }
 
             #[test]
             fn coerce_hval() {
-                use crate::h_null::NULL;
-                use crate::h_marker::MARKER;
-                use crate::h_remove::REMOVE;
                 use crate::h_bool::HBool;
+                use crate::h_marker::MARKER;
                 use crate::h_na::NA;
+                use crate::h_null::NULL;
+                use crate::h_remove::REMOVE;
                 use crate::h_str::HStr;
                 use crate::h_uri::HUri;
 
-                assert_literal!("N",get_null,NULL);
-                assert_literal!("M",get_marker,MARKER);
-                assert_literal!("R",get_remove,REMOVE);
-                assert_literal!("T",get_bool,HBool(true));
-                assert_literal!("F",get_bool,HBool(false));
-                assert_literal!("NA",get_na,NA);
-                assert_literal!(r#""Hello\nSmidgen\"""#,get_string,HStr("Hello\nSmidgen\"".to_owned()));
-                assert_literal!("`http://www.google.com`",get_uri,HUri::new("http://www.google.com").unwrap());
-                assert_literal!("1.5kWh",get_number,HNumber::new(1.5f64,Some(HUnit::new("kWh".to_owned()))));
+                assert_literal!("N", get_null, NULL);
+                assert_literal!("M", get_marker, MARKER);
+                assert_literal!("R", get_remove, REMOVE);
+                assert_literal!("T", get_bool, HBool(true));
+                assert_literal!("F", get_bool, HBool(false));
+                assert_literal!("NA", get_na, NA);
+                assert_literal!(
+                    r#""Hello\nSmidgen\"""#,
+                    get_string,
+                    HStr("Hello\nSmidgen\"".to_owned())
+                );
+                assert_literal!(
+                    "`http://www.google.com`",
+                    get_uri,
+                    HUri::new("http://www.google.com").unwrap()
+                );
+                assert_literal!(
+                    "1.5kWh",
+                    get_number,
+                    HNumber::new(1.5f64, Some(HUnit::new("kWh".to_owned())))
+                );
             }
-            
+
             #[test]
             fn parse_literal_na() {
-                assert_eq!(literal::<f64>("NA").unwrap().1.get_na(), Some(&crate::h_na::NA));
+                assert_eq!(
+                    literal::<f64>("NA").unwrap().1.get_na(),
+                    Some(&crate::h_na::NA)
+                );
             }
 
             #[test]
             fn parse_literal_null() {
-                assert_eq!(literal::<f64>("N").unwrap().1.get_null(), Some(&crate::h_null::NULL));
+                assert_eq!(
+                    literal::<f64>("N").unwrap().1.get_null(),
+                    Some(&crate::h_null::NULL)
+                );
             }
 
             #[test]
             fn parse_literal_marker() {
-                assert_eq!(literal::<f64>("M").unwrap().1.get_marker(), Some(&crate::h_marker::MARKER));
+                assert_eq!(
+                    literal::<f64>("M").unwrap().1.get_marker(),
+                    Some(&crate::h_marker::MARKER)
+                );
             }
 
             #[test]
             fn parse_literal_remove() {
-                assert_eq!(literal::<f64>("R").unwrap().1.get_remove(), Some(&crate::h_remove::REMOVE));
+                assert_eq!(
+                    literal::<f64>("R").unwrap().1.get_remove(),
+                    Some(&crate::h_remove::REMOVE)
+                );
             }
 
             #[test]
             fn parse_literal_bool() {
-                assert_eq!(literal::<f64>("T").unwrap().1.get_bool(), Some(&HBool(true)));
-                assert_eq!(literal::<f64>("F").unwrap().1.get_bool(), Some(&HBool(false)));
+                assert_eq!(
+                    literal::<f64>("T").unwrap().1.get_bool(),
+                    Some(&HBool(true))
+                );
+                assert_eq!(
+                    literal::<f64>("F").unwrap().1.get_bool(),
+                    Some(&HBool(false))
+                );
             }
 
             #[test]
@@ -597,7 +758,10 @@ pub mod parse {
 
             #[test]
             fn parse_literal_datetime() {
-                let tz_obj = ("America/New_York".to_owned(), HOffset::Fixed(chrono::offset::FixedOffset::east(-5 * 3600)));
+                let tz_obj = (
+                    "America/New_York".to_owned(),
+                    HOffset::Fixed(chrono::offset::FixedOffset::east(-5 * 3600)),
+                );
                 assert_eq!(
                     literal::<f64>("2023-03-15T12:34:56.789-05:00 America/New_York")
                         .unwrap()
@@ -611,8 +775,14 @@ pub mod parse {
             fn parse_literal_dict() {
                 let input = r#"{key1:"value1" key2:42 key3:T}"#;
                 let result = dict::<f64>(input).unwrap().1;
-                assert_eq!(result.get("key1").unwrap().get_string(), Some(&HStr("value1".to_owned())));
-                assert_eq!(result.get("key2").unwrap().get_number(), Some(&HNumber::new(42.0, None)));
+                assert_eq!(
+                    result.get("key1").unwrap().get_string(),
+                    Some(&HStr("value1".to_owned()))
+                );
+                assert_eq!(
+                    result.get("key2").unwrap().get_number(),
+                    Some(&HNumber::new(42.0, None))
+                );
                 assert_eq!(result.get("key3").unwrap().get_bool(), Some(&HBool(true)));
             }
 
@@ -643,8 +813,11 @@ pub mod parse {
                 let grid: HGrid<'_, f64> = grid::<f64>(input).unwrap().1;
                 match grid {
                     HGrid::Empty { meta } => {
-                        assert_eq!(meta.unwrap().get("dis").unwrap().get_string(), Some(&HStr("Example Grid".to_owned())));
-                    },
+                        assert_eq!(
+                            meta.unwrap().get("dis").unwrap().get_string(),
+                            Some(&HStr("Example Grid".to_owned()))
+                        );
+                    }
                     _ => panic!("Expected an empty grid with metadata"),
                 }
             }
@@ -688,7 +861,7 @@ pub mod parse {
     }
 
     pub fn is_digits(chr: char) -> bool {
-        is_digit(chr as u8) && chr=='_'
+        is_digit(chr as u8) && chr == '_'
     }
 
     pub fn digits(input: &str) -> IResult<&str, (&str, &str)> {
@@ -700,36 +873,44 @@ pub mod parse {
     pub fn exp(input: &str) -> IResult<&str, (bool, (&str, &str))> {
         use nom::sequence::pair;
 
-        preceded(alt((tag("e"),tag("E"))),pair(
-            opt(alt((tag("+"),tag("-"))))
-                .map(|sign| if let Some(c) = sign { c!="-" } else { true } ),
-            digits
-        )).parse(input)
+        preceded(
+            alt((tag("e"), tag("E"))),
+            pair(
+                opt(alt((tag("+"), tag("-"))))
+                    .map(|sign| if let Some(c) = sign { c != "-" } else { true }),
+                digits,
+            ),
+        )
+        .parse(input)
     }
 
     pub fn is_unit(c: char) -> bool {
-        c.is_ascii_alphabetic() || c>=(128 as char) || match c {
-            '%' | '_' | '/' | '$' => true,
-            _ => false
-        }
+        c.is_ascii_alphabetic()
+            || c >= (128 as char)
+            || match c {
+                '%' | '_' | '/' | '$' => true,
+                _ => false,
+            }
     }
 
     pub fn unit(input: &str) -> IResult<&str, HUnit> {
-        let (input,unit_str) = take_while1(is_unit)(input)?;
-        Ok((input,HUnit::new(unit_str.to_owned())))
+        let (input, unit_str) = take_while1(is_unit)(input)?;
+        Ok((input, HUnit::new(unit_str.to_owned())))
     }
 
     pub fn number<'out, T: NumTrait + 'out>(input: &str) -> IResult<&str, HNumber<T>> {
         use std::slice;
 
         let start = input;
-        let (input, is_positive) = map(opt(tag("-")),|d| d.is_none()).parse(start)?;
+        let (input, is_positive) = map(opt(tag("-")), |d| d.is_none()).parse(start)?;
         let (input, integer) = digits(input)?;
-        let (input, decimals) = opt(preceded(tag("."),digits)).parse(input)?;
+        let (input, decimals) = opt(preceded(tag("."), digits)).parse(input)?;
         let (input, exponent) = opt(exp).parse(input)?;
         let number_slice = unsafe {
-            slice::from_raw_parts(start.as_ptr(),
-            (input.as_ptr() as usize) - (start.as_ptr() as usize))
+            slice::from_raw_parts(
+                start.as_ptr(),
+                (input.as_ptr() as usize) - (start.as_ptr() as usize),
+            )
         };
 
         let number_ty: T;
@@ -739,13 +920,17 @@ pub mod parse {
             if let Ok(number_ty_ok) = number_res {
                 number_ty = number_ty_ok;
             } else {
-                return Err(nom::Err::Error(nom::error::Error{ input: number_str, code: nom::error::ErrorKind::Float }));
+                return Err(nom::Err::Error(nom::error::Error {
+                    input: number_str,
+                    code: nom::error::ErrorKind::Float,
+                }));
             }
         } else {
             // TODO: Handle numbers with '_' in the digits
-            return Err(nom::Err::Error(nom::error::Error{
+            return Err(nom::Err::Error(nom::error::Error {
                 input: unsafe { std::str::from_utf8_unchecked(number_slice) },
-                code: nom::error::ErrorKind::Float }));
+                code: nom::error::ErrorKind::Float,
+            }));
         }
 
         let (input, unit_opt) = opt(unit).parse(input)?;
@@ -754,35 +939,63 @@ pub mod parse {
     }
 
     pub fn date(input: &str) -> IResult<&str, HDate> {
-        let (input, year) = map(take(4usize), |s| i32::from_str_radix(s, 10) ).parse(input)?;
-        let year = year.or(Err(nom::Err::Error(Error{ input: input, code: ErrorKind::Digit })))?;
+        let (input, year) = map(take(4usize), |s| i32::from_str_radix(s, 10)).parse(input)?;
+        let year = year.or(Err(nom::Err::Error(Error {
+            input: input,
+            code: ErrorKind::Digit,
+        })))?;
 
         let (input, _) = tag("-")(input)?;
-        let (input, month) = map(take(2usize), |s| u32::from_str_radix(s, 10) ).parse(input)?;
-        let month = month.or(Err(nom::Err::Error(Error{ input: input, code: ErrorKind::Digit })))?;
+        let (input, month) = map(take(2usize), |s| u32::from_str_radix(s, 10)).parse(input)?;
+        let month = month.or(Err(nom::Err::Error(Error {
+            input: input,
+            code: ErrorKind::Digit,
+        })))?;
 
         let (input, _) = tag("-")(input)?;
-        let (input, day) = map(take(2usize), |s| u32::from_str_radix(s, 10) ).parse(input)?;
-        let day = day.or(Err(nom::Err::Error(Error{ input: input, code: ErrorKind::Digit })))?;
+        let (input, day) = map(take(2usize), |s| u32::from_str_radix(s, 10)).parse(input)?;
+        let day = day.or(Err(nom::Err::Error(Error {
+            input: input,
+            code: ErrorKind::Digit,
+        })))?;
 
-        Ok((input,HDate::new(year, month, day)))
+        Ok((input, HDate::new(year, month, day)))
     }
 
     pub fn time(input: &str) -> IResult<&str, HTime> {
-        let (input, hour) = map(take(2usize), |s| {u32::from_str_radix(s, 10)}).parse(input)?;
-        let hour = hour.or(Err(nom::Err::Error(Error{ input: input, code: ErrorKind::Digit })))?;
+        let (input, hour) = map(take(2usize), |s| u32::from_str_radix(s, 10)).parse(input)?;
+        let hour = hour.or(Err(nom::Err::Error(Error {
+            input: input,
+            code: ErrorKind::Digit,
+        })))?;
 
         let (input, _) = tag(":")(input)?;
-        let (input, min) = map(take(2usize), |s| {u32::from_str_radix(s, 10)}).parse(input)?;
-        let min = min.or(Err(nom::Err::Error(Error{ input: input, code: ErrorKind::Digit })))?;
+        let (input, min) = map(take(2usize), |s| u32::from_str_radix(s, 10)).parse(input)?;
+        let min = min.or(Err(nom::Err::Error(Error {
+            input: input,
+            code: ErrorKind::Digit,
+        })))?;
 
         let (input, _) = tag(":")(input)?;
-        let (input, sec) = map(take(2usize), |s| {u32::from_str_radix(s, 10)}).parse(input)?;
-        let sec = sec.or(Err(nom::Err::Error(Error{ input: input, code: ErrorKind::Digit })))?;
+        let (input, sec) = map(take(2usize), |s| u32::from_str_radix(s, 10)).parse(input)?;
+        let sec = sec.or(Err(nom::Err::Error(Error {
+            input: input,
+            code: ErrorKind::Digit,
+        })))?;
 
         let (input, _) = tag(".")(input)?;
-        let (input, nano) = map(opt(digit1), |s| {if let Some(s) = s {u32::from_str_radix(s, 10)} else {Ok(0)}}).parse(input)?;
-        let nano = nano.or(Err(nom::Err::Error(Error{ input: input, code: ErrorKind::Digit })))?;
+        let (input, nano) = map(opt(digit1), |s| {
+            if let Some(s) = s {
+                u32::from_str_radix(s, 10)
+            } else {
+                Ok(0)
+            }
+        })
+        .parse(input)?;
+        let nano = nano.or(Err(nom::Err::Error(Error {
+            input: input,
+            code: ErrorKind::Digit,
+        })))?;
 
         Ok((input, HTime::new(hour, min, sec, nano)))
     }
@@ -793,17 +1006,20 @@ pub mod parse {
 
         #[test]
         fn parse_id() {
-            assert_eq!(id("asdasd1223_").unwrap(),("","asdasd1223_"));
+            assert_eq!(id("asdasd1223_").unwrap(), ("", "asdasd1223_"));
         }
 
         #[test]
         fn parse_date() {
-            assert_eq!(date("2010-11-28").unwrap(),("",HDate::new(2010,11,28)));
+            assert_eq!(date("2010-11-28").unwrap(), ("", HDate::new(2010, 11, 28)));
         }
 
         #[test]
         fn parse_time() {
-            assert_eq!(time("07:23:02.773").unwrap(),("",HTime::new(07,23,02,773)));
+            assert_eq!(
+                time("07:23:02.773").unwrap(),
+                ("", HTime::new(07, 23, 02, 773))
+            );
         }
     }
 }

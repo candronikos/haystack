@@ -1,42 +1,44 @@
-use std::collections::HashMap;
 use crate::{HType, HVal, NumTrait, h_val::HBox};
-use std::fmt::{self,Write};
+use std::collections::HashMap;
+use std::fmt::{self, Write};
 
 #[derive(Clone)]
-pub struct HDict<'a,T: NumTrait> {
-    inner: HashMap<String, HBox<'a,T>>
+pub struct HDict<'a, T: NumTrait> {
+    inner: HashMap<String, HBox<'a, T>>,
 }
 
-pub type Dict<'a,T> = HDict<'a,T>;
+pub type Dict<'a, T> = HDict<'a, T>;
 
 const THIS_TYPE: HType = HType::Dict;
 
-impl <'a,T: NumTrait>HDict<'a,T> {
-    pub fn new() -> HDict<'a,T> {
-        HDict { inner: HashMap::new() }
+impl<'a, T: NumTrait> HDict<'a, T> {
+    pub fn new() -> HDict<'a, T> {
+        HDict {
+            inner: HashMap::new(),
+        }
     }
 
-    pub fn from_map(map: HashMap<String, HBox<'a,T>>) -> HDict<'a,T> {
+    pub fn from_map(map: HashMap<String, HBox<'a, T>>) -> HDict<'a, T> {
         HDict { inner: map }
     }
 
-    pub fn set(&mut self, key: String, value: HBox<'a,T>) -> Option<HBox<'a,T>> {
+    pub fn set(&mut self, key: String, value: HBox<'a, T>) -> Option<HBox<'a, T>> {
         self.inner.insert(key, value)
     }
 
-    pub fn merge(&mut self, other: HDict<'a,T>) {
+    pub fn merge(&mut self, other: HDict<'a, T>) {
         self.inner.extend(other.inner);
     }
 
-    pub fn extend(&mut self, other: HashMap<String, HBox<'a,T>>) {
+    pub fn extend(&mut self, other: HashMap<String, HBox<'a, T>>) {
         self.inner.extend(other);
     }
 
-    pub fn get(&self, key: &str) -> Option<&HBox<'a,T>> {
+    pub fn get(&self, key: &str) -> Option<&HBox<'a, T>> {
         self.inner.get(key)
     }
 
-    pub fn into_map(self) -> HashMap<String, HBox<'a,T>> {
+    pub fn into_map(self) -> HashMap<String, HBox<'a, T>> {
         self.inner
     }
 
@@ -44,31 +46,34 @@ impl <'a,T: NumTrait>HDict<'a,T> {
         self.inner.is_empty()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&String, &HBox<'a,T>)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &HBox<'a, T>)> {
         self.inner.iter()
     }
 }
 
-impl <'a,T: NumTrait + 'a>HVal<'a,T> for HDict<'a,T> {
+impl<'a, T: NumTrait + 'a> HVal<'a, T> for HDict<'a, T> {
     fn to_zinc<'b>(&self, buf: &'b mut String) -> fmt::Result {
-        write!(buf,"{{")?;
+        write!(buf, "{{")?;
         let inner = &self.inner;
-        let mut kv_pairs = inner.into_iter()
-            .filter(|(k,v)| v.get_null_val().is_none())
+        let mut kv_pairs = inner
+            .into_iter()
+            .filter(|(k, v)| v.get_null_val().is_none())
             .peekable();
-        while let Some((k,v)) = kv_pairs.next() {
+        while let Some((k, v)) = kv_pairs.next() {
             match v.haystack_type() {
-                HType::Remove => write!(buf,"-{}",k),
-                HType::Marker => write!(buf,"{}",k),
+                HType::Remove => write!(buf, "-{}", k),
+                HType::Marker => write!(buf, "{}", k),
                 _ => {
-                    write!(buf,"{}:",k)?;
+                    write!(buf, "{}:", k)?;
                     v.to_zinc(buf)?;
-                    if kv_pairs.peek().is_some() { write!(buf," ")?; };
+                    if kv_pairs.peek().is_some() {
+                        write!(buf, " ")?;
+                    };
                     Ok(())
                 }
             }?;
         }
-        write!(buf,"}}")
+        write!(buf, "}}")
     }
     fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result {
         HVal::<T>::to_zinc(self, buf)
@@ -76,18 +81,21 @@ impl <'a,T: NumTrait + 'a>HVal<'a,T> for HDict<'a,T> {
     fn to_json(&self, _buf: &mut String) -> fmt::Result {
         unimplemented!()
     }
-    fn haystack_type(&self) -> HType { THIS_TYPE }
+    fn haystack_type(&self) -> HType {
+        THIS_TYPE
+    }
 
-    fn _eq(&self, other: &dyn HVal<'a,T>) -> bool { false }
+    fn _eq(&self, other: &dyn HVal<'a, T>) -> bool {
+        false
+    }
     set_get_method!(get_dict_val,HDict,'a,T);
-
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{h_number::HNumber, HCast};
-    use std::rc::Rc;
     use super::*;
+    use crate::{HCast, h_number::HNumber};
+    use std::rc::Rc;
 
     #[test]
     fn test_new_dict() {
@@ -102,8 +110,14 @@ mod tests {
         map.insert("key1".to_string(), val);
         let dict = HDict::from_map(map.clone());
         assert_eq!(dict.inner.len(), 1);
-        assert_eq!(dict.inner.get("key1").unwrap().get_number().unwrap().val(), 42.0);
-        assert_eq!(dict.inner.get("key1").unwrap().get_number().unwrap().unit(), &None);
+        assert_eq!(
+            dict.inner.get("key1").unwrap().get_number().unwrap().val(),
+            42.0
+        );
+        assert_eq!(
+            dict.inner.get("key1").unwrap().get_number().unwrap().unit(),
+            &None
+        );
     }
 
     #[test]
@@ -118,7 +132,7 @@ mod tests {
         let mut buf = String::new();
         dict.to_zinc(&mut buf).unwrap();
 
-        assert!(buf=="{key1:42 key2:3.14}" || buf=="{key2:3.14 key1:42}");
+        assert!(buf == "{key1:42 key2:3.14}" || buf == "{key2:3.14 key1:42}");
     }
 
     #[test]

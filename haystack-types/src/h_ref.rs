@@ -1,8 +1,8 @@
+use crate::common::{escape_str_no_escape_unicode as escape_str, zinc_escape_str};
 use crate::{HType, HVal, NumTrait};
-use std::fmt::{self,Write};
-use crate::common::{zinc_escape_str, escape_str_no_escape_unicode as escape_str};
+use std::fmt::{self, Write};
 
-#[derive(Clone,PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct HRef {
     pub id: String,
     pub dis: Option<String>,
@@ -18,15 +18,15 @@ impl HRef {
     }
 }
 
-impl <'a,T: NumTrait + 'a>HVal<'a,T> for HRef {
+impl<'a, T: NumTrait + 'a> HVal<'a, T> for HRef {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        write!(buf,"@{}",self.id)?;
+        write!(buf, "@{}", self.id)?;
         match &self.dis {
             Some(dis) => {
                 buf.push(' ');
-                dis.chars().try_for_each(|c| { zinc_escape_str(c,buf) })?;
+                dis.chars().try_for_each(|c| zinc_escape_str(c, buf))?;
                 Ok(())
-            },
+            }
             None => Ok(()),
         }
     }
@@ -34,17 +34,19 @@ impl <'a,T: NumTrait + 'a>HVal<'a,T> for HRef {
         HVal::<T>::to_zinc(self, buf)
     }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
-        write!(buf,"r:{}",self.id)?;
+        write!(buf, "r:{}", self.id)?;
         match &self.dis {
             Some(dis) => {
                 buf.push(' ');
-                dis.chars().try_for_each(|c| { escape_str(c,buf) })?;
+                dis.chars().try_for_each(|c| escape_str(c, buf))?;
                 Ok(())
-            },
+            }
             None => Ok(()),
         }
     }
-    fn haystack_type(&self) -> HType { THIS_TYPE }
+    fn haystack_type(&self) -> HType {
+        THIS_TYPE
+    }
 
     set_trait_eq_method!(get_ref_val,'a,T);
     set_get_method!(get_ref_val, HRef);
@@ -56,7 +58,10 @@ mod tests {
 
     #[test]
     fn test_href_new() {
-        let href = HRef::new("id123".to_string(), Some("Building 1: \"Main\"".to_string()));
+        let href = HRef::new(
+            "id123".to_string(),
+            Some("Building 1: \"Main\"".to_string()),
+        );
         assert_eq!(href.id, "id123");
         assert_eq!(href.dis, Some("Building 1: \"Main\"".to_string()));
         assert_ne!(href.dis, Some("Building 2: \"Main\"".to_string()));

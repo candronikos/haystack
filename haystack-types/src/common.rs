@@ -1,21 +1,21 @@
-use nom::multi::many0;
+use crate::{NumTrait, h_val::HBox};
+use nom::branch::alt;
+use nom::bytes::complete::tag;
 use nom::bytes::complete::take_while1;
 use nom::character::complete::alphanumeric1;
 use nom::combinator::recognize;
-use nom::bytes::complete::tag;
-use nom::branch::alt;
-use std::fmt::{self,Display,Formatter};
-use crate::{h_val::{HBox}, NumTrait};
+use nom::multi::many0;
 use nom::{IResult, Parser};
 use std::fmt::Write;
+use std::fmt::{self, Display, Formatter};
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum Txt<'a> {
     Const(&'a str),
-    Owned(String)
+    Owned(String),
 }
 
-impl <'a>Txt<'a> {
+impl<'a> Txt<'a> {
     pub fn chars(&self) -> std::str::Chars {
         match self {
             Txt::Const(s) => s.chars(),
@@ -38,7 +38,7 @@ impl <'a>Txt<'a> {
     }
 }
 
-impl <'a>Display for Txt<'a> {
+impl<'a> Display for Txt<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Txt::Const(s) => write!(f, "{}", s),
@@ -56,11 +56,9 @@ pub fn zinc_escape_str(c: char, buf: &mut String) -> fmt::Result {
             '\n' => buf.push('n'),
             '\r' => buf.push('r'),
             '\t' => buf.push('t'),
-            '\\' |
-            '\"' |
-            '$' => buf.push(c),
+            '\\' | '\"' | '$' => buf.push(c),
             _ => {
-                write!(buf,"u{:04x}", c as usize)?;
+                write!(buf, "u{:04x}", c as usize)?;
             }
         };
     } else {
@@ -79,7 +77,7 @@ pub fn escape_str_no_escape_unicode(c: char, buf: &mut String) -> fmt::Result {
             '"' => buf.push('"'),
             '\\' => buf.push('\\'),
             _ => {
-                write!(buf,"u{:04x}", c as usize)?;
+                write!(buf, "u{:04x}", c as usize)?;
             }
         };
     } else {
@@ -98,12 +96,12 @@ pub fn escape_str_escape_unicode(c: char, buf: &mut String) -> fmt::Result {
             '"' => buf.push('"'),
             '\\' => buf.push('\\'),
             _ => {
-                write!(buf,"u{:04x}", c as usize)?;
+                write!(buf, "u{:04x}", c as usize)?;
             }
         };
     } else {
         if c > '\x7F' {
-            write!(buf,"\\u{:04x}", c as usize)?;
+            write!(buf, "\\u{:04x}", c as usize)?;
         } else {
             buf.push(c);
         }
@@ -115,26 +113,25 @@ pub fn unicode_char(ex: char) -> impl Fn(char) -> bool {
     move |c| c >= 0x20 as char && c != '\\' && c != ex
 }
 
-pub fn id(input: &str) -> IResult<&str,&str> {
-    let lower = |c: char| { c>='a' && c<='z' };
-    recognize((
-        take_while1(lower),
-        many0(alt((alphanumeric1,tag("_"))))
-    )).parse(input)
+pub fn id(input: &str) -> IResult<&str, &str> {
+    let lower = |c: char| c >= 'a' && c <= 'z';
+    recognize((take_while1(lower), many0(alt((alphanumeric1, tag("_")))))).parse(input)
 }
 
-pub trait ZincWriter<'a,T: NumTrait + 'a> {
+pub trait ZincWriter<'a, T: NumTrait + 'a> {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result;
 }
 
-pub trait ZincReader<'a,T: NumTrait + 'a> {
-    fn parse<'b>(buf: &'b str) -> IResult<&'b str, HBox<'a,T>> where 'a: 'b;
+pub trait ZincReader<'a, T: NumTrait + 'a> {
+    fn parse<'b>(buf: &'b str) -> IResult<&'b str, HBox<'a, T>>
+    where
+        'a: 'b;
 }
 
-pub trait JsonWriter<'a,T: NumTrait + 'a> {
+pub trait JsonWriter<'a, T: NumTrait + 'a> {
     fn to_json(&self, buf: &mut String) -> fmt::Result;
 }
 
-pub trait TrioWriter<'a,T: NumTrait + 'a> {
+pub trait TrioWriter<'a, T: NumTrait + 'a> {
     fn to_trio(&self, buf: &mut String) -> fmt::Result;
 }

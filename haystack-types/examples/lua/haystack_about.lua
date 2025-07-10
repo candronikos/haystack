@@ -7,7 +7,7 @@ for Haystack data exchange.
 It uses the `haystack` Lua module to parse the Zinc data.
 
 Usage:
-  haystack-client default about | lua read_from_stdin.lua
+  haystack-client default about | lua haystack_about.lua
 ]]
 
 hs = require("haystack")

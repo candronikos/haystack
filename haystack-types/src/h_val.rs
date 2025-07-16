@@ -165,7 +165,8 @@ impl<'a, T: NumTrait + 'a> ZincReader<'a, T> for dyn HVal<'a, T> {
     where
         'a: 'b,
     {
-        io::parse::zinc::literal::<T>(buf)
+        let mut dt_cell = io::ParseHint::default();
+        io::parse::zinc::literal::<T>(&mut dt_cell)(buf)
     }
 }
 

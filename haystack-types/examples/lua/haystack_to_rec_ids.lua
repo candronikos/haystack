@@ -9,8 +9,12 @@ Usage:
   ( # () Opens a sub-shell
     export HAYSTACK_AUTH_CONFIG=`hs default auth`;
     
-    POINT="$(haystack-client read --filter "point and (power or energy) and equipRef->siteMeter")"
-    echo $POINT | lua haystack_to_rec_ids.lua
+    POINTS="$(haystack-client read --filter "point and (power or energy) and equipRef->siteMeter")"
+    POINT_IDS="$(echo "$POINTS" | lua haystack_to_rec_ids.lua)"
+    
+    # Can use either of the below commands
+    haystack-client hisRead 2025-01-20 $POINT_IDS
+    #echo $POINT_IDS | haystack-client hisRead 2025-01-20 $POINT_IDS
   )
 ]]
 

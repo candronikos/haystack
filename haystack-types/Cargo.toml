@@ -28,7 +28,7 @@ lua          = []
 [dependencies]
 url = "2.5"
 chrono = "0.4"
-chrono-tz = "0.9"
+chrono-tz = "0.10.4"
 nom = "8.0.0"
 num = "0.4.3"
 rpds = "1.1.1"

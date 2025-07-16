@@ -22,6 +22,10 @@ impl<'a, T: NumTrait> HDict<'a, T> {
         HDict { inner: map }
     }
 
+    pub fn has(&self, key: &str) -> bool {
+        self.inner.contains_key(key)
+    }
+
     pub fn set(&mut self, key: String, value: HBox<'a, T>) -> Option<HBox<'a, T>> {
         self.inner.insert(key, value)
     }

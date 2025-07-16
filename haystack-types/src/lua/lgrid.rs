@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
-use crate::h_dict::HDict;
+use crate::h_list::HList;
+use crate::h_val::HBox;
 use crate::lua::{H, LuaFloat};
 use crate::{HGrid, HVal};
 use mlua::prelude::*;
@@ -34,6 +35,14 @@ impl<'a: 'static> UserData for H<HGrid<'a, LuaFloat>> {
             let meta = this.meta().clone();
             let ret = H::new(meta);
             Ok(ret)
+        });
+
+        methods.add_method("cols", |_, this, ()| {
+            let cols = this
+                .iter_cols()
+                .map(|c| H::new(c.clone()))
+                .collect::<Vec<_>>();
+            Ok(cols)
         });
 
         methods.add_method("is_empty", |_, this, ()| Ok(this.is_empty()));

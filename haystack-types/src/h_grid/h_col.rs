@@ -1,8 +1,11 @@
+use crate::h_dict::HDict;
+use crate::h_str::HStr;
 use crate::h_val::HBox;
 use crate::{HCast, HType, NumTrait};
 use std::fmt::{self, Write};
 
 use std::collections::HashMap;
+use std::rc::Rc;
 
 #[derive(Clone)]
 pub struct HCol<'a, T: NumTrait> {
@@ -31,6 +34,12 @@ impl<'a, T: NumTrait> HCol<'a, T> {
             meta: meta.unwrap_or(HashMap::new()),
         }
     }
+
+    pub fn meta(&self) -> HDict<'a, T> {
+        let mut dict = HDict::new();
+        dict.extend(self.meta.clone());
+        dict
+    }
 }
 
 impl<'a, T: NumTrait> HCol<'a, T> {
@@ -42,8 +51,8 @@ impl<'a, T: NumTrait> HCol<'a, T> {
         self.meta.get(&key)
     }
 
-    pub fn has(&self, key: String) -> bool {
-        self.meta.contains_key(&key)
+    pub fn has(&self, key: &str) -> bool {
+        self.meta.contains_key(key)
     }
 
     pub fn add_meta(&mut self, meta: HashMap<String, HBox<'a, T>>) {

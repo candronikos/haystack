@@ -14,6 +14,7 @@ use nom::Parser;
 
 //mod lany;
 mod lbool;
+mod lcol;
 mod lcoord;
 mod ldate;
 mod ldatetime;

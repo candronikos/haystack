@@ -22,5 +22,7 @@ impl<'a: 'static> UserData for H<Dict<'a, LuaFloat>> {
 
             Ok(res)
         });
+
+        methods.add_method("has", |_, this, (key,): (String,)| Ok(this.has(&key)));
     }
 }

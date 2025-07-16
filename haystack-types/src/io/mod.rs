@@ -9,12 +9,19 @@ use nom::number::complete::double;
 use nom::sequence::{preceded, separated_pair, terminated};
 use nom::{IResult, Parser};
 
+use core::fmt::Display;
+use core::str::FromStr;
+use std::sync::OnceLock;
+use num::Float;
+use std::collections::HashMap;
+use std::rc::Rc;
+
 use crate::{
     HVal,
     h_bool::HBool,
     h_coord::HCoord,
     h_date::HDate,
-    h_datetime::{HDateTime, HOffset},
+    h_datetime::{HDateTime, HTimezone},
     h_dict::HDict,
     h_grid::HGrid,
     h_list::HList,
@@ -34,11 +41,33 @@ use crate::{
 
 use crate::common::*;
 
-use core::fmt::Display;
-use core::str::FromStr;
-use num::Float;
-use std::collections::HashMap;
-use std::rc::Rc;
+fn get_timezone(tz_name: &str, dt_cell: &mut OnceLock<chrono_tz::Tz>) -> Result<chrono_tz::Tz,&'static str> {
+    let tz =  dt_cell.get_or_init(|| chrono_tz::Tz::UTC);
+    if tz.name() == tz_name || tz.name().split('/').last().unwrap() == tz_name {
+        return Ok(tz.clone());
+    }
+
+    match dt_cell.get_mut() {
+        Some(tz) => {
+            if tz.name() == tz_name || tz.name().split('/').last().unwrap() == tz_name {
+                return Ok(tz.clone());
+            }
+            match chrono_tz::Tz::from_str(tz_name) {
+                Ok(tz_clone) => return Ok(tz_clone),
+                Err(_) => {
+                    let tz_new = chrono_tz::TZ_VARIANTS
+                        .iter()
+                        .find(|&&t| t.name() == tz_name || t.name().split('/').last().unwrap() == tz_name)
+                        .ok_or_else(|| "Invalid timezone name")?;
+
+                    *tz = tz_new.clone();
+                    return Ok(tz.clone());
+                }
+            }
+        }
+        None => panic!("Timezone cell is not initialized. This should never happen."),
+    }
+}
 
 pub mod parse {
     use super::*;
@@ -52,6 +81,8 @@ pub mod parse {
     }
 
     pub mod zinc {
+        use chrono::FixedOffset;
+        use chrono_tz::Tz;
         use nom::{
             AsChar, Err, character::complete::newline, combinator::all_consuming, error::ParseError,
         };
@@ -203,7 +234,7 @@ pub mod parse {
             }
         }
 
-        fn reference(input: &str) -> IResult<&str, HRef> {
+        pub fn reference(input: &str) -> IResult<&str, HRef> {
             let (input, (ref_str, dis_str)) =
                 ((ref_chars_body('@'), opt(preceded(tag(" "), string)))).parse(input)?;
             Ok((
@@ -212,7 +243,7 @@ pub mod parse {
             ))
         }
 
-        fn symbol(input: &str) -> IResult<&str, HSymbol> {
+        pub fn symbol(input: &str) -> IResult<&str, HSymbol> {
             let (input, symbol_str) = ref_chars_body('^')(input)?;
             Ok((input, HSymbol::new(symbol_str.to_owned())))
         }
@@ -246,39 +277,39 @@ pub mod parse {
             .parse(input)
         }
 
-        fn timezone(input: &str) -> IResult<&str, (String, HOffset)> {
-            use chrono::offset::FixedOffset;
-            use chrono_tz::{Tz, UTC};
+        fn timezone(input: &str) -> IResult<&str, (FixedOffset, Tz)> {
 
-            let (input, (first, second)) = alt((
+            let (input, (timezone_offset, timezone_id)) = alt((
                 (recognize(get_offset), preceded(tag(" "), get_named_tz)),
                 (tag("Z"), preceded(tag(" "), get_named_tz)),
                 (tag("Z"), success("")),
             ))
             .parse(input)?;
 
-            // TODO: Implement with TZ instead of String
-            let timezone: (String, HOffset) = match first {
-                "Z" => match second {
-                    // "" => (UTC, HOffset::Utc),
-                    "" => ("UTC".to_owned(), HOffset::Utc),
+            let timezone: (FixedOffset, chrono_tz::Tz) = match timezone_offset {
+                "Z" => match timezone_id {
+                    "" => (FixedOffset::east_opt(0).unwrap(), Tz::UTC),
                     _ => {
-                        // let t = Tz::from_str(second).unwrap();
-                        // (t, HOffset::Variable(chrono::Duration::minutes(1 * 60 + 1)))
                         (
-                            second.to_owned(),
-                            HOffset::Variable(chrono::Duration::minutes(1 * 60 + 1)),
+                            FixedOffset::east_opt(0).unwrap(),
+                            Tz::from_str(timezone_id)
+                                .or(Err(nom::Err::Error(Error {
+                                    input: input,
+                                    code: ErrorKind::Tag,
+                                })))?,
                         )
                     }
                 },
                 _ => {
-                    let (_, (sign, hours, minutes)) = get_offset(first)?;
-                    // (Tz::from_str(second).unwrap(), HOffset::Fixed(FixedOffset::east(sign * (hours as i32 * 3600 + minutes as i32 * 60))))
+                    let (_, (sign, hours, minutes)) = get_offset(timezone_offset)?;
+                    
                     (
-                        second.to_owned(),
-                        HOffset::Fixed(FixedOffset::east(
-                            sign * (hours as i32 * 3600 + minutes as i32 * 60),
-                        )),
+                        FixedOffset::east_opt(sign * (hours as i32 * 3600 + minutes as i32 * 60)).unwrap(),
+                        Tz::from_str(timezone_id)
+                                .or(Err(nom::Err::Error(Error {
+                                    input: input,
+                                    code: ErrorKind::Tag,
+                                })))?
                     )
                 }
             };
@@ -287,6 +318,7 @@ pub mod parse {
         }
 
         pub fn datetime(input: &str) -> IResult<&str, HDateTime> {
+            use crate::h_datetime::IntoTimezone;
             let start = input;
             let (input, (yr, mo, day, hr, min, sec, nano, tz)) = (
                 terminated(map(take(4usize), |s| i32::from_str_radix(s, 10)), tag("-")),
@@ -345,8 +377,11 @@ pub mod parse {
                     } else {
                         0
                     },
-                    tz,
-                ),
+                    tz.into_timezone(),
+                ).or(Err(nom::Err::Error(Error {
+                    input: start,
+                    code: ErrorKind::Digit,
+                })))?,
             ))
         }
 
@@ -553,6 +588,7 @@ pub mod parse {
         mod tests {
             use super::*;
             use crate::HCast;
+            use crate::h_datetime::IntoTimezone;
 
             #[test]
             fn parse_unicode_char() {
@@ -583,6 +619,11 @@ pub mod parse {
             }
 
             #[test]
+            fn parse_string_escape_dollar() {
+                assert_eq!(string("\"\\$equipRef \\$navName\""), Ok(("", HStr("$equipRef $navName".to_owned()))));
+            }
+
+            #[test]
             fn parse_bool() {
                 assert_eq!(boolean("T").unwrap(), ("", HBool(true)));
                 assert_eq!(boolean("F").unwrap(), ("", HBool(false)),);
@@ -610,21 +651,45 @@ pub mod parse {
 
             #[test]
             fn parse_datetime() {
-                // TODO: Implement with Haystack Timezones so they're valid with the `chrono` library
-                // let tz_obj = (chrono_tz::Tz::from_str("America/Los_Angeles").unwrap(), HOffset::Fixed(chrono::offset::FixedOffset::east(-1 * 8 * 3600)));
-                let tz_obj = (
-                    "America/Los_Angeles".to_owned(),
-                    HOffset::Fixed(chrono::offset::FixedOffset::east(-1 * 8 * 3600)),
-                );
+                let tz = (FixedOffset::east_opt(-1 * 8 * 3600).unwrap(), chrono_tz::Tz::from_str("America/Los_Angeles").unwrap());
                 assert_eq!(
                     datetime("2010-11-28T07:23:02.773-08:00 America/Los_Angeles").unwrap(),
-                    ("", HDateTime::new(2010, 11, 28, 7, 23, 2, 773, tz_obj))
+                    ("", HDateTime::new(2010, 11, 28, 7, 23, 2, 773, tz.into_timezone()).unwrap())
+                );
+            }
+
+            #[test]
+            fn parse_datetime_02() {
+                let tz_offset = match FixedOffset::east_opt(-5 * 60 * 60) {
+                    Some(offset) => offset,
+                    None => panic!("Invalid timezone offset"),
+                };
+                let tz_id = match Tz::from_str("New_York") {
+                    Ok(tz) => tz,
+                    Err(_) => panic!("Invalid timezone ID"),
+                };
+                let tz = (tz_offset,tz_id);
+                let left = HDateTime::new(2023, 3, 15, 12, 34, 56, 789, tz.into_timezone()).unwrap();
+                let right = "2024-01-01T00:00:00-05:00 New_York";
+                assert_eq!(
+                    datetime(right).unwrap(),
+                    ("", left)
                 );
             }
 
             #[test]
             fn parse_coord() {
                 assert_eq!(coord("C(1.5,-9)").unwrap(), ("", HCoord::new(1.5, -9f64)));
+            }
+
+            #[test]
+            fn parse_reference() {
+                let input = "@p:demo:r:2f70054a-65a50ffa \"Carytown\"";
+                let expected = HRef::new(
+                    "p:demo:r:2f70054a-65a50ffa".to_owned(),
+                    Some("Carytown".to_owned()),
+                );
+                assert_eq!(reference(input).unwrap(), ("", expected));
             }
 
             #[test]
@@ -759,15 +824,15 @@ pub mod parse {
             #[test]
             fn parse_literal_datetime() {
                 let tz_obj = (
-                    "America/New_York".to_owned(),
-                    HOffset::Fixed(chrono::offset::FixedOffset::east(-5 * 3600)),
+                    FixedOffset::east_opt(-5 * 3600).unwrap(),
+                    Tz::from_str("America/New_York").unwrap(),
                 );
                 assert_eq!(
                     literal::<f64>("2023-03-15T12:34:56.789-05:00 America/New_York")
                         .unwrap()
                         .1
                         .get_datetime(),
-                    Some(&HDateTime::new(2023, 3, 15, 12, 34, 56, 789, tz_obj))
+                    Some(&HDateTime::new(2023, 3, 15, 12, 34, 56, 789, tz_obj.into_timezone()).unwrap())
                 );
             }
 

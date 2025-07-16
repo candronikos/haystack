@@ -2,7 +2,7 @@ use crate::common::{escape_str_no_escape_unicode as escape_str, zinc_escape_str}
 use crate::{HType, HVal, NumTrait};
 use std::fmt::{self, Write};
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct HRef {
     pub id: String,
     pub dis: Option<String>,

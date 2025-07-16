@@ -1,28 +1,65 @@
+use crate::h_time::HTime;
 use crate::{HType, HVal, NumTrait};
-use std::fmt::{self, Write};
+use std::fmt::{self, Display, Write};
 
-use chrono::{Datelike, Timelike};
-use chrono::{Duration, FixedOffset};
-use chrono::{NaiveDate, NaiveDateTime as DT};
+use crate::h_date::HDate;
+use chrono::offset::LocalResult;
+use chrono::{DateTime as DT, Datelike, Duration, FixedOffset, NaiveDate, NaiveDateTime, Offset, TimeZone, Timelike};
+use chrono_tz::{OffsetComponents, Tz};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct HDateTime {
-    inner: DT,
-    // TODO: Implement timezones to work with `chrono_tz`
-    // tz: (chrono_tz::Tz, HOffset)
-    tz: (String, HOffset),
+    inner: NaiveDateTime,
+    tz: HTimezone,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum HOffset {
-    Fixed(chrono::FixedOffset),
-    Variable(chrono::Duration),
-    Utc,
+pub struct HTimezone {
+    offset: chrono::FixedOffset,
+    id: Tz,
+}
+
+impl Default for HTimezone {
+    fn default() -> Self {
+        Self {
+            offset: FixedOffset::east_opt(0).unwrap(),
+            id: Tz::UTC,
+        }
+    }
+}
+
+pub trait IntoTimezone {
+    fn into_timezone(self) -> HTimezone;
+}
+
+impl IntoTimezone for (FixedOffset, Tz) {
+    fn into_timezone(self) -> HTimezone {
+        HTimezone {
+            offset: self.0,
+            id: self.1,
+        }
+    }
+}
+
+impl Display for HTimezone {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.id.name())
+    }
 }
 
 pub type DateTime = HDateTime;
 
 const THIS_TYPE: HType = HType::DateTime;
+
+#[derive(Debug)]
+pub enum TZError {
+    InvalidFormat,
+    UnknownTimezone,
+    ParseError(chrono_tz::ParseError),
+    Nonexistent,
+    DateConstruction,
+    TimeConstruction
+}
 
 impl HDateTime {
     pub fn new(
@@ -33,15 +70,78 @@ impl HDateTime {
         min: u32,
         sec: u32,
         nano: u32,
-        tz: (String /* chrono_tz::Tz*/, HOffset),
-    ) -> Self {
-        let inner = NaiveDate::from_ymd(year, month, day).and_hms_nano(hour, min, sec, nano);
-
-        Self { inner, tz }
+        tz: HTimezone,
+    ) -> Result<Self,TZError> {
+        let inner = NaiveDate::from_ymd_opt(year, month, day)
+            .ok_or(TZError::DateConstruction)?
+            .and_hms_nano_opt(hour, min, sec, nano)
+            .ok_or(TZError::TimeConstruction)?;
+        Ok(Self { inner, tz })
     }
-    pub fn val(&self) -> DT {
+    pub fn val(&self) -> NaiveDateTime {
         self.inner
     }
+    pub fn date(&self) -> HDate {
+        HDate::new(self.inner.year(), self.inner.month(), self.inner.day())
+    }
+
+    pub fn time(&self) -> HTime {
+        HTime::new(
+            self.inner.hour(),
+            self.inner.minute(),
+            self.inner.second(),
+            self.inner.nanosecond(),
+        )
+    }
+
+    pub fn year(&self) -> i32 {
+        self.inner.year()
+    }
+
+    pub fn month(&self) -> u32 {
+        self.inner.month()
+    }
+
+    pub fn day(&self) -> u32 {
+        self.inner.day()
+    }
+
+    pub fn hour(&self) -> u32 {
+        self.inner.hour()
+    }
+
+    pub fn minute(&self) -> u32 {
+        self.inner.minute()
+    }
+
+    pub fn second(&self) -> u32 {
+        self.inner.second()
+    }
+
+    pub fn nanosecond(&self) -> u32 {
+        self.inner.nanosecond()
+    }
+
+    pub fn is_dst(&self) -> bool {
+        let local_result = self.tz.id.from_local_datetime(&self.inner);
+        match local_result {
+            LocalResult::Single(one) => one.offset().dst_offset()!=Duration::zero(),
+            _ => true,
+        }
+    }
+
+    pub fn tz(&self) -> &HTimezone {
+        &self.tz
+    }
+
+    pub fn tz_id(&self) -> chrono_tz::Tz {
+        self.tz.id
+    }
+
+    pub fn offset(&self) -> FixedOffset {
+        self.tz.offset
+    }
+
     fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         write!(
             buf,
@@ -92,8 +192,8 @@ mod tests {
 
     #[test]
     fn test_new() {
-        let tz = ("UTC".to_string(), HOffset::Utc);
-        let datetime = HDateTime::new(2023, 10, 5, 14, 30, 45, 123456789, tz.clone());
+        let tz = HTimezone::default();
+        let datetime = HDateTime::new(2023, 10, 5, 14, 30, 45, 123456789, tz.clone()).unwrap();
         assert_eq!(datetime.inner.year(), 2023);
         assert_eq!(datetime.inner.month(), 10);
         assert_eq!(datetime.inner.day(), 5);
@@ -101,13 +201,13 @@ mod tests {
         assert_eq!(datetime.inner.minute(), 30);
         assert_eq!(datetime.inner.second(), 45);
         assert_eq!(datetime.inner.nanosecond(), 123456789);
-        assert_eq!(datetime.tz, tz);
+        assert_eq!(datetime.tz(), &tz);
     }
 
     #[test]
     fn test_to_zinc() {
-        let tz = ("UTC".to_string(), HOffset::Utc);
-        let datetime = HDateTime::new(2023, 10, 5, 14, 30, 45, 123456789, tz);
+        let tz = HTimezone::default();
+        let datetime = HDateTime::new(2023, 10, 5, 14, 30, 45, 123456789, tz.clone()).unwrap();
         let mut buf = String::new();
         datetime.to_zinc(&mut buf).unwrap();
         assert_eq!(buf, "2023-10-05T14:30:45.123456789");
@@ -115,8 +215,8 @@ mod tests {
 
     #[test]
     fn test_to_trio() {
-        let tz = ("UTC".to_string(), HOffset::Utc);
-        let datetime = HDateTime::new(2023, 10, 5, 14, 30, 45, 123456789, tz);
+        let tz = HTimezone::default();
+        let datetime = HDateTime::new(2023, 10, 5, 14, 30, 45, 123456789, tz.clone()).unwrap();
         let mut buf = String::new();
         datetime.to_trio(&mut buf).unwrap();
         assert_eq!(buf, "2023-10-05T14:30:45.123456789");
@@ -124,8 +224,8 @@ mod tests {
 
     #[test]
     fn test_to_json() {
-        let tz = ("UTC".to_string(), HOffset::Utc);
-        let datetime = HDateTime::new(2023, 10, 5, 14, 30, 45, 123456789, tz);
+        let tz = HTimezone::default();
+        let datetime = HDateTime::new(2023, 10, 5, 14, 30, 45, 123456789, tz.clone()).unwrap();
         let mut buf = String::new();
         datetime.to_json(&mut buf).unwrap();
         assert_eq!(buf, "t:2023-10-05T14:30:45.123456789");
@@ -133,28 +233,22 @@ mod tests {
 
     #[test]
     fn test_with_fixed_offset() {
-        let tz = (
-            "FixedOffset".to_string(),
-            HOffset::Fixed(FixedOffset::east(3600)),
-        );
-        let datetime = HDateTime::new(2023, 10, 5, 14, 30, 45, 0, tz.clone());
-        assert_eq!(datetime.tz, tz);
+        let tz = HTimezone::default();
+        let datetime = HDateTime::new(2023, 10, 5, 14, 30, 45, 0, tz.clone()).unwrap();
+        assert_eq!(datetime.tz(), &tz);
     }
 
     #[test]
     fn test_with_variable_offset() {
-        let tz = (
-            "VariableOffset".to_string(),
-            HOffset::Variable(Duration::hours(2)),
-        );
-        let datetime = HDateTime::new(2023, 10, 5, 14, 30, 45, 0, tz.clone());
-        assert_eq!(datetime.tz, tz);
+        let tz = HTimezone::default();
+        let datetime = HDateTime::new(2023, 10, 5, 14, 30, 45, 0, tz.clone()).unwrap();
+        assert_eq!(datetime.tz(), &tz);
     }
 
     #[test]
     fn test_haystack_type() {
-        let tz = ("UTC".to_string(), HOffset::Utc);
-        let datetime = HDateTime::new(2023, 10, 5, 14, 30, 45, 123456789, tz);
+        let tz = HTimezone::default();
+        let datetime = HDateTime::new(2023, 10, 5, 14, 30, 45, 123456789, tz).unwrap();
         let hval_type = HVal::<f64>::as_hval(&datetime);
         assert_eq!(hval_type.haystack_type(), HType::DateTime);
     }

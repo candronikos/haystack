@@ -11,10 +11,10 @@ use nom::{IResult, Parser};
 
 use core::fmt::Display;
 use core::str::FromStr;
-use std::sync::OnceLock;
 use num::Float;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::sync::OnceLock;
 
 use crate::{
     HVal,
@@ -42,7 +42,7 @@ use crate::{
 use crate::common::*;
 
 pub struct ParseHint {
-    tz: OnceLock<chrono_tz::Tz>
+    tz: OnceLock<chrono_tz::Tz>,
 }
 
 impl ParseHint {
@@ -59,8 +59,8 @@ impl Default for ParseHint {
     }
 }
 
-fn get_timezone(tz_name: &str, dt_cell: &mut ParseHint) -> Result<chrono_tz::Tz,&'static str> {
-    let _tz =  dt_cell.tz().get_or_init(|| chrono_tz::Tz::UTC);
+fn get_timezone(tz_name: &str, dt_cell: &mut ParseHint) -> Result<chrono_tz::Tz, &'static str> {
+    let _tz = dt_cell.tz().get_or_init(|| chrono_tz::Tz::UTC);
     match dt_cell.tz().get_mut() {
         Some(tz) => {
             if tz.name() == tz_name || tz.name().split('/').last() == Some(tz_name) {
@@ -68,19 +68,15 @@ fn get_timezone(tz_name: &str, dt_cell: &mut ParseHint) -> Result<chrono_tz::Tz,
             }
             let tz_clone = match chrono_tz::Tz::from_str(tz_name) {
                 Ok(tz_clone) => tz_clone,
-                Err(_) => {
-                    chrono_tz::TZ_VARIANTS
-                        .iter()
-                        .find(|&&t| t.name() == tz_name || t.name().split('/').last() == Some(tz_name))
-                        .ok_or_else(|| "Invalid timezone name")?
-                        .clone()
-
-                }
+                Err(_) => chrono_tz::TZ_VARIANTS
+                    .iter()
+                    .find(|&&t| t.name() == tz_name || t.name().split('/').last() == Some(tz_name))
+                    .ok_or_else(|| "Invalid timezone name")?
+                    .clone(),
             };
 
             *tz = tz_clone.clone();
             return Ok(tz_clone);
-
         }
         None => panic!("Timezone cell is not initialized. This should never happen."),
     }
@@ -106,7 +102,9 @@ pub mod parse {
 
         use super::*;
 
-        pub fn literal<'out, T: NumTrait + 'out>(dt_cell: &mut ParseHint) -> impl FnMut(&str) -> IResult<&str, HBox<'out, T>> {
+        pub fn literal<'out, T: NumTrait + 'out>(
+            dt_cell: &mut ParseHint,
+        ) -> impl FnMut(&str) -> IResult<&str, HBox<'out, T>> {
             |input: &str| {
                 alt((
                     into_box!(na,T,'out),
@@ -296,7 +294,9 @@ pub mod parse {
             .parse(input)
         }
 
-        fn timezone(dt_cell: &mut ParseHint) -> impl FnMut(&str) -> IResult<&str, (FixedOffset, Tz)> {
+        fn timezone(
+            dt_cell: &mut ParseHint,
+        ) -> impl FnMut(&str) -> IResult<&str, (FixedOffset, Tz)> {
             move |input: &str| {
                 let (input, (timezone_offset, timezone_id)) = alt((
                     (recognize(get_offset), preceded(tag(" "), get_named_tz)),
@@ -309,14 +309,16 @@ pub mod parse {
                     "Z" => (FixedOffset::east_opt(0).unwrap(), Tz::UTC),
                     _ => {
                         let (_, (sign, hours, minutes)) = get_offset(timezone_offset)?;
-                        
+
                         (
-                            FixedOffset::east_opt(sign * (hours as i32 * 3600 + minutes as i32 * 60)).unwrap(),
-                            get_timezone(timezone_id, dt_cell)
-                                    .or(Err(nom::Err::Error(Error {
-                                        input: input,
-                                        code: ErrorKind::Tag,
-                                    })))?
+                            FixedOffset::east_opt(
+                                sign * (hours as i32 * 3600 + minutes as i32 * 60),
+                            )
+                            .unwrap(),
+                            get_timezone(timezone_id, dt_cell).or(Err(nom::Err::Error(Error {
+                                input: input,
+                                code: ErrorKind::Tag,
+                            })))?,
                         )
                     }
                 };
@@ -327,7 +329,7 @@ pub mod parse {
 
         pub fn datetime(dt_cell: &mut ParseHint) -> impl FnMut(&str) -> IResult<&str, HDateTime> {
             use crate::h_datetime::IntoTimezone;
-            
+
             |input: &str| {
                 let start = input;
                 let (input, (yr, mo, day, hr, min, sec, nano, tz)) = (
@@ -388,7 +390,8 @@ pub mod parse {
                             0
                         },
                         tz.into_timezone(),
-                    ).or(Err(nom::Err::Error(Error {
+                    )
+                    .or(Err(nom::Err::Error(Error {
                         input: start,
                         code: ErrorKind::Digit,
                     })))?,
@@ -418,9 +421,11 @@ pub mod parse {
             dt_cell: &mut ParseHint,
         ) -> impl FnMut(&str) -> IResult<&str, HashMap<String, HBox<'out, T>>> {
             |input: &str| {
-                let (input, res) =
-                    separated_list1(tag(" "), (id, opt(preceded(tag(":"), literal::<T>(dt_cell)))))
-                        .parse(input)?;
+                let (input, res) = separated_list1(
+                    tag(" "),
+                    (id, opt(preceded(tag(":"), literal::<T>(dt_cell)))),
+                )
+                .parse(input)?;
 
                 let mut map: HashMap<String, HBox<'out, T>> = HashMap::new();
 
@@ -451,7 +456,8 @@ pub mod parse {
 
         pub fn dict<'out, T: NumTrait + 'out>(input: &str) -> IResult<&str, HDict<'out, T>> {
             let mut parse_hint = ParseHint::default();
-            let (input, opt_dict) = delimited(tag("{"), opt(tags::<T>(&mut parse_hint)), tag("}")).parse(input)?;
+            let (input, opt_dict) =
+                delimited(tag("{"), opt(tags::<T>(&mut parse_hint)), tag("}")).parse(input)?;
 
             let dict = match opt_dict {
                 Some(dict) => dict,
@@ -493,8 +499,11 @@ pub mod parse {
             input: &str,
         ) -> IResult<&str, Vec<(String, Option<HashMap<String, HBox<'out, T>>>)>> {
             let mut parse_hint = ParseHint::default();
-            let (input, columns) =
-                separated_list1(tag(","), (id, opt(preceded(space1, tags::<T>(&mut parse_hint))))).parse(input)?;
+            let (input, columns) = separated_list1(
+                tag(","),
+                (id, opt(preceded(space1, tags::<T>(&mut parse_hint)))),
+            )
+            .parse(input)?;
             let columns = columns.into_iter().map(|(id, meta)| (id.to_owned(), meta));
             let columns = columns.collect();
             Ok((input, columns))
@@ -638,7 +647,10 @@ pub mod parse {
 
             #[test]
             fn parse_string_escape_dollar() {
-                assert_eq!(string("\"\\$equipRef \\$navName\""), Ok(("", HStr("$equipRef $navName".to_owned()))));
+                assert_eq!(
+                    string("\"\\$equipRef \\$navName\""),
+                    Ok(("", HStr("$equipRef $navName".to_owned())))
+                );
             }
 
             #[test]
@@ -669,11 +681,18 @@ pub mod parse {
 
             #[test]
             fn parse_datetime() {
-                let tz = (FixedOffset::east_opt(-1 * 8 * 3600).unwrap(), chrono_tz::Tz::from_str("America/Los_Angeles").unwrap());
+                let tz = (
+                    FixedOffset::east_opt(-1 * 8 * 3600).unwrap(),
+                    chrono_tz::Tz::from_str("America/Los_Angeles").unwrap(),
+                );
                 let mut dt_cell = ParseHint::default();
                 assert_eq!(
-                    datetime(&mut dt_cell)("2010-11-28T07:23:02.773-08:00 America/Los_Angeles").unwrap(),
-                    ("", HDateTime::new(2010, 11, 28, 7, 23, 2, 773, tz.into_timezone()).unwrap())
+                    datetime(&mut dt_cell)("2010-11-28T07:23:02.773-08:00 America/Los_Angeles")
+                        .unwrap(),
+                    (
+                        "",
+                        HDateTime::new(2010, 11, 28, 7, 23, 2, 773, tz.into_timezone()).unwrap()
+                    )
                 );
             }
 
@@ -684,17 +703,15 @@ pub mod parse {
                     Some(offset) => offset,
                     None => panic!("Invalid timezone offset"),
                 };
-                let tz_id = match get_timezone("New_York",&mut dt_cell) {
+                let tz_id = match get_timezone("New_York", &mut dt_cell) {
                     Ok(tz) => tz,
                     Err(_) => panic!("Invalid timezone ID"),
                 };
-                let tz = (tz_offset,tz_id);
-                let left = HDateTime::new(2023, 3, 15, 12, 34, 56, 789, tz.into_timezone()).unwrap();
+                let tz = (tz_offset, tz_id);
+                let left =
+                    HDateTime::new(2023, 3, 15, 12, 34, 56, 789, tz.into_timezone()).unwrap();
                 let right = "2023-03-15T12:34:56.000000789-05:00 New_York";
-                assert_eq!(
-                    datetime(&mut dt_cell)(right).unwrap(),
-                    ("", left)
-                );
+                assert_eq!(datetime(&mut dt_cell)(right).unwrap(), ("", left));
             }
 
             #[test]
@@ -816,7 +833,10 @@ pub mod parse {
             fn parse_literal_string() {
                 let mut dt_cell = ParseHint::default();
                 assert_eq!(
-                    literal::<f64>(&mut dt_cell)(r#""Hello\nWorld""#).unwrap().1.get_string(),
+                    literal::<f64>(&mut dt_cell)(r#""Hello\nWorld""#)
+                        .unwrap()
+                        .1
+                        .get_string(),
                     Some(&HStr("Hello\nWorld".to_owned()))
                 );
             }
@@ -825,7 +845,10 @@ pub mod parse {
             fn parse_literal_uri() {
                 let mut dt_cell = ParseHint::default();
                 assert_eq!(
-                    literal::<f64>(&mut dt_cell)("`http://example.com`").unwrap().1.get_uri(),
+                    literal::<f64>(&mut dt_cell)("`http://example.com`")
+                        .unwrap()
+                        .1
+                        .get_uri(),
                     Some(&HUri::new("http://example.com").unwrap())
                 );
             }
@@ -838,7 +861,10 @@ pub mod parse {
                     Some(&HNumber::new(42.5, None))
                 );
                 assert_eq!(
-                    literal::<f64>(&mut dt_cell)("1.5kWh").unwrap().1.get_number(),
+                    literal::<f64>(&mut dt_cell)("1.5kWh")
+                        .unwrap()
+                        .1
+                        .get_number(),
                     Some(&HNumber::new(1.5, Some(HUnit::new("kWh".to_owned()))))
                 );
             }
@@ -847,7 +873,10 @@ pub mod parse {
             fn parse_literal_coord() {
                 let mut dt_cell = ParseHint::default();
                 assert_eq!(
-                    literal::<f64>(&mut dt_cell)("C(12.34,-56.78)").unwrap().1.get_coord_val(),
+                    literal::<f64>(&mut dt_cell)("C(12.34,-56.78)")
+                        .unwrap()
+                        .1
+                        .get_coord_val(),
                     Some(&HCoord::new(12.34, -56.78))
                 );
             }
@@ -864,7 +893,10 @@ pub mod parse {
                         .unwrap()
                         .1
                         .get_datetime(),
-                    Some(&HDateTime::new(2023, 3, 15, 12, 34, 56, 789, tz_obj.into_timezone()).unwrap())
+                    Some(
+                        &HDateTime::new(2023, 3, 15, 12, 34, 56, 789, tz_obj.into_timezone())
+                            .unwrap()
+                    )
                 );
             }
 
@@ -1111,17 +1143,17 @@ pub mod parse {
             let mut dt_cell = ParseHint::default();
             let tz = get_timezone("America/New_York", &mut dt_cell);
             let cell_tz = dt_cell.tz().take();
-            assert_eq!(tz.ok(),cell_tz);
-            assert_eq!(tz.ok(),Some(chrono_tz::Tz::America__New_York));
-            
+            assert_eq!(tz.ok(), cell_tz);
+            assert_eq!(tz.ok(), Some(chrono_tz::Tz::America__New_York));
+
             let tz = get_timezone("New_York", &mut dt_cell);
             let cell_tz = dt_cell.tz().get().unwrap();
-            assert_eq!(tz.ok(),Some(cell_tz.clone()));
-            assert_eq!(tz.ok(),Some(chrono_tz::Tz::America__New_York));
-            
+            assert_eq!(tz.ok(), Some(cell_tz.clone()));
+            assert_eq!(tz.ok(), Some(chrono_tz::Tz::America__New_York));
+
             let tz = get_timezone("New_York", &mut dt_cell);
-            assert_eq!(tz.ok(),Some(dt_cell.tz.get().unwrap().clone()));
-            assert_eq!(tz.ok(),Some(chrono_tz::Tz::America__New_York));
+            assert_eq!(tz.ok(), Some(dt_cell.tz.get().unwrap().clone()));
+            assert_eq!(tz.ok(), Some(chrono_tz::Tz::America__New_York));
         }
 
         #[test]

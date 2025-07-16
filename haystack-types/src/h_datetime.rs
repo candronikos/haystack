@@ -4,7 +4,10 @@ use std::fmt::{self, Display, Write};
 
 use crate::h_date::HDate;
 use chrono::offset::LocalResult;
-use chrono::{DateTime as DT, Datelike, Duration, FixedOffset, NaiveDate, NaiveDateTime, Offset, TimeZone, Timelike};
+use chrono::{
+    DateTime as DT, Datelike, Duration, FixedOffset, NaiveDate, NaiveDateTime, Offset, TimeZone,
+    Timelike,
+};
 use chrono_tz::{OffsetComponents, Tz};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -58,7 +61,7 @@ pub enum TZError {
     ParseError(chrono_tz::ParseError),
     Nonexistent,
     DateConstruction,
-    TimeConstruction
+    TimeConstruction,
 }
 
 impl HDateTime {
@@ -71,7 +74,7 @@ impl HDateTime {
         sec: u32,
         nano: u32,
         tz: HTimezone,
-    ) -> Result<Self,TZError> {
+    ) -> Result<Self, TZError> {
         let inner = NaiveDate::from_ymd_opt(year, month, day)
             .ok_or(TZError::DateConstruction)?
             .and_hms_nano_opt(hour, min, sec, nano)
@@ -125,7 +128,7 @@ impl HDateTime {
     pub fn is_dst(&self) -> bool {
         let local_result = self.tz.id.from_local_datetime(&self.inner);
         match local_result {
-            LocalResult::Single(one) => one.offset().dst_offset()!=Duration::zero(),
+            LocalResult::Single(one) => one.offset().dst_offset() != Duration::zero(),
             _ => true,
         }
     }

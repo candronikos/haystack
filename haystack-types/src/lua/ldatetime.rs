@@ -3,9 +3,7 @@ use std::os;
 use crate::lua::{H, LuaFloat};
 use crate::{HVal, NumTrait, h_datetime::HDateTime, io};
 use mlua::prelude::*;
-use mlua::{
-    Table, Function, MetaMethod, UserData,
-};
+use mlua::{Function, MetaMethod, Table, UserData};
 
 impl<'a: 'static> UserData for H<HDateTime> {
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {
@@ -36,6 +34,8 @@ impl<'a: 'static> UserData for H<HDateTime> {
 
         methods.add_method("time", |_, this, ()| Ok(H::new(this.get_ref().time())));
 
-        methods.add_method("timezone", |_, this, ()| Ok(this.get_ref().tz().to_string()));
+        methods.add_method("timezone", |_, this, ()| {
+            Ok(this.get_ref().tz().to_string())
+        });
     }
 }

@@ -1,8 +1,9 @@
 use std::rc::Rc;
 
-use crate::h_list::HList;
-use crate::h_val::HBox;
-use crate::lua::{H, LuaFloat};
+use haystack_types::h_list::HList;
+use haystack_types::h_val::HBox;
+use crate::ldict::to_dict;
+use crate::{H, LuaFloat};
 use crate::{HGrid, HVal};
 use mlua::prelude::*;
 use mlua::{Error as LuaError, Lua, MetaMethod, Result as LuaResult, Table as LuaTable, UserData};
@@ -24,7 +25,7 @@ impl<'a: 'static> UserData for H<HGrid<'a, LuaFloat>> {
             };
 
             match this.get(tmp_idx) {
-                Ok(row) => Ok(Some(H::new(row.to_dict()))),
+                Ok(row) => Ok(Some(H::new(to_dict(row)))),
                 Err(_) => Ok(None),
             }
         });
@@ -48,12 +49,12 @@ impl<'a: 'static> UserData for H<HGrid<'a, LuaFloat>> {
         methods.add_method("is_empty", |_, this, ()| Ok(this.is_empty()));
 
         methods.add_method("first", |_, this, ()| match this.first() {
-            Ok(row) => Ok(Some(H::new(row.to_dict()))),
+            Ok(row) => Ok(Some(H::new(to_dict(row)))),
             Err(_) => Ok(None),
         });
 
         methods.add_method("last", |_, this, ()| match this.last() {
-            Ok(row) => Ok(Some(H::new(row.to_dict()))),
+            Ok(row) => Ok(Some(H::new(to_dict(row)))),
             Err(_) => Ok(None),
         });
 

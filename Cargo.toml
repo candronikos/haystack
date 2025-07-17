@@ -4,6 +4,7 @@ package.repository = "https://github.com/candronikos/haystack"
 members = [
     "haystack-types",
     "haystack-client",
+    "haystack-lua",
 ]
 
 resolver = "2"

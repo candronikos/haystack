@@ -1,7 +1,7 @@
 use std::os;
 
-use crate::lua::{H, LuaFloat};
-use crate::{HVal, NumTrait, h_datetime::HDateTime, io};
+use crate::{H, LuaFloat};
+use haystack_types::{HVal, NumTrait, h_datetime::HDateTime, io};
 use mlua::prelude::*;
 use mlua::{Function, MetaMethod, Table, UserData};
 

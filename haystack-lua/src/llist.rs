@@ -1,5 +1,5 @@
-use crate::lua::{H, LuaFloat, create_lua_data};
-use crate::{HType, HVal, NumTrait, h_list::HList, io};
+use crate::{H, LuaFloat, create_lua_data};
+use haystack_types::{HType, HVal, NumTrait, h_list::HList, io};
 use mlua::prelude::*;
 use mlua::{
     AnyUserData, Error as LuaError, Lua, MetaMethod, Result as LuaResult, Table as LuaTable,

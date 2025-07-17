@@ -1,8 +1,8 @@
 use mlua::prelude::*;
 use mlua::{Error as LuaError, Lua, MetaMethod, Result as LuaResult, UserData, Value};
 
-use crate::h_bool::HBool;
-use crate::lua::H;
+use haystack_types::h_bool::HBool;
+use crate::H;
 
 impl LuaUserData for H<HBool> {
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {

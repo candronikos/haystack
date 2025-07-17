@@ -7,8 +7,8 @@ use std::rc::Weak;
 #[derive(Clone)]
 pub struct HRow<'a, T: NumTrait + 'a> {
     //parent: Option<Rc<HGrid<'a,T>>>,
-    parent: HGrid<'a, T>,
-    inner: Weak<Vector<Option<HBox<'a, T>>>>,
+    pub parent: HGrid<'a, T>,
+    pub inner: Weak<Vector<Option<HBox<'a, T>>>>,
 }
 
 pub type Row<'a, T> = HRow<'a, T>;
@@ -16,30 +16,6 @@ pub type Row<'a, T> = HRow<'a, T>;
 impl<'a, T: NumTrait + 'a> HRow<'a, T> {
     pub fn new(parent: HGrid<'a, T>, inner: Weak<Vector<Option<HBox<'a, T>>>>) -> Self {
         Self { parent, inner }
-    }
-
-    #[cfg(feature = "lua")]
-    pub fn to_dict(self) -> HDict<'a, T> {
-        let mut dict = HDict::new();
-        match &self.parent {
-            HGrid::Grid { cols, .. } => {
-                for (idx, col) in cols.iter().enumerate() {
-                    let inner = &self.inner;
-                    if let Some(val) = inner.upgrade().unwrap().get(idx) {
-                        if let Some(v) = val {
-                            dict.set(col.name.to_owned(), v.clone());
-                        }
-                    }
-                }
-            }
-            HGrid::Error { .. } => {
-                panic!("Error: Row in error grid cannot exist")
-            }
-            HGrid::Empty { .. } => {
-                panic!("Error: Row in empty grid cannot exist")
-            }
-        }
-        dict
     }
 
     pub fn get(&'a self, key: &str) -> Option<HBox<'a, T>> {

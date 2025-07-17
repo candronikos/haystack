@@ -1,18 +1,33 @@
 use std::ops::Deref;
 use std::rc::Rc;
 
-use crate::h_number::HNumber;
-use crate::h_val::HBox;
-use crate::io::parse::zinc::dict;
-use crate::{HGrid, HRow, HType, HVal, NumTrait, io};
-use chrono::format::parse;
+#[cfg(feature = "lua51")]
+extern crate mlua_51 as mlua;
+#[cfg(feature = "lua52")]
+extern crate mlua_52 as mlua;
+#[cfg(feature = "lua53")]
+extern crate mlua_53 as mlua;
+#[cfg(feature = "lua54")]
+extern crate mlua_54 as mlua;
+#[cfg(feature = "luajit52")]
+extern crate mlua_jit52 as mlua;
+#[cfg(feature = "luajit")]
+extern crate mlua_luajit as mlua;
+#[cfg(feature = "luau")]
+extern crate mlua_u as mlua;
+#[cfg(feature = "luau-jit")]
+extern crate mlua_ujit as mlua;
+#[cfg(feature = "luau-vector4")]
+extern crate mlua_uvector4 as mlua;
+
+use haystack_types::h_number::HNumber;
+use haystack_types::h_val::HBox;
+use haystack_types::{Parser, HGrid, HRow, HType, HVal, NumTrait, io};
 use mlua::prelude::*;
 use mlua::{
-    Error as LuaError, Lua, MetaMethod, Result as LuaResult, Table as LuaTable, UserData, Value,
+    Function as LuaFunction, Error as LuaError, Lua, MetaMethod, Result as LuaResult, Table as LuaTable, UserData, Value,
 };
-use nom::Parser;
 
-//mod lany;
 mod lbool;
 mod lcol;
 mod lcoord;
@@ -105,10 +120,10 @@ pub fn haystack(lua: &Lua) -> LuaResult<LuaTable> {
 
 pub fn create_lua_data(lua: &Lua, value: HBox<'static, LuaFloat>) -> LuaResult<Value> {
     let l_type = match value.haystack_type() {
-        HType::Null => lua.create_userdata(H::new(crate::h_null::HNull))?,
-        HType::Marker => lua.create_userdata(H::new(crate::h_marker::HMarker))?,
-        HType::Remove => lua.create_userdata(H::new(crate::h_remove::HRemove))?,
-        HType::NA => lua.create_userdata(H::new(crate::h_na::HNA))?,
+        HType::Null => lua.create_userdata(H::new(haystack_types::h_null::HNull))?,
+        HType::Marker => lua.create_userdata(H::new(haystack_types::h_marker::HMarker))?,
+        HType::Remove => lua.create_userdata(H::new(haystack_types::h_remove::HRemove))?,
+        HType::NA => lua.create_userdata(H::new(haystack_types::h_na::HNA))?,
         HType::Bool => lua.create_userdata(H::new(value.get_bool_val().unwrap().clone()))?,
         HType::Number => lua.create_userdata(H::new(value.get_number_val().unwrap().clone()))?,
         HType::Str => lua.create_userdata(H::new(value.get_string_val().unwrap().clone()))?,
@@ -135,15 +150,15 @@ pub fn setup_tonumber_override(lua: &Lua) -> LuaResult<()> {
 
     let original_tonumber: LuaFunction = globals.get("tonumber")?;
 
-    let enhanced_tonumber = lua.create_function(move |lua, value: LuaValue| match value {
-        LuaValue::UserData(ud) => {
+    let enhanced_tonumber = lua.create_function(move |lua, value: Value| match value {
+        Value::UserData(ud) => {
             if let Ok(hnumber) = ud.borrow::<H<HNumber<LuaFloat>>>() {
-                Ok(LuaValue::Number(hnumber.val()))
+                Ok(Value::Number(hnumber.val()))
             } else {
-                Ok(LuaValue::Nil)
+                Ok(Value::Nil)
             }
         }
-        _ => LuaFunction::call::<LuaValue>(&original_tonumber, value),
+        _ => LuaFunction::call::<Value>(&original_tonumber, value),
     })?;
 
     globals.set("tonumber", enhanced_tonumber)?;

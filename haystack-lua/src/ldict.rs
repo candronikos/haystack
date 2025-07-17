@@ -1,5 +1,6 @@
-use crate::lua::{H, LuaFloat, create_lua_data};
-use crate::{Dict, HRow, HVal, NumTrait, h_val::HType};
+use crate::{H, LuaFloat, create_lua_data};
+use haystack_types::{Float, HGrid};
+use haystack_types::{Dict, HRow, HVal, NumTrait, h_val::HType};
 use mlua::prelude::*;
 use mlua::{
     Error as LuaError, Lua, MetaMethod, Result as LuaResult, Table as LuaTable, UserData, Value,
@@ -25,4 +26,27 @@ impl<'a: 'static> UserData for H<Dict<'a, LuaFloat>> {
 
         methods.add_method("has", |_, this, (key,): (String,)| Ok(this.has(&key)));
     }
+}
+
+pub fn to_dict(row: HRow<LuaFloat>) -> Dict<LuaFloat> {
+    let mut dict = Dict::new();
+    match &row.parent {
+        HGrid::Grid { cols, .. } => {
+            for (idx, col) in cols.iter().enumerate() {
+                let inner = &row.inner;
+                if let Some(val) = inner.upgrade().unwrap().get(idx) {
+                    if let Some(v) = val {
+                        dict.set(col.name.to_owned(), v.clone());
+                    }
+                }
+            }
+        }
+        HGrid::Error { .. } => {
+            panic!("Error: Row in error grid cannot exist")
+        }
+        HGrid::Empty { .. } => {
+            panic!("Error: Row in empty grid cannot exist")
+        }
+    }
+    dict
 }

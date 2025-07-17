@@ -64,7 +64,7 @@ jobs:
         with:
           command: build
           target: ${{ matrix.platform.target }}
-          args: "--locked --release"
+          args: "--locked --release --package haystack-client"
           strip: true
 
       # Upload release binary

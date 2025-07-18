@@ -1,8 +1,8 @@
 use mlua::prelude::*;
 use mlua::{Error as LuaError, Lua, MetaMethod, Result as LuaResult, UserData, Value};
 
-use haystack_types::h_remove::HRemove;
 use crate::H;
+use haystack_types::h_remove::HRemove;
 
 impl LuaUserData for H<HRemove> {
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {

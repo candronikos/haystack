@@ -1,7 +1,7 @@
 use mlua::prelude::*;
 
-use haystack_types::h_marker::HMarker;
 use crate::H;
+use haystack_types::h_marker::HMarker;
 
 impl LuaUserData for H<HMarker> {
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {

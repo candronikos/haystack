@@ -1,10 +1,10 @@
 use std::rc::Rc;
 
-use haystack_types::h_list::HList;
-use haystack_types::h_val::HBox;
 use crate::ldict::to_dict;
 use crate::{H, LuaFloat};
 use crate::{HGrid, HVal};
+use haystack_types::h_list::HList;
+use haystack_types::h_val::HBox;
 use mlua::prelude::*;
 use mlua::{Error as LuaError, Lua, MetaMethod, Result as LuaResult, Table as LuaTable, UserData};
 

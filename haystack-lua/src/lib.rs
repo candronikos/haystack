@@ -22,10 +22,11 @@ extern crate mlua_uvector4 as mlua;
 
 use haystack_types::h_number::HNumber;
 use haystack_types::h_val::HBox;
-use haystack_types::{Parser, HGrid, HRow, HType, HVal, NumTrait, io};
+use haystack_types::{HGrid, HRow, HType, HVal, NumTrait, Parser, io};
 use mlua::prelude::*;
 use mlua::{
-    Function as LuaFunction, Error as LuaError, Lua, MetaMethod, Result as LuaResult, Table as LuaTable, UserData, Value,
+    Error as LuaError, Function as LuaFunction, Lua, MetaMethod, Result as LuaResult,
+    Table as LuaTable, UserData, Value,
 };
 
 mod lbool;

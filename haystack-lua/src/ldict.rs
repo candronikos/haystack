@@ -1,6 +1,6 @@
 use crate::{H, LuaFloat, create_lua_data};
-use haystack_types::{Float, HGrid};
 use haystack_types::{Dict, HRow, HVal, NumTrait, h_val::HType};
+use haystack_types::{Float, HGrid};
 use mlua::prelude::*;
 use mlua::{
     Error as LuaError, Lua, MetaMethod, Result as LuaResult, Table as LuaTable, UserData, Value,

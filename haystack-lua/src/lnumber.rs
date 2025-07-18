@@ -1,8 +1,8 @@
 use mlua::prelude::*;
 
+use crate::{H, LuaFloat};
 use haystack_types::HVal;
 use haystack_types::h_number::HNumber;
-use crate::{H, LuaFloat};
 
 impl LuaUserData for H<HNumber<LuaFloat>> {
     fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {

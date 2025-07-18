@@ -1,8 +1,8 @@
 use mlua::prelude::*;
 use mlua::{Error as LuaError, Lua, MetaMethod, Result as LuaResult, UserData, Value};
 
-use haystack_types::h_null::HNull;
 use crate::H;
+use haystack_types::h_null::HNull;
 
 impl LuaUserData for H<HNull> {
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {

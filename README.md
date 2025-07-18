@@ -135,6 +135,9 @@ accept-invalid-certs: true
 ### haystack-client (Library)
 The underlying API library implementing an asynchronous haystack client. API may change and will be documented further once finalised.
 
+### haystack-lua (Lua bindings)
+Implements Lua bindings for Project Haystack data processing. Parse and manipulate Zinc format grids, lists, and dictionaries through a pipeline-friendly Lua API. Ideal for command-line data transformation workflows and automation scripts. Built in Rust for performance, supports Lua 5.1+.
+
 ### haystack-types
 Rust-native implementations of haystack data types as well as zinc parsers for each type enabling interactivity with haystack servers.
 

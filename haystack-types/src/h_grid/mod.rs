@@ -217,7 +217,11 @@ impl<'a, T: NumTrait + 'a> HGrid<'a, T> {
                 ..
             } => {
                 let r = rows.get(key).ok_or(HGridErr::IndexErr)?;
-                Ok(HRow::new(Rc::downgrade(col_index), cols.clone(), Rc::downgrade(r)))
+                Ok(HRow::new(
+                    Rc::downgrade(col_index),
+                    cols.clone(),
+                    Rc::downgrade(r),
+                ))
             }
             _ => Err(HGridErr::IndexErr),
         }
@@ -302,19 +306,17 @@ impl<'a, T: NumTrait + 'a> HGrid<'a, T> {
                 col_index,
                 cols,
                 ..
-            } => {
-                rows
-                    .iter()
-                    .map(|row| {
-                        HRow::new(
-                            Rc::downgrade(col_index),
-                            cols.clone(),
-                            (Rc::<Vector<Option<Rc<(dyn HVal<'a, T>)>>>>::downgrade(row)),
-                        )
-                    })
-                    .collect::<Vec<HRow<'a, T>>>()
-                    .into_iter()
-            }
+            } => rows
+                .iter()
+                .map(|row| {
+                    HRow::new(
+                        Rc::downgrade(col_index),
+                        cols.clone(),
+                        (Rc::<Vector<Option<Rc<(dyn HVal<'a, T>)>>>>::downgrade(row)),
+                    )
+                })
+                .collect::<Vec<HRow<'a, T>>>()
+                .into_iter(),
             HGrid::Empty { .. } => panic!("Empty grid"), //Box::new(std::iter::empty()),
             HGrid::Error { dis, errTrace } => {
                 panic!(
@@ -398,6 +400,23 @@ impl<'a, T: NumTrait + 'a> HGrid<'a, T> {
                 write!(buf, "\nempty\n")
             }
         }
+    }
+
+    pub fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result {
+        match self {
+            HGrid::Grid { .. } => {
+                let mut row_iter = self.iter().peekable();
+
+                while let Some(row) = row_iter.next() {
+                    row.to_trio(buf)?;
+                    if row_iter.peek().is_some() {
+                        write!(buf, "---\n")?;
+                    }
+                }
+            }
+            _ => (),
+        };
+        Ok(())
     }
 }
 
@@ -485,22 +504,6 @@ impl<'a, T: NumTrait + 'a> Iterator for HGridIter<'a, T> {
 }
 
 impl<'a, T: 'a + NumTrait> HVal<'a, T> for HGrid<'a, T> {
-    fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result {
-        match self {
-            HGrid::Grid { .. } => {
-                let mut row_iter = self.iter().peekable();
-
-                while let Some(row) = row_iter.next() {
-                    row.to_trio(buf)?;
-                    if row_iter.peek().is_some() {
-                        write!(buf, "---\n")?;
-                    }
-                }
-            }
-            _ => (),
-        };
-        Ok(())
-    }
     fn to_json(&self, _buf: &mut String) -> fmt::Result {
         unimplemented!();
     }
@@ -512,7 +515,6 @@ impl<'a, T: 'a + NumTrait> HVal<'a, T> for HGrid<'a, T> {
         false
     }
 }
-
 
 #[cfg(test)]
 mod tests {

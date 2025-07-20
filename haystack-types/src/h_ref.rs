@@ -28,7 +28,7 @@ impl HRef {
         }
     }
     pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        Self::to_zinc(self, buf)
+        self.to_zinc(buf)
     }
     pub fn to_json(&self, buf: &mut String) -> fmt::Result {
         write!(buf, "r:{}", self.id)?;
@@ -44,9 +44,6 @@ impl HRef {
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HRef {
-    fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        self.to_trio(buf)
-    }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         self.to_json(buf)
     }

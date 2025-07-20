@@ -127,7 +127,3 @@ pub trait ZincReader<'a, T: NumTrait + 'a> {
 pub trait JsonWriter<'a, T: NumTrait + 'a> {
     fn to_json(&self, buf: &mut String) -> fmt::Result;
 }
-
-pub trait TrioWriter<'a, T: NumTrait + 'a> {
-    fn to_trio(&self, buf: &mut String) -> fmt::Result;
-}

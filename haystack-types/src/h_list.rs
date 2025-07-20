@@ -62,9 +62,6 @@ impl<'a, T: NumTrait> HList<'a, T> {
 }
 
 impl<'a, T: NumTrait> HVal<'a, T> for HList<'a, T> {
-    fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result {
-        self.to_trio(buf)
-    }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         self.to_json(buf)
     }

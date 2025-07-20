@@ -23,13 +23,9 @@ impl HSymbol {
     pub fn to_json(&self, buf: &mut String) -> fmt::Result {
         write!(buf, "y:{}", self.val)
     }
-
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HSymbol {
-    fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        self.to_trio(buf)
-    }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         write!(buf, "y:{}", self.val)
     }

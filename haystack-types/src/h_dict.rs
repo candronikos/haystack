@@ -53,7 +53,7 @@ impl<'a, T: NumTrait> HDict<'a, T> {
     pub fn iter(&self) -> impl Iterator<Item = (&String, &HBox<'a, T>)> {
         self.inner.iter()
     }
-    
+
     pub fn to_zinc<'b>(&self, buf: &'b mut String) -> fmt::Result {
         write!(buf, "{{")?;
         let inner = &self.inner;
@@ -86,9 +86,6 @@ impl<'a, T: NumTrait> HDict<'a, T> {
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HDict<'a, T> {
-    fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result {
-        self.to_trio(buf)
-    }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         self.to_json(buf)
     }

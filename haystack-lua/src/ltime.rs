@@ -2,9 +2,7 @@ use crate::{H, LuaFloat};
 use haystack_types::io::write::ZincWriter;
 use haystack_types::{HVal, NumTrait, h_time::HTime, io};
 use mlua::prelude::*;
-use mlua::{
-    MetaMethod, UserData,
-};
+use mlua::{MetaMethod, UserData};
 
 impl<'a: 'static> UserData for H<HTime> {
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {

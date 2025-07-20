@@ -35,7 +35,7 @@ impl HStr {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
-    
+
     pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         buf.push('\"');
         self.0.chars().try_for_each(|c| zinc_escape_str(c, buf))?;
@@ -55,9 +55,6 @@ impl HStr {
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HStr {
-    fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result {
-        self.to_trio(buf)
-    }
     fn to_json<'b>(&self, buf: &'b mut String) -> fmt::Result {
         self.to_json(buf)
     }
@@ -70,6 +67,8 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HStr {
 
 #[cfg(test)]
 mod tests {
+    use crate::io::write::TrioWriter;
+
     use super::*;
 
     #[test]
@@ -113,7 +112,7 @@ mod tests {
     fn test_to_trio() {
         let hstr = HStr::new("hello".into());
         let mut buf = String::new();
-        HVal::<f64>::to_trio(&hstr, &mut buf).unwrap();
+        hstr.to_trio(&mut buf).unwrap();
         assert_eq!(buf, "\"hello\"");
     }
 

@@ -1,7 +1,7 @@
 use crate::{HType, HVal, NumTrait};
-use std::fmt::{self, Write};
 use chrono::Datelike;
 use chrono::naive::NaiveDate;
+use std::fmt::{self, Write};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct HDate {
@@ -37,9 +37,6 @@ impl HDate {
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HDate {
-    fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        self.to_trio(buf)
-    }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         self.to_json(buf)
     }

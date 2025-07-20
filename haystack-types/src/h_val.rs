@@ -1,6 +1,6 @@
-use crate::common::{JsonWriter, TrioWriter, ZincReader};
-use crate::io::write::zinc::ZincWriter;
-use crate::{io, HCast, NumTrait};
+use crate::common::{JsonWriter, ZincReader};
+use crate::io::write::{TrioWriter, ZincWriter};
+use crate::{HCast, NumTrait, io};
 use std::fmt::{self, Debug, Display, Formatter};
 use std::rc::{Rc, Weak};
 
@@ -47,9 +47,7 @@ macro_rules! set_trait_eq_method {
     };
 }
 
-pub trait HVal<'a, T: NumTrait + 'a>: HCast<'a,T> + ZincWriter<'a, T> {
-    //fn to_zinc<'b>(&self, buf: &'b mut String) -> fmt::Result;
-    fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result;
+pub trait HVal<'a, T: NumTrait + 'a>: HCast<'a, T> + ZincWriter<'a, T> + TrioWriter<'a, T> {
     fn to_json(&self, buf: &mut String) -> fmt::Result;
     fn haystack_type(&self) -> HType;
 
@@ -75,7 +73,6 @@ pub trait HVal<'a, T: NumTrait + 'a>: HCast<'a,T> + ZincWriter<'a, T> {
     }
 
     fn _eq(&self, other: &dyn HVal<'a, T>) -> bool;
-
 }
 
 impl<'a, T: NumTrait + 'a> Display for dyn HVal<'a, T> {
@@ -124,20 +121,6 @@ impl<'a, T: NumTrait + 'a> Display for dyn JsonWriter<'a, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut buf = String::new();
         self.to_json(&mut buf)?;
-        write!(f, "{}", buf)
-    }
-}
-
-impl<'a, T: NumTrait + 'a> TrioWriter<'a, T> for dyn HVal<'a, T> {
-    fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        self.to_zinc(buf)
-    }
-}
-
-impl<'a, T: NumTrait + 'a> Display for dyn TrioWriter<'a, T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let mut buf = String::new();
-        self.to_trio(&mut buf)?;
         write!(f, "{}", buf)
     }
 }

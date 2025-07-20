@@ -1,5 +1,5 @@
-use crate::h_grid::HGrid;
 use crate::HCol;
+use crate::h_grid::HGrid;
 use crate::{HType, NumTrait, h_val::HBox};
 use rpds::Vector;
 use std::collections::HashMap;
@@ -16,8 +16,16 @@ pub struct HRow<'a, T: NumTrait + 'a> {
 pub type Row<'a, T> = HRow<'a, T>;
 
 impl<'a, T: NumTrait + 'a> HRow<'a, T> {
-    pub fn new(col_index: Weak<HashMap<String, usize>>, cols: Vector<HCol<'a, T>>, inner: Weak<Vector<Option<HBox<'a, T>>>>) -> Self {
-        Self { col_index, cols, inner }
+    pub fn new(
+        col_index: Weak<HashMap<String, usize>>,
+        cols: Vector<HCol<'a, T>>,
+        inner: Weak<Vector<Option<HBox<'a, T>>>>,
+    ) -> Self {
+        Self {
+            col_index,
+            cols,
+            inner,
+        }
     }
 
     pub fn get(&'a self, key: &str) -> Option<HBox<'a, T>> {

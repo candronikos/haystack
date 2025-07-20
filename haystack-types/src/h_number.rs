@@ -48,12 +48,12 @@ impl<T: Float + Display> Number<T> {
             None => write!(buf, "{}", self.val),
         }
     }
+    pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
+        self.to_zinc(buf)
+    }
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HNumber<T> {
-    fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        self.to_zinc(buf)
-    }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         match &self.unit {
             Some(unit) => write!(buf, "{} {}", self.val, unit),

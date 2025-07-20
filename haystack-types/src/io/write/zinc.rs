@@ -1,13 +1,27 @@
 use std::fmt;
 
 use crate::{
-    h_bool::HBool, h_coord::HCoord, h_date::HDate, h_datetime::HDateTime, h_dict::HDict,
-    h_grid::HGrid, h_list::HList, h_marker::HMarker, h_na::HNA, h_null::HNull, h_number::{HNumber, NumTrait},
-    h_ref::HRef, h_remove::HRemove, h_str::HStr, h_symbol::HSymbol, h_time::HTime, h_uri::HUri,
+    h_bool::HBool,
+    h_coord::HCoord,
+    h_date::HDate,
+    h_datetime::HDateTime,
+    h_dict::HDict,
+    h_grid::HGrid,
+    h_list::HList,
+    h_marker::HMarker,
+    h_na::HNA,
+    h_null::HNull,
+    h_number::{HNumber, NumTrait},
+    h_ref::HRef,
+    h_remove::HRemove,
+    h_str::HStr,
+    h_symbol::HSymbol,
+    h_time::HTime,
+    h_uri::HUri,
     h_xstr::HXStr,
 };
 
-pub trait ZincWriter<'a,T:NumTrait + 'a> {
+pub trait ZincWriter<'a, T: NumTrait + 'a> {
     fn to_zinc(&self, buf: &mut String) -> fmt::Result;
 }
 
@@ -15,14 +29,14 @@ macro_rules! impl_zinc_writer {
     ($h_type:ty) => {
         impl<'a, T: NumTrait + 'a> ZincWriter<'a, T> for $h_type {
             fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-                <$h_type>::to_zinc(self,buf)
+                <$h_type>::to_zinc(self, buf)
             }
         }
     };
     ($h_type:ty, $num_trait:ident) => {
         impl<'a, T: $num_trait + 'a> ZincWriter<'a, T> for $h_type {
             fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-                <$h_type>::to_zinc(self,buf)
+                <$h_type>::to_zinc(self, buf)
             }
         }
     };

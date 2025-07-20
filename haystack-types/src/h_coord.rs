@@ -19,18 +19,14 @@ impl<T: NumTrait> HCoord<T> {
         write!(buf, "C({},{})", self.lat, self.long)
     }
     pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        Self::to_zinc(self, buf)
+        self.to_zinc(buf)
     }
     pub fn to_json(&self, buf: &mut String) -> fmt::Result {
         write!(buf, "c:{},{}", self.lat, self.long)
     }
-
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HCoord<T> {
-    fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        self.to_trio(buf)
-    }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         write!(buf, "c:{},{}", self.lat, self.long)
     }

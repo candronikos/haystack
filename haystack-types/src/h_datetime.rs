@@ -5,8 +5,7 @@ use std::fmt::{self, Display, Write};
 use crate::h_date::HDate;
 use chrono::offset::LocalResult;
 use chrono::{
-    Datelike, Duration, FixedOffset, NaiveDate, NaiveDateTime, Offset, TimeZone,
-    Timelike,
+    Datelike, Duration, FixedOffset, NaiveDate, NaiveDateTime, Offset, TimeZone, Timelike,
 };
 use chrono_tz::{OffsetComponents, Tz};
 
@@ -172,9 +171,6 @@ impl HDateTime {
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HDateTime {
-    fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        self.to_trio(buf)
-    }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         self.to_json(buf)
     }

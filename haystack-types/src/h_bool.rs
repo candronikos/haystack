@@ -34,9 +34,6 @@ impl HBool {
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HBool {
-    fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        self.to_trio(buf)
-    }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         self.to_json(buf)
     }

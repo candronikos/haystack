@@ -133,9 +133,7 @@ pub fn create_lua_data(lua: &Lua, value: HBox<'static, LuaFloat>) -> LuaResult<V
         HType::Symbol => lua.create_userdata(H::new(value.get_symbol().unwrap().clone()))?,
         HType::Date => lua.create_userdata(H::new(value.get_date().unwrap().clone()))?,
         HType::Time => lua.create_userdata(H::new(value.get_time().unwrap().clone()))?,
-        HType::DateTime => {
-            lua.create_userdata(H::new(value.get_datetime().unwrap().clone()))?
-        }
+        HType::DateTime => lua.create_userdata(H::new(value.get_datetime().unwrap().clone()))?,
         HType::Coord => lua.create_userdata(H::new(value.get_coord().unwrap().clone()))?,
         HType::XStr => lua.create_userdata(H::new(value.get_xstr().unwrap().clone()))?,
         HType::List => lua.create_userdata(H::new(value.get_list().unwrap().clone()))?,

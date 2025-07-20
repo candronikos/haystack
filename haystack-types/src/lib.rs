@@ -2,7 +2,7 @@ mod err;
 pub use err::HError;
 
 mod common;
-pub use common::{Txt, ZincReader, ZincWriter};
+pub use common::{Txt, ZincReader};
 
 #[macro_use]
 pub mod h_val;

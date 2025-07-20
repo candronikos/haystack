@@ -11,18 +11,25 @@ pub type Coord<T> = HCoord<T>;
 
 const THIS_TYPE: HType = HType::Coord;
 
-impl<T> HCoord<T> {
+impl<T: NumTrait> HCoord<T> {
     pub fn new(lat: T, long: T) -> HCoord<T> {
         HCoord { lat, long }
     }
+    pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
+        write!(buf, "C({},{})", self.lat, self.long)
+    }
+    pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
+        Self::to_zinc(self, buf)
+    }
+    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
+        write!(buf, "c:{},{}", self.lat, self.long)
+    }
+
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HCoord<T> {
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        write!(buf, "C({},{})", self.lat, self.long)
-    }
     fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        HVal::<T>::to_zinc(self, buf)
+        self.to_trio(buf)
     }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         write!(buf, "c:{},{}", self.lat, self.long)

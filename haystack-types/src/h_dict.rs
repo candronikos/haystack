@@ -53,10 +53,8 @@ impl<'a, T: NumTrait> HDict<'a, T> {
     pub fn iter(&self) -> impl Iterator<Item = (&String, &HBox<'a, T>)> {
         self.inner.iter()
     }
-}
-
-impl<'a, T: NumTrait + 'a> HVal<'a, T> for HDict<'a, T> {
-    fn to_zinc<'b>(&self, buf: &'b mut String) -> fmt::Result {
+    
+    pub fn to_zinc<'b>(&self, buf: &'b mut String) -> fmt::Result {
         write!(buf, "{{")?;
         let inner = &self.inner;
         let mut kv_pairs = inner
@@ -79,11 +77,20 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HDict<'a, T> {
         }
         write!(buf, "}}")
     }
-    fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result {
-        HVal::<T>::to_zinc(self, buf)
+    pub fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result {
+        self.to_zinc(buf)
     }
-    fn to_json(&self, _buf: &mut String) -> fmt::Result {
+    pub fn to_json(&self, _buf: &mut String) -> fmt::Result {
         unimplemented!()
+    }
+}
+
+impl<'a, T: NumTrait + 'a> HVal<'a, T> for HDict<'a, T> {
+    fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result {
+        self.to_trio(buf)
+    }
+    fn to_json(&self, buf: &mut String) -> fmt::Result {
+        self.to_json(buf)
     }
     fn haystack_type(&self) -> HType {
         THIS_TYPE

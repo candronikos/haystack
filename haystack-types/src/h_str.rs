@@ -35,24 +35,31 @@ impl HStr {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
-}
-
-impl<'a, T: NumTrait + 'a> HVal<'a, T> for HStr {
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result {
+    
+    pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         buf.push('\"');
         self.0.chars().try_for_each(|c| zinc_escape_str(c, buf))?;
         buf.push('\"');
         Ok(())
     }
-    fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        HVal::<T>::to_zinc(self, buf)
+    pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
+        self.to_zinc(buf)
     }
-    fn to_json(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
         if let Some(_) = self.0.find(":") {
             write!(buf, "s:")?;
         }
         write!(buf, "{}", self.0)?;
         Ok(())
+    }
+}
+
+impl<'a, T: NumTrait + 'a> HVal<'a, T> for HStr {
+    fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result {
+        self.to_trio(buf)
+    }
+    fn to_json<'b>(&self, buf: &'b mut String) -> fmt::Result {
+        self.to_json(buf)
     }
     fn haystack_type(&self) -> HType {
         STR_TYPE
@@ -89,7 +96,7 @@ mod tests {
     fn test_to_zinc() {
         let hstr = HStr::new("hello".into());
         let mut buf = String::new();
-        HVal::<f64>::to_zinc(&hstr, &mut buf).unwrap();
+        hstr.to_zinc(&mut buf).unwrap();
         assert_eq!(buf, "\"hello\"");
     }
 
@@ -98,7 +105,7 @@ mod tests {
         //let hstr = HStr::new("\b \f \n \r \t \" \\ $ \u{263A}".into());
         let hstr = HStr::new("\x08 \x0C \n \r \t \" \\ $ \u{263A} ☺".into());
         let mut buf = String::new();
-        HVal::<f64>::to_zinc(&hstr, &mut buf).unwrap();
+        hstr.to_zinc(&mut buf).unwrap();
         assert_eq!(buf, "\"\\b \\f \\n \\r \\t \\\" \\\\ \\$ \u{263A} ☺\"");
     }
 

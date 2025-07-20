@@ -14,14 +14,21 @@ impl HSymbol {
     pub fn new(val: String) -> HSymbol {
         HSymbol { val }
     }
+    pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
+        write!(buf, "^{}", self.val)
+    }
+    pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
+        self.to_zinc(buf)
+    }
+    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
+        write!(buf, "y:{}", self.val)
+    }
+
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HSymbol {
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        write!(buf, "^{}", self.val)
-    }
     fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        HVal::<T>::to_zinc(self, buf)
+        self.to_trio(buf)
     }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         write!(buf, "y:{}", self.val)

@@ -13,21 +13,18 @@ const JSON: Txt = Txt::Const("-:");
 const THIS_TYPE: HType = HType::Remove;
 
 impl HRemove {
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         write!(buf, "{}", ZINC)
     }
-    fn to_trio(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
         self.to_zinc(buf)
     }
-    fn to_json(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
         write!(buf, "{}", JSON)
     }
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HRemove {
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        self.to_zinc(buf)
-    }
     fn to_trio(&self, buf: &mut String) -> fmt::Result {
         self.to_trio(buf)
     }

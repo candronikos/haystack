@@ -1,3 +1,4 @@
+use haystack_types::io::write::ZincWriter;
 use mlua::prelude::*;
 
 use crate::{H, LuaFloat};
@@ -15,7 +16,7 @@ impl LuaUserData for H<HNumber<LuaFloat>> {
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {
         methods.add_meta_method(LuaMetaMethod::ToString, |_, this, ()| {
             let mut buf = String::new();
-            HVal::<LuaFloat>::to_zinc(this.get_ref(), &mut buf).unwrap();
+            ZincWriter::<LuaFloat>::to_zinc(this.get_ref(), &mut buf).unwrap();
             Ok(buf)
         });
 

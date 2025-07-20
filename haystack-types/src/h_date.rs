@@ -1,6 +1,5 @@
 use crate::{HType, HVal, NumTrait};
 use std::fmt::{self, Write};
-
 use chrono::Datelike;
 use chrono::naive::NaiveDate;
 
@@ -19,7 +18,7 @@ impl HDate {
             inner: NaiveDate::from_ymd(year, month, day),
         }
     }
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         write!(
             buf,
             "{:0>4}-{:0>2}-{:0>2}",
@@ -28,19 +27,16 @@ impl HDate {
             self.inner.day()
         )
     }
-    fn to_trio(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
         self.to_zinc(buf)
     }
-    fn to_json(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
         write!(buf, "d:")?;
         self.to_zinc(buf)
     }
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HDate {
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        self.to_zinc(buf)
-    }
     fn to_trio(&self, buf: &mut String) -> fmt::Result {
         self.to_trio(buf)
     }
@@ -53,6 +49,7 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HDate {
 
     set_trait_eq_method!(get_date,'a,T);
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

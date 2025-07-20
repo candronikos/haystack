@@ -16,16 +16,16 @@ const JSON_FALSE: Txt = Txt::Const("false");
 const THIS_TYPE: HType = HType::Bool;
 
 impl HBool {
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         match self.0 {
             true => write!(buf, "{}", ZINC_TRUE),
             false => write!(buf, "{}", ZINC_FALSE),
         }
     }
-    fn to_trio(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
         self.to_zinc(buf)
     }
-    fn to_json(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
         match self.0 {
             true => write!(buf, "{}", JSON_TRUE),
             false => write!(buf, "{}", JSON_FALSE),
@@ -34,9 +34,6 @@ impl HBool {
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HBool {
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        self.to_zinc(buf)
-    }
     fn to_trio(&self, buf: &mut String) -> fmt::Result {
         self.to_trio(buf)
     }
@@ -49,6 +46,7 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HBool {
 
     set_trait_eq_method!(get_bool,'a,T);
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

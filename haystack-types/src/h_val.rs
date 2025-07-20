@@ -1,16 +1,10 @@
-use crate::common::{JsonWriter, TrioWriter, ZincReader, ZincWriter};
+use crate::common::{JsonWriter, TrioWriter, ZincReader};
+use crate::io::write::zinc::ZincWriter;
 use crate::{io, HCast, NumTrait};
 use std::fmt::{self, Debug, Display, Formatter};
 use std::rc::{Rc, Weak};
 
 use nom::IResult;
-
-use crate::{
-    h_bool::HBool, h_coord::HCoord, h_date::HDate, h_datetime::HDateTime, h_dict::HDict,
-    h_grid::HGrid, h_list::HList, h_marker::HMarker, h_na::HNA, h_null::HNull, h_number::HNumber,
-    h_ref::HRef, h_remove::HRemove, h_str::HStr, h_symbol::HSymbol, h_time::HTime, h_uri::HUri,
-    h_xstr::HXStr,
-};
 
 #[derive(Debug, PartialEq)]
 pub enum HType {
@@ -53,8 +47,8 @@ macro_rules! set_trait_eq_method {
     };
 }
 
-pub trait HVal<'a, T: NumTrait + 'a>: HCast<'a,T> {
-    fn to_zinc<'b>(&self, buf: &'b mut String) -> fmt::Result;
+pub trait HVal<'a, T: NumTrait + 'a>: HCast<'a,T> + ZincWriter<'a, T> {
+    //fn to_zinc<'b>(&self, buf: &'b mut String) -> fmt::Result;
     fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result;
     fn to_json(&self, buf: &mut String) -> fmt::Result;
     fn haystack_type(&self) -> HType;
@@ -89,7 +83,7 @@ impl<'a, T: NumTrait + 'a> Display for dyn HVal<'a, T> {
         let self_as_hval: &(dyn HVal<'a, T>) = self;
         write!(f, "{}(", self_as_hval.haystack_type())?;
         let mut buf = String::new();
-        HVal::to_zinc(self_as_hval, &mut buf)?;
+        self.to_zinc(&mut buf)?;
         write!(f, "{})", buf)
     }
 }
@@ -110,12 +104,6 @@ impl<'a, T: NumTrait + 'a> PartialEq for dyn HVal<'a, T> {
     }
 }
 
-impl<'a, T: NumTrait + 'a> ZincWriter<'a, T> for dyn HVal<'a, T> + 'a {
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        self.to_zinc(buf)
-    }
-}
-
 impl<'a, T: NumTrait + 'a> ZincReader<'a, T> for dyn HVal<'a, T> {
     fn parse<'b>(buf: &'b str) -> IResult<&'b str, HBox<'a, T>>
     where
@@ -123,14 +111,6 @@ impl<'a, T: NumTrait + 'a> ZincReader<'a, T> for dyn HVal<'a, T> {
     {
         let mut dt_cell = io::ParseHint::default();
         io::parse::zinc::literal::<T>(&mut dt_cell)(buf)
-    }
-}
-
-impl<'a, T: NumTrait + 'a> Display for dyn ZincWriter<'a, T> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        let mut buf = String::new();
-        self.to_zinc(&mut buf)?;
-        write!(f, "{}", buf)
     }
 }
 

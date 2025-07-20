@@ -15,16 +15,16 @@ impl HUri {
         let url = Url::parse(input)?;
         Ok(HUri(url))
     }
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         buf.push('`');
         buf.push_str(self.0.as_str());
         buf.push('`');
         Ok(())
     }
-    fn to_trio(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
         self.to_zinc(buf)
     }
-    fn to_json(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
         write!(buf, "u:{}", self.0)?;
         Ok(())
     }
@@ -34,9 +34,6 @@ impl HUri {
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HUri {
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        self.to_zinc(buf)
-    }
     fn to_trio(&self, buf: &mut String) -> fmt::Result {
         self.to_trio(buf)
     }

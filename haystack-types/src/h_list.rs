@@ -40,10 +40,7 @@ impl<'a, T: NumTrait> HList<'a, T> {
     pub fn last(&self) -> Option<&HBox<'a, T>> {
         self.inner.last()
     }
-}
-
-impl<'a, T: NumTrait> HVal<'a, T> for HList<'a, T> {
-    fn to_zinc<'b>(&self, buf: &'b mut String) -> fmt::Result {
+    pub fn to_zinc<'b>(&self, buf: &'b mut String) -> fmt::Result {
         write!(buf, "[")?;
         let inner = &self.inner;
         let mut elements = inner.into_iter().peekable();
@@ -56,11 +53,20 @@ impl<'a, T: NumTrait> HVal<'a, T> for HList<'a, T> {
         }
         write!(buf, "]")
     }
-    fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result {
-        HVal::<T>::to_zinc(self, buf)
+    pub fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result {
+        self.to_zinc(buf)
     }
-    fn to_json(&self, _buf: &mut String) -> fmt::Result {
+    pub fn to_json(&self, _buf: &mut String) -> fmt::Result {
         unimplemented!()
+    }
+}
+
+impl<'a, T: NumTrait> HVal<'a, T> for HList<'a, T> {
+    fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result {
+        self.to_trio(buf)
+    }
+    fn to_json(&self, buf: &mut String) -> fmt::Result {
+        self.to_json(buf)
     }
     fn haystack_type(&self) -> HType {
         THIS_TYPE

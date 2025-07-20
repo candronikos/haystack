@@ -118,10 +118,6 @@ pub fn id(input: &str) -> IResult<&str, &str> {
     recognize((take_while1(lower), many0(alt((alphanumeric1, tag("_")))))).parse(input)
 }
 
-pub trait ZincWriter<'a, T: NumTrait + 'a> {
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result;
-}
-
 pub trait ZincReader<'a, T: NumTrait + 'a> {
     fn parse<'b>(buf: &'b str) -> IResult<&'b str, HBox<'a, T>>
     where

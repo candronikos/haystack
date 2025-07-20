@@ -30,22 +30,12 @@ impl<'a: 'static> UserData for H<Dict<'a, LuaFloat>> {
 
 pub fn to_dict(row: HRow<LuaFloat>) -> Dict<LuaFloat> {
     let mut dict = Dict::new();
-    match &row.parent {
-        HGrid::Grid { cols, .. } => {
-            for (idx, col) in cols.iter().enumerate() {
-                let inner = &row.inner;
-                if let Some(val) = inner.upgrade().unwrap().get(idx) {
-                    if let Some(v) = val {
-                        dict.set(col.name.to_owned(), v.clone());
-                    }
-                }
+    for (idx, col) in row.cols.iter().enumerate() {
+        let inner = &row.inner;
+        if let Some(val) = inner.upgrade().unwrap().get(idx) {
+            if let Some(v) = val {
+                dict.set(col.name.to_owned(), v.clone());
             }
-        }
-        HGrid::Error { .. } => {
-            panic!("Error: Row in error grid cannot exist")
-        }
-        HGrid::Empty { .. } => {
-            panic!("Error: Row in empty grid cannot exist")
         }
     }
     dict

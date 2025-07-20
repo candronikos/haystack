@@ -145,7 +145,7 @@ impl HDateTime {
         self.tz.offset
     }
 
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         write!(
             buf,
             "{:0>4}-{:0>2}-{:0>2}T",
@@ -162,19 +162,16 @@ impl HDateTime {
             self.inner.nanosecond()
         )
     }
-    fn to_trio(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
         self.to_zinc(buf)
     }
-    fn to_json(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
         write!(buf, "t:")?;
         self.to_zinc(buf)
     }
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HDateTime {
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        self.to_zinc(buf)
-    }
     fn to_trio(&self, buf: &mut String) -> fmt::Result {
         self.to_trio(buf)
     }

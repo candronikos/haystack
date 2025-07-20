@@ -16,10 +16,7 @@ impl HRef {
     pub fn new(id: String, dis: Option<String>) -> HRef {
         HRef { id, dis }
     }
-}
-
-impl<'a, T: NumTrait + 'a> HVal<'a, T> for HRef {
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         write!(buf, "@{}", self.id)?;
         match &self.dis {
             Some(dis) => {
@@ -30,10 +27,10 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HRef {
             None => Ok(()),
         }
     }
-    fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        HVal::<T>::to_zinc(self, buf)
+    pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
+        Self::to_zinc(self, buf)
     }
-    fn to_json(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
         write!(buf, "r:{}", self.id)?;
         match &self.dis {
             Some(dis) => {
@@ -43,6 +40,15 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HRef {
             }
             None => Ok(()),
         }
+    }
+}
+
+impl<'a, T: NumTrait + 'a> HVal<'a, T> for HRef {
+    fn to_trio(&self, buf: &mut String) -> fmt::Result {
+        self.to_trio(buf)
+    }
+    fn to_json(&self, buf: &mut String) -> fmt::Result {
+        self.to_json(buf)
     }
     fn haystack_type(&self) -> HType {
         THIS_TYPE

@@ -20,16 +20,26 @@ impl HXStr {
             xval: HStr::new(xval),
         }
     }
+    pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
+        write!(buf, "{}(", self.xtype)?;
+        self.xval.to_zinc(buf)?;
+        write!(buf, ")")
+    }
+    pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
+        self.to_zinc(buf)
+    }
+    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
+        write!(buf, "x:{}:", self.xtype)?;
+        self.xval
+            .chars()
+            .try_for_each(|c| escape_str_no_escape_unicode(c, buf))
+    }
+
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HXStr {
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        write!(buf, "{}(", self.xtype)?;
-        HVal::<T>::to_zinc(&self.xval, buf)?;
-        write!(buf, ")")
-    }
     fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        HVal::<T>::to_zinc(self, buf)
+        self.to_trio(buf)
     }
     fn to_json(&self, buf: &mut String) -> fmt::Result {
         write!(buf, "x:{}:", self.xtype)?;
@@ -62,7 +72,7 @@ mod tests {
             xval: HStr::new("hello".into()),
         };
         let mut buf = String::new();
-        HVal::<f64>::to_zinc(&xhstr, &mut buf).unwrap();
+        xhstr.to_zinc(&mut buf).unwrap();
         assert_eq!(buf, "custom(\"hello\")");
     }
 

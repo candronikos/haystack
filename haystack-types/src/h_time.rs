@@ -19,7 +19,7 @@ impl HTime {
             inner: NaiveTime::from_hms_nano(hour, minute, second, nano),
         }
     }
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         write!(
             buf,
             "{:0>2}:{:0>2}:{:0>2}.{}",
@@ -30,19 +30,16 @@ impl HTime {
         )?;
         Ok(())
     }
-    fn to_trio(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
         self.to_zinc(buf)
     }
-    fn to_json(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
         write!(buf, "h:")?;
         self.to_zinc(buf)
     }
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HTime {
-    fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        self.to_zinc(buf)
-    }
     fn to_trio(&self, buf: &mut String) -> fmt::Result {
         self.to_trio(buf)
     }

@@ -1,6 +1,7 @@
 use crate::h_dict::HDict;
 use crate::h_str::HStr;
 use crate::h_val::HBox;
+use crate::io::write::zinc::ZincWriter;
 use crate::{HType, HVal, NumTrait};
 use std::fmt::{self, Write};
 
@@ -210,20 +211,13 @@ impl<'a, T: NumTrait + 'a> HGrid<'a, T> {
     pub fn get(&self, key: usize) -> Result<HRow<'a, T>, HGridErr> {
         match self {
             HGrid::Grid {
-                meta,
                 cols,
                 col_index,
                 rows,
                 ..
             } => {
                 let r = rows.get(key).ok_or(HGridErr::IndexErr)?;
-                let parent = HGrid::Grid {
-                    meta: RefCell::new(meta.borrow().clone()),
-                    col_index: Rc::clone(col_index),
-                    cols: cols.clone(),
-                    rows: vec![],
-                };
-                Ok(HRow::new(parent, Rc::downgrade(r)))
+                Ok(HRow::new(Rc::downgrade(col_index), cols.clone(), Rc::downgrade(r)))
             }
             _ => Err(HGridErr::IndexErr),
         }
@@ -305,27 +299,21 @@ impl<'a, T: NumTrait + 'a> HGrid<'a, T> {
         match self {
             HGrid::Grid {
                 rows,
-                meta,
                 col_index,
                 cols,
+                ..
             } => {
-                let parent = HGrid::Grid {
-                    meta: meta.clone(),
-                    col_index: col_index.clone(),
-                    cols: cols.clone(),
-                    rows: vec![],
-                };
-                let static_rows = rows
+                rows
                     .iter()
                     .map(|row| {
                         HRow::new(
-                            parent.clone(),
+                            Rc::downgrade(col_index),
+                            cols.clone(),
                             (Rc::<Vector<Option<Rc<(dyn HVal<'a, T>)>>>>::downgrade(row)),
                         )
                     })
                     .collect::<Vec<HRow<'a, T>>>()
-                    .into_iter();
-                static_rows
+                    .into_iter()
             }
             HGrid::Empty { .. } => panic!("Empty grid"), //Box::new(std::iter::empty()),
             HGrid::Error { dis, errTrace } => {
@@ -339,6 +327,77 @@ impl<'a, T: NumTrait + 'a> HGrid<'a, T> {
 
     pub fn as_ref(&self) -> &Self {
         self
+    }
+    pub fn to_zinc<'b>(&self, buf: &'b mut String) -> fmt::Result {
+        match self {
+            HGrid::Grid { meta, rows, .. } => {
+                write!(buf, "ver:\"3.0\" ")?;
+                if !meta.borrow().is_empty() {
+                    let meta_borrow = meta.borrow();
+                    let mut iter = meta_borrow.iter().peekable();
+                    while let Some((k, v)) = iter.next() {
+                        write!(buf, " {}", k.as_str())?;
+                        match v.haystack_type() {
+                            HType::Marker => (),
+                            _ => {
+                                write!(buf, ":")?;
+                                v.to_zinc(buf)?;
+                            }
+                        };
+                    }
+                }
+                write!(buf, "\n")?;
+
+                let mut iter = self.iter_cols().peekable();
+                while let Some(c) = iter.next() {
+                    let () = c.to_zinc(buf)?;
+                    if let Some(_) = iter.peek() {
+                        write!(buf, ", ")?;
+                    }
+                }
+
+                write!(buf, "\n")?;
+
+                let mut iter = self.iter();
+                while let Some(r) = iter.next() {
+                    r.to_zinc(buf)?;
+                    write!(buf, "\n")?;
+                }
+                Ok(())
+            }
+            HGrid::Error { dis, errTrace } => {
+                //write!(buf,"ver:\"3.0\" err dis:{} errTrace:{}\nempty",dis,HStr(errTrace.toString))?;
+                write!(buf, "ver:\"3.0\" err dis:")?;
+                ZincWriter::<f64>::to_zinc(&HStr(dis.to_string()), buf)?;
+
+                if let Some(errTrace) = errTrace {
+                    write!(buf, " errTrace:")?;
+                    ZincWriter::<f64>::to_zinc(&HStr(errTrace.to_string()), buf)?;
+                }
+                write!(buf, "\nempty\n")
+            }
+            HGrid::Empty { meta } => {
+                write!(buf, "ver:\"3.0\"")?;
+
+                if let Some(meta) = meta {
+                    if !meta.is_empty() {
+                        let mut iter = meta.iter().peekable();
+                        while let Some((k, v)) = iter.next() {
+                            write!(buf, " {}", k.as_str())?;
+                            match v.haystack_type() {
+                                HType::Marker => (),
+                                _ => {
+                                    write!(buf, ":")?;
+                                    v.to_zinc(buf)?;
+                                }
+                            };
+                        }
+                    }
+                }
+
+                write!(buf, "\nempty\n")
+            }
+        }
     }
 }
 
@@ -426,77 +485,6 @@ impl<'a, T: NumTrait + 'a> Iterator for HGridIter<'a, T> {
 }
 
 impl<'a, T: 'a + NumTrait> HVal<'a, T> for HGrid<'a, T> {
-    fn to_zinc<'b>(&self, buf: &'b mut String) -> fmt::Result {
-        match self {
-            HGrid::Grid { meta, rows, .. } => {
-                write!(buf, "ver:\"3.0\" ")?;
-                if !meta.borrow().is_empty() {
-                    let meta_borrow = meta.borrow();
-                    let mut iter = meta_borrow.iter().peekable();
-                    while let Some((k, v)) = iter.next() {
-                        write!(buf, " {}", k.as_str())?;
-                        match v.haystack_type() {
-                            HType::Marker => (),
-                            _ => {
-                                write!(buf, ":")?;
-                                v.to_zinc(buf)?;
-                            }
-                        };
-                    }
-                }
-                write!(buf, "\n")?;
-
-                let mut iter = self.iter_cols().peekable();
-                while let Some(c) = iter.next() {
-                    let () = c.to_zinc(buf)?;
-                    if let Some(_) = iter.peek() {
-                        write!(buf, ", ")?;
-                    }
-                }
-
-                write!(buf, "\n")?;
-
-                let mut iter = self.iter();
-                while let Some(r) = iter.next() {
-                    r.to_zinc(buf)?;
-                    write!(buf, "\n")?;
-                }
-                Ok(())
-            }
-            HGrid::Error { dis, errTrace } => {
-                //write!(buf,"ver:\"3.0\" err dis:{} errTrace:{}\nempty",dis,HStr(errTrace.toString))?;
-                write!(buf, "ver:\"3.0\" err dis:")?;
-                HVal::<f64>::to_zinc(&HStr(dis.to_string()), buf)?;
-
-                if let Some(errTrace) = errTrace {
-                    write!(buf, " errTrace:")?;
-                    HVal::<f64>::to_zinc(&HStr(errTrace.to_string()), buf)?;
-                }
-                write!(buf, "\nempty\n")
-            }
-            HGrid::Empty { meta } => {
-                write!(buf, "ver:\"3.0\"")?;
-
-                if let Some(meta) = meta {
-                    if !meta.is_empty() {
-                        let mut iter = meta.iter().peekable();
-                        while let Some((k, v)) = iter.next() {
-                            write!(buf, " {}", k.as_str())?;
-                            match v.haystack_type() {
-                                HType::Marker => (),
-                                _ => {
-                                    write!(buf, ":")?;
-                                    v.to_zinc(buf)?;
-                                }
-                            };
-                        }
-                    }
-                }
-
-                write!(buf, "\nempty\n")
-            }
-        }
-    }
     fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result {
         match self {
             HGrid::Grid { .. } => {
@@ -524,6 +512,7 @@ impl<'a, T: 'a + NumTrait> HVal<'a, T> for HGrid<'a, T> {
         false
     }
 }
+
 
 #[cfg(test)]
 mod tests {

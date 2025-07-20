@@ -93,7 +93,7 @@ impl<'a, T: NumTrait> HDict<'a, T> {
             .filter(|(_, v)| v.get_null().is_none())
             .peekable();
         while let Some((k, v)) = dict_iter.next() {
-            write!(buf, "\"{}\":\"", k)?;
+            write!(buf, "\"{}\":", k)?;
             v.to_json(buf)?;
             if dict_iter.peek().is_some() {
                 write!(buf, ",")?;
@@ -171,11 +171,11 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "not implemented")]
     fn test_to_json() {
         let dict: HDict<f64> = HDict::new();
         let mut buf = String::new();
         dict.to_json(&mut buf).unwrap();
+        assert_eq!(buf, "{}");
     }
 
     #[test]

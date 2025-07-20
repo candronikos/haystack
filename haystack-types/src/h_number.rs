@@ -17,6 +17,12 @@ impl HUnit {
     }
 }
 
+impl From<String> for HUnit {
+    fn from(value: String) -> Self {
+        HUnit(value)
+    }
+}
+
 #[derive(PartialEq, Debug, Clone)]
 pub struct HNumber<T: Display> {
     val: T,
@@ -53,8 +59,8 @@ impl<T: Float + Display> Number<T> {
     }
     pub fn to_json(&self, buf: &mut String) -> fmt::Result {
         match &self.unit {
-            Some(unit) => write!(buf, "{} {}", self.val, unit),
-            None => write!(buf, "{}", self.val),
+            Some(unit) => write!(buf, "n:{} {}", self.val, unit),
+            None => write!(buf, "n:{}", self.val),
         }
     }
 }
@@ -136,7 +142,7 @@ mod tests {
         let number = HNumber::new(42.0, unit);
         let mut buf = String::new();
         number.to_json(&mut buf).unwrap();
-        assert_eq!(buf, "42 m");
+        assert_eq!(buf, "n:42 m");
     }
 
     #[test]
@@ -144,7 +150,7 @@ mod tests {
         let number = HNumber::new(3.14, None);
         let mut buf = String::new();
         number.to_json(&mut buf).unwrap();
-        assert_eq!(buf, "3.14");
+        assert_eq!(buf, "n:3.14");
     }
 
     #[test]

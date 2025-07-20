@@ -40,6 +40,10 @@ impl<'a, T: NumTrait> HList<'a, T> {
     pub fn last(&self) -> Option<&HBox<'a, T>> {
         self.inner.last()
     }
+    pub fn push(&mut self, value: HBox<'a, T>) {
+        self.inner.push(value);
+    }
+
     pub fn to_zinc<'b>(&self, buf: &'b mut String) -> fmt::Result {
         write!(buf, "[")?;
         let inner = &self.inner;
@@ -48,7 +52,7 @@ impl<'a, T: NumTrait> HList<'a, T> {
         while let Some(v) = elements.next() {
             let () = v.to_zinc(buf)?;
             if elements.peek().is_some() {
-                write!(buf, ",")?;
+                write!(buf, ", ")?;
             }
         }
         write!(buf, "]")
@@ -60,7 +64,9 @@ impl<'a, T: NumTrait> HList<'a, T> {
         write!(buf, "[")?;
         let mut elements = self.inner.iter().peekable();
         while let Some(v) = elements.next() {
+            write!(buf, "\"")?;
             v.to_json(buf)?;
+            write!(buf, "\"")?;
             if elements.peek().is_some() {
                 write!(buf, ",")?;
             }
@@ -123,7 +129,7 @@ mod tests {
         let hlist = HList::from_vec(vec);
         let mut buf = String::new();
         hlist.to_zinc(&mut buf).unwrap();
-        assert_eq!(buf, "[1,2]");
+        assert_eq!(buf, "[1, 2]");
     }
 
     #[test]
@@ -135,7 +141,7 @@ mod tests {
         let hlist = HList::from_vec(vec);
         let mut buf = String::new();
         hlist.to_trio(&mut buf).unwrap();
-        assert_eq!(buf, "[1,2]");
+        assert_eq!(buf, "[1, 2]");
     }
 
     #[test]

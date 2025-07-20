@@ -22,12 +22,14 @@ impl HTime {
     pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
         write!(
             buf,
-            "{:0>2}:{:0>2}:{:0>2}.{}",
+            "{:0>2}:{:0>2}:{:0>2}",
             self.inner.hour(),
             self.inner.minute(),
-            self.inner.second(),
-            self.inner.nanosecond()
+            self.inner.second()
         )?;
+        if self.inner.nanosecond() != 0 {
+            write!(buf, ".{:0>9}", self.inner.nanosecond())?;
+        }
         Ok(())
     }
     pub fn to_trio(&self, buf: &mut String) -> fmt::Result {

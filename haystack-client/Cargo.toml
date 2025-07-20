@@ -7,6 +7,7 @@ license = "MIT"
 homepage = "https://candronikos.com/projects/haystack-rust/"
 repository = "https://github.com/candronikos/haystack"
 description = "Client library and CLI tool for interacting with haystack servers"
+keywords = ["haystack", "skyspark", "zinc"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

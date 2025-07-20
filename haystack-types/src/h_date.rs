@@ -51,8 +51,7 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HDate {
         THIS_TYPE
     }
 
-    set_trait_eq_method!(get_date_val,'a,T);
-    set_get_method!(get_date_val, HDate);
+    set_trait_eq_method!(get_date,'a,T);
 }
 #[cfg(test)]
 mod tests {

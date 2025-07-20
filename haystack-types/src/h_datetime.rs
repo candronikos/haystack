@@ -5,7 +5,7 @@ use std::fmt::{self, Display, Write};
 use crate::h_date::HDate;
 use chrono::offset::LocalResult;
 use chrono::{
-    DateTime as DT, Datelike, Duration, FixedOffset, NaiveDate, NaiveDateTime, Offset, TimeZone,
+    Datelike, Duration, FixedOffset, NaiveDate, NaiveDateTime, Offset, TimeZone,
     Timelike,
 };
 use chrono_tz::{OffsetComponents, Tz};
@@ -185,8 +185,7 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HDateTime {
         THIS_TYPE
     }
 
-    set_trait_eq_method!(get_datetime_val,'a,T);
-    set_get_method!(get_datetime_val, HDateTime);
+    set_trait_eq_method!(get_datetime,'a,T);
 }
 
 #[cfg(test)]

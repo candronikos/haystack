@@ -38,8 +38,7 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HNA {
         THIS_TYPE
     }
 
-    set_trait_eq_method!(get_na_val,'a,T);
-    set_get_method!(get_na_val, HNA);
+    set_trait_eq_method!(get_na,'a,T);
 }
 
 #[cfg(test)]

@@ -47,8 +47,7 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HUri {
         THIS_TYPE
     }
 
-    set_trait_eq_method!(get_uri_val,'a,T);
-    set_get_method!(get_uri_val, HUri);
+    set_trait_eq_method!(get_uri,'a,T);
 }
 
 #[cfg(test)]

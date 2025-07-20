@@ -48,8 +48,7 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HRef {
         THIS_TYPE
     }
 
-    set_trait_eq_method!(get_ref_val,'a,T);
-    set_get_method!(get_ref_val, HRef);
+    set_trait_eq_method!(get_ref,'a,T);
 }
 
 #[cfg(test)]

@@ -61,7 +61,7 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HDict<'a, T> {
         let inner = &self.inner;
         let mut kv_pairs = inner
             .into_iter()
-            .filter(|(k, v)| v.get_null_val().is_none())
+            .filter(|(k, v)| v.get_null().is_none())
             .peekable();
         while let Some((k, v)) = kv_pairs.next() {
             match v.haystack_type() {
@@ -92,7 +92,6 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HDict<'a, T> {
     fn _eq(&self, other: &dyn HVal<'a, T>) -> bool {
         false
     }
-    set_get_method!(get_dict_val,HDict,'a,T);
 }
 
 #[cfg(test)]

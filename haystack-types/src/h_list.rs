@@ -69,7 +69,6 @@ impl<'a, T: NumTrait> HVal<'a, T> for HList<'a, T> {
     fn _eq(&self, other: &dyn HVal<'a, T>) -> bool {
         false
     }
-    set_get_method!(get_list_val,HList,'a,T);
 }
 
 impl<'a, T> Index<usize> for HList<'a, T> {

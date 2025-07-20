@@ -38,8 +38,7 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HNull {
         THIS_TYPE
     }
 
-    set_trait_eq_method!(get_null_val,'a,T);
-    set_get_method!(get_null_val, HNull);
+    set_trait_eq_method!(get_null,'a,T);
 }
 
 #[cfg(test)]

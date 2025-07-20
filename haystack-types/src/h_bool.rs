@@ -47,8 +47,7 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HBool {
         THIS_TYPE
     }
 
-    set_trait_eq_method!(get_bool_val,'a,T);
-    set_get_method!(get_bool_val, HBool);
+    set_trait_eq_method!(get_bool,'a,T);
 }
 #[cfg(test)]
 mod tests {

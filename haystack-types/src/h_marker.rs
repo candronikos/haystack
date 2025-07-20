@@ -38,8 +38,7 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HMarker {
         THIS_TYPE
     }
 
-    set_trait_eq_method!(get_marker_val,'a,T);
-    set_get_method!(get_marker_val, HMarker);
+    set_trait_eq_method!(get_marker,'a,T);
 }
 
 #[cfg(test)]

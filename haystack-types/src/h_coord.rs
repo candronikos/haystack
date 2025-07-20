@@ -31,8 +31,7 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HCoord<T> {
         THIS_TYPE
     }
 
-    set_trait_eq_method!(get_coord_val,'a,T);
-    set_get_method!(get_coord_val, HCoord<T>);
+    set_trait_eq_method!(get_coord,'a,T);
 }
 
 #[cfg(test)]

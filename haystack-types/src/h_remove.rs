@@ -38,8 +38,7 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HRemove {
         THIS_TYPE
     }
 
-    set_trait_eq_method!(get_remove_val,'a,T);
-    set_get_method!(get_remove_val, HRemove);
+    set_trait_eq_method!(get_remove,'a,T);
 }
 
 #[cfg(test)]

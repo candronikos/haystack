@@ -522,7 +522,7 @@ pub mod parse {
                 let dis = match meta.get("dis") {
                     Some(v) => {
                         // v.get_string_val().unwrap().into_string()
-                        if let Some(s) = v.get_string_val() {
+                        if let Some(s) = v.get_string() {
                             s.clone_into_string()
                         } else {
                             return Err(nom::Err::Error(Error {
@@ -543,7 +543,7 @@ pub mod parse {
                 let errTrace = match meta.get("errTrace") {
                     Some(v) => {
                         // v.get_string_val().unwrap().into_string()
-                        if let Some(s) = v.get_string_val() {
+                        if let Some(s) = v.get_string() {
                             Some(s.clone_into_string())
                         } else {
                             return Err(nom::Err::Error(Error {
@@ -876,7 +876,7 @@ pub mod parse {
                     literal::<f64>(&mut dt_cell)("C(12.34,-56.78)")
                         .unwrap()
                         .1
-                        .get_coord_val(),
+                        .get_coord(),
                     Some(&HCoord::new(12.34, -56.78))
                 );
             }

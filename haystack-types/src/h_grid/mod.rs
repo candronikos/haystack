@@ -2,7 +2,6 @@ use crate::h_dict::HDict;
 use crate::h_str::HStr;
 use crate::h_val::HBox;
 use crate::{HType, HVal, NumTrait};
-use core::{hash, panic};
 use std::fmt::{self, Write};
 
 use rpds::Vector;
@@ -524,7 +523,6 @@ impl<'a, T: 'a + NumTrait> HVal<'a, T> for HGrid<'a, T> {
     fn _eq(&self, other: &dyn HVal<'a, T>) -> bool {
         false
     }
-    set_get_method!(get_grid_val,HGrid,'a,T);
 }
 
 #[cfg(test)]

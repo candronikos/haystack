@@ -30,8 +30,7 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HSymbol {
         SYMBOL_TYPE
     }
 
-    set_trait_eq_method!(get_symbol_val, 'a, T);
-    set_get_method!(get_symbol_val, HSymbol);
+    set_trait_eq_method!(get_symbol, 'a, T);
 }
 
 #[cfg(test)]

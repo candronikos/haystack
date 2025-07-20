@@ -1,5 +1,5 @@
 use std::{
-    io::{self, Read, Write},
+    io::{self, Read},
     path::PathBuf,
     pin::Pin,
 };

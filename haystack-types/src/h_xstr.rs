@@ -48,8 +48,7 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HXStr {
         XSTR_TYPE
     }
 
-    set_trait_eq_method!(get_xstr_val,'a,T);
-    set_get_method!(get_xstr_val, HXStr);
+    set_trait_eq_method!(get_xstr,'a,T);
 }
 
 #[cfg(test)]

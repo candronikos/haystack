@@ -125,22 +125,22 @@ pub fn create_lua_data(lua: &Lua, value: HBox<'static, LuaFloat>) -> LuaResult<V
         HType::Marker => lua.create_userdata(H::new(haystack_types::h_marker::HMarker))?,
         HType::Remove => lua.create_userdata(H::new(haystack_types::h_remove::HRemove))?,
         HType::NA => lua.create_userdata(H::new(haystack_types::h_na::HNA))?,
-        HType::Bool => lua.create_userdata(H::new(value.get_bool_val().unwrap().clone()))?,
-        HType::Number => lua.create_userdata(H::new(value.get_number_val().unwrap().clone()))?,
-        HType::Str => lua.create_userdata(H::new(value.get_string_val().unwrap().clone()))?,
-        HType::Uri => lua.create_userdata(H::new(value.get_uri_val().unwrap().clone()))?,
-        HType::Ref => lua.create_userdata(H::new(value.get_ref_val().unwrap().clone()))?,
-        HType::Symbol => lua.create_userdata(H::new(value.get_symbol_val().unwrap().clone()))?,
-        HType::Date => lua.create_userdata(H::new(value.get_date_val().unwrap().clone()))?,
-        HType::Time => lua.create_userdata(H::new(value.get_time_val().unwrap().clone()))?,
+        HType::Bool => lua.create_userdata(H::new(value.get_bool().unwrap().clone()))?,
+        HType::Number => lua.create_userdata(H::new(value.get_number().unwrap().clone()))?,
+        HType::Str => lua.create_userdata(H::new(value.get_string().unwrap().clone()))?,
+        HType::Uri => lua.create_userdata(H::new(value.get_uri().unwrap().clone()))?,
+        HType::Ref => lua.create_userdata(H::new(value.get_ref().unwrap().clone()))?,
+        HType::Symbol => lua.create_userdata(H::new(value.get_symbol().unwrap().clone()))?,
+        HType::Date => lua.create_userdata(H::new(value.get_date().unwrap().clone()))?,
+        HType::Time => lua.create_userdata(H::new(value.get_time().unwrap().clone()))?,
         HType::DateTime => {
-            lua.create_userdata(H::new(value.get_datetime_val().unwrap().clone()))?
+            lua.create_userdata(H::new(value.get_datetime().unwrap().clone()))?
         }
-        HType::Coord => lua.create_userdata(H::new(value.get_coord_val().unwrap().clone()))?,
-        HType::XStr => lua.create_userdata(H::new(value.get_xstr_val().unwrap().clone()))?,
-        HType::List => lua.create_userdata(H::new(value.get_list_val().unwrap().clone()))?,
-        HType::Dict => lua.create_userdata(H::new(value.get_dict_val().unwrap().clone()))?,
-        HType::Grid => lua.create_userdata(H::new(value.get_grid_val().unwrap().clone()))?,
+        HType::Coord => lua.create_userdata(H::new(value.get_coord().unwrap().clone()))?,
+        HType::XStr => lua.create_userdata(H::new(value.get_xstr().unwrap().clone()))?,
+        HType::List => lua.create_userdata(H::new(value.get_list().unwrap().clone()))?,
+        HType::Dict => lua.create_userdata(H::new(value.get_dict().unwrap().clone()))?,
+        HType::Grid => lua.create_userdata(H::new(value.get_grid().unwrap().clone()))?,
     };
 
     Ok(Value::UserData(l_type))

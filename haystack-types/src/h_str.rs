@@ -58,8 +58,7 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HStr {
         STR_TYPE
     }
 
-    set_trait_eq_method!(get_string_val,'a,T);
-    set_get_method!(get_string_val, HStr);
+    set_trait_eq_method!(get_string,'a,T);
 }
 
 #[cfg(test)]

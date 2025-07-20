@@ -64,8 +64,7 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HNumber<T> {
         THIS_TYPE
     }
 
-    set_trait_eq_method!(get_number_val,'a,T);
-    set_get_method!(get_number_val, HNumber<T>);
+    set_trait_eq_method!(get_number,'a,T);
 }
 
 impl Display for HUnit {

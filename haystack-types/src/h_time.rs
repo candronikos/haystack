@@ -53,8 +53,7 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HTime {
         THIS_TYPE
     }
 
-    set_trait_eq_method!(get_time_val,'a,T);
-    set_get_method!(get_time_val, HTime);
+    set_trait_eq_method!(get_time,'a,T);
 }
 
 #[cfg(test)]

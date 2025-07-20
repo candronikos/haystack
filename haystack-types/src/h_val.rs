@@ -1,5 +1,5 @@
 use crate::common::{JsonWriter, TrioWriter, ZincReader, ZincWriter};
-use crate::{NumTrait, io};
+use crate::{io, HCast, NumTrait};
 use std::fmt::{self, Debug, Display, Formatter};
 use std::rc::{Rc, Weak};
 
@@ -42,32 +42,6 @@ impl Display for HType {
     }
 }
 
-macro_rules! set_get_method {
-    ( $name: ident,$tt: ty ) => {
-        fn $name(&self) -> Option<&$tt> {
-            Some(self)
-        }
-    };
-    ( $name:ident, $tt:ident, $lt:lifetime, $t:ty ) => {
-        fn $name(&self) -> Option<&$tt<$lt, $t>> {
-            Some(self)
-        }
-    };
-}
-
-macro_rules! set_trait_get_method {
-    ( $name: ident,$tt: ty ) => {
-        fn $name(&self) -> Option<&$tt> {
-            None
-        }
-    };
-    ( $name:ident, $tt:ident, $lt:lifetime, $t:ty ) => {
-        fn $name(&self) -> Option<&$tt<$lt, $t>> {
-            None
-        }
-    };
-}
-
 macro_rules! set_trait_eq_method {
     ( $get_method: ident, $lt: lifetime, $FT: tt ) => {
         fn _eq(&self, other: &dyn HVal<$lt, $FT>) -> bool {
@@ -79,7 +53,7 @@ macro_rules! set_trait_eq_method {
     };
 }
 
-pub trait HVal<'a, T: NumTrait + 'a> {
+pub trait HVal<'a, T: NumTrait + 'a>: HCast<'a,T> {
     fn to_zinc<'b>(&self, buf: &'b mut String) -> fmt::Result;
     fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result;
     fn to_json(&self, buf: &mut String) -> fmt::Result;
@@ -108,24 +82,6 @@ pub trait HVal<'a, T: NumTrait + 'a> {
 
     fn _eq(&self, other: &dyn HVal<'a, T>) -> bool;
 
-    set_trait_get_method!(get_null_val, HNull);
-    set_trait_get_method!(get_marker_val, HMarker);
-    set_trait_get_method!(get_remove_val, HRemove);
-    set_trait_get_method!(get_na_val, HNA);
-    set_trait_get_method!(get_bool_val, HBool);
-    set_trait_get_method!(get_string_val, HStr);
-    set_trait_get_method!(get_xstr_val, HXStr);
-    set_trait_get_method!(get_uri_val, HUri);
-    set_trait_get_method!(get_coord_val, HCoord<T>);
-    set_trait_get_method!(get_datetime_val, HDateTime);
-    set_trait_get_method!(get_date_val, HDate);
-    set_trait_get_method!(get_time_val, HTime);
-    set_trait_get_method!(get_number_val, HNumber<T>);
-    set_trait_get_method!(get_ref_val, HRef);
-    set_trait_get_method!(get_symbol_val, HSymbol);
-    set_trait_get_method!(get_dict_val, HDict,'a,T);
-    set_trait_get_method!(get_list_val, HList,'a,T);
-    set_trait_get_method!(get_grid_val, HGrid,'a,T);
 }
 
 impl<'a, T: NumTrait + 'a> Display for dyn HVal<'a, T> {

@@ -1,3 +1,4 @@
+use crate::io::write;
 use crate::{HType, HVal, NumTrait, h_val::HBox};
 use std::collections::HashMap;
 use std::fmt::{self, Write};
@@ -24,6 +25,10 @@ impl<'a, T: NumTrait> HDict<'a, T> {
 
     pub fn has(&self, key: &str) -> bool {
         self.inner.contains_key(key)
+    }
+
+    pub fn len(&self) -> usize {
+        self.inner.len()
     }
 
     pub fn set(&mut self, key: String, value: HBox<'a, T>) -> Option<HBox<'a, T>> {
@@ -80,15 +85,26 @@ impl<'a, T: NumTrait> HDict<'a, T> {
     pub fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result {
         self.to_zinc(buf)
     }
-    pub fn to_json(&self, _buf: &mut String) -> fmt::Result {
-        unimplemented!()
+    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
+        write!(buf, "{{")?;
+        let mut dict_iter = self
+            .inner
+            .iter()
+            .filter(|(_, v)| v.get_null().is_none())
+            .peekable();
+        while let Some((k, v)) = dict_iter.next() {
+            write!(buf, "\"{}\":\"", k)?;
+            v.to_json(buf)?;
+            if dict_iter.peek().is_some() {
+                write!(buf, ",")?;
+            }
+            write!(buf, "\"")?;
+        }
+        write!(buf, "}}")
     }
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HDict<'a, T> {
-    fn to_json(&self, buf: &mut String) -> fmt::Result {
-        self.to_json(buf)
-    }
     fn haystack_type(&self) -> HType {
         THIS_TYPE
     }

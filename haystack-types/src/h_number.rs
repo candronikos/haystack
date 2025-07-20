@@ -51,15 +51,15 @@ impl<T: Float + Display> Number<T> {
     pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
         self.to_zinc(buf)
     }
-}
-
-impl<'a, T: NumTrait + 'a> HVal<'a, T> for HNumber<T> {
-    fn to_json(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
         match &self.unit {
             Some(unit) => write!(buf, "{} {}", self.val, unit),
             None => write!(buf, "{}", self.val),
         }
     }
+}
+
+impl<'a, T: NumTrait + 'a> HVal<'a, T> for HNumber<T> {
     fn haystack_type(&self) -> HType {
         THIS_TYPE
     }

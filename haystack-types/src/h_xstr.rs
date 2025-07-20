@@ -37,12 +37,6 @@ impl HXStr {
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HXStr {
-    fn to_json(&self, buf: &mut String) -> fmt::Result {
-        write!(buf, "x:{}:", self.xtype)?;
-        self.xval
-            .chars()
-            .try_for_each(|c| escape_str_no_escape_unicode(c, buf))
-    }
     /*
     fn to_json_v4(&self, buf: &mut String) -> fmt::Result {
         write!(buf,"{{ \"_kind\": \"xstr\", \"type\": \"{}\", \"val\": ",self.xtype)?;
@@ -90,7 +84,7 @@ mod tests {
             xval: HStr::new("hello".into()),
         };
         let mut buf = String::new();
-        HVal::<f64>::to_json(&xhstr, &mut buf).unwrap();
+        xhstr.to_json(&mut buf).unwrap();
         assert_eq!(buf, "x:custom:hello");
     }
 }

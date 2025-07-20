@@ -123,7 +123,3 @@ pub trait ZincReader<'a, T: NumTrait + 'a> {
     where
         'a: 'b;
 }
-
-pub trait JsonWriter<'a, T: NumTrait + 'a> {
-    fn to_json(&self, buf: &mut String) -> fmt::Result;
-}

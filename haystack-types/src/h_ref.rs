@@ -44,9 +44,6 @@ impl HRef {
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HRef {
-    fn to_json(&self, buf: &mut String) -> fmt::Result {
-        self.to_json(buf)
-    }
     fn haystack_type(&self) -> HType {
         THIS_TYPE
     }

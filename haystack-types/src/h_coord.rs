@@ -27,9 +27,6 @@ impl<T: NumTrait> HCoord<T> {
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HCoord<T> {
-    fn to_json(&self, buf: &mut String) -> fmt::Result {
-        write!(buf, "c:{},{}", self.lat, self.long)
-    }
     fn haystack_type(&self) -> HType {
         THIS_TYPE
     }

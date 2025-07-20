@@ -95,6 +95,24 @@ impl<'a, T: NumTrait + 'a> HRow<'a, T> {
 
         Ok(())
     }
+
+    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
+        write!(buf, "{{")?;
+        let mut iter = self.cols.iter().enumerate().peekable();
+
+        while let Some((idx, c)) = iter.next() {
+            if let Some(v) = self.inner.upgrade().unwrap().get(idx) {
+                if let Some(v) = v {
+                    write!(buf, "\"{}\":", c.name)?;
+                    v.to_json(buf)?;
+                    if iter.peek().is_some() {
+                        write!(buf, ",")?;
+                    }
+                }
+            }
+        }
+        write!(buf, "}}")
+    }
 }
 
 impl<'a, T: NumTrait> Debug for HRow<'a, T> {

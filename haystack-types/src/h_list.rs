@@ -56,15 +56,20 @@ impl<'a, T: NumTrait> HList<'a, T> {
     pub fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result {
         self.to_zinc(buf)
     }
-    pub fn to_json(&self, _buf: &mut String) -> fmt::Result {
-        unimplemented!()
+    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
+        write!(buf, "[")?;
+        let mut elements = self.inner.iter().peekable();
+        while let Some(v) = elements.next() {
+            v.to_json(buf)?;
+            if elements.peek().is_some() {
+                write!(buf, ",")?;
+            }
+        }
+        write!(buf, "]")
     }
 }
 
 impl<'a, T: NumTrait> HVal<'a, T> for HList<'a, T> {
-    fn to_json(&self, buf: &mut String) -> fmt::Result {
-        self.to_json(buf)
-    }
     fn haystack_type(&self) -> HType {
         THIS_TYPE
     }

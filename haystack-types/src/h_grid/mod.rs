@@ -1,6 +1,7 @@
 use crate::h_dict::HDict;
 use crate::h_str::HStr;
 use crate::h_val::HBox;
+use crate::io::write;
 use crate::io::write::zinc::ZincWriter;
 use crate::{HType, HVal, NumTrait};
 use std::fmt::{self, Write};
@@ -418,6 +419,58 @@ impl<'a, T: NumTrait + 'a> HGrid<'a, T> {
         };
         Ok(())
     }
+
+    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
+        match self {
+            HGrid::Grid { meta, cols, .. } => {
+                write!(buf, "{{\n")?;
+                write!(buf, "  \"meta\": {{\"ver\":\"3.0\"")?;
+                self.meta().iter().try_for_each(|(k, v)| {
+                    write!(buf, ", \"{}\":\"", k)?;
+                    v.to_json(buf)?;
+                    write!(buf, "\"")
+                })?;
+                write!(buf, "}},\n")?;
+
+                write!(buf, "  \"cols\": [\n")?;
+                let mut cols_iter = self.iter_cols().enumerate();
+                let num_cols = cols.len();
+                cols_iter.try_for_each(|(i, c)| {
+                    let col_meta = c.meta();
+                    write!(buf, "{{\"name\":\"{}\"", c.name)?;
+                    let mut col_meta_iter = col_meta.iter().enumerate();
+                    col_meta_iter.try_for_each(|(j, (k, v))| {
+                        write!(buf, ", \"{}\":\"", k)?;
+                        v.to_json(buf)?;
+                        write!(buf, "\"")?;
+                        Ok(())
+                    })?;
+                    write!(buf, "}}")?;
+                    if i + 1 < num_cols {
+                        write!(buf, ",")?;
+                    }
+                    Ok(())
+                })?;
+                write!(buf, "],\n")?;
+
+                write!(buf, "  \"rows\": [\n")?;
+                let mut row_iter = self.iter().enumerate();
+                let num_rows = self.len();
+                row_iter.try_for_each(|(i, r)| {
+                    r.to_json(buf)?;
+                    if i + 1 < num_rows {
+                        write!(buf, ",")?;
+                    }
+                    Ok(())
+                })?;
+                write!(buf, "],\n")?;
+
+                write!(buf, "}},\n")?;
+            }
+            _ => {}
+        }
+        Ok(())
+    }
 }
 
 pub struct HColIter<'a, T: NumTrait + 'a> {
@@ -504,9 +557,6 @@ impl<'a, T: NumTrait + 'a> Iterator for HGridIter<'a, T> {
 }
 
 impl<'a, T: 'a + NumTrait> HVal<'a, T> for HGrid<'a, T> {
-    fn to_json(&self, _buf: &mut String) -> fmt::Result {
-        unimplemented!();
-    }
     fn haystack_type(&self) -> HType {
         THIS_TYPE
     }

@@ -26,9 +26,6 @@ impl HSymbol {
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HSymbol {
-    fn to_json(&self, buf: &mut String) -> fmt::Result {
-        write!(buf, "y:{}", self.val)
-    }
     fn haystack_type(&self) -> HType {
         SYMBOL_TYPE
     }

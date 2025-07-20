@@ -55,9 +55,6 @@ impl HStr {
 }
 
 impl<'a, T: NumTrait + 'a> HVal<'a, T> for HStr {
-    fn to_json<'b>(&self, buf: &'b mut String) -> fmt::Result {
-        self.to_json(buf)
-    }
     fn haystack_type(&self) -> HType {
         STR_TYPE
     }
@@ -120,12 +117,12 @@ mod tests {
     fn test_to_json() {
         let hstr = HStr::new("hello".into());
         let mut buf = String::new();
-        HVal::<f64>::to_json(&hstr, &mut buf).unwrap();
+        hstr.to_json(&mut buf).unwrap();
         assert_eq!(buf, "hello");
 
         let hstr_with_colon = HStr::new("key:value".into());
         let mut buf_with_colon = String::new();
-        HVal::<f64>::to_json(&hstr_with_colon, &mut buf_with_colon).unwrap();
+        hstr_with_colon.to_json(&mut buf_with_colon).unwrap();
         assert_eq!(buf_with_colon, "s:key:value");
     }
 }

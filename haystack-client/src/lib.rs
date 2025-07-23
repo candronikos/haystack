@@ -24,12 +24,11 @@ use std::sync::Arc;
 use tokio::sync::{Mutex, Semaphore};
 
 use anyhow::{Result as AnyResult, anyhow};
+use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use tokio::sync::mpsc;
 
 pub mod ops;
 use ops::{FStr, HaystackOpTxRx, HaystackResponse};
-
-static BASE64_CONFIG: base64::Config = base64::URL_SAFE_NO_PAD;
 
 #[derive(Clone, Copy)]
 enum GridFormat {
@@ -253,7 +252,7 @@ impl<'a> HSession {
             &mut uname_b64,
             format_args!(
                 "HELLO username={}",
-                base64::encode_config(self.username.as_bytes(), BASE64_CONFIG)
+                URL_SAFE_NO_PAD.encode(self.username.as_bytes())
             ),
         )
         .or_else(|e| {
@@ -328,7 +327,7 @@ impl<'a> HSession {
                 format_args!(
                     "SCRAM handshakeToken={}, data={}",
                     hs_token,
-                    base64::encode_config(state_first.as_bytes(), BASE64_CONFIG)
+                    URL_SAFE_NO_PAD.encode(state_first.as_bytes())
                 ),
             )
             .map_err(|e| anyhow!("{:?}", e))?;
@@ -337,7 +336,7 @@ impl<'a> HSession {
                 &mut data,
                 format_args!(
                     "SCRAM data={}",
-                    base64::encode_config(state_first.as_bytes(), BASE64_CONFIG)
+                    URL_SAFE_NO_PAD.encode(state_first.as_bytes())
                 ),
             )
             .map_err(|e| anyhow!("{:?}", e))?;
@@ -383,18 +382,18 @@ impl<'a> HSession {
             .get("data")
             .ok_or(anyhow!("\"data\" missing from server response"))?;
 
-        let data_temp_2 = base64::decode_config(
-            str::from_utf8(data_temp.as_bytes())
-                .map_err(|e| anyhow!("SCRAM bytes to str: {:?}", e))?,
-            BASE64_CONFIG,
-        )
-        .map_err(|e| {
-            anyhow!(
-                "SCRAM decode: {:?}, payload: {:02X?}",
-                e,
-                data_temp.as_bytes()
+        let data_temp_2 = URL_SAFE_NO_PAD
+            .decode(
+                str::from_utf8(data_temp.as_bytes())
+                    .map_err(|e| anyhow!("SCRAM bytes to str: {:?}", e))?,
             )
-        })?;
+            .map_err(|e| {
+                anyhow!(
+                    "SCRAM decode: {:?}, payload: {:02X?}",
+                    e,
+                    data_temp.as_bytes()
+                )
+            })?;
 
         let data_temp_1 =
             str::from_utf8(&data_temp_2).map_err(|e| anyhow!("SCRAM bytes to str: {:?}", e))?;
@@ -419,7 +418,7 @@ impl<'a> HSession {
                 format_args!(
                     "SCRAM handshakeToken={}, data={}",
                     hs_token,
-                    base64::encode_config(client_final.as_bytes(), BASE64_CONFIG)
+                    URL_SAFE_NO_PAD.encode(client_final.as_bytes())
                 ),
             )
             .map_err(|e| anyhow!("Format: {:?}", e))?;
@@ -428,7 +427,7 @@ impl<'a> HSession {
                 &mut data,
                 format_args!(
                     "SCRAM data={}",
-                    base64::encode_config(client_final.as_bytes(), BASE64_CONFIG)
+                    URL_SAFE_NO_PAD.encode(client_final.as_bytes())
                 ),
             )
             .map_err(|e| anyhow!("Format: {:?}", e))?;
@@ -475,18 +474,18 @@ impl<'a> HSession {
             .get("data")
             .ok_or(anyhow!("\"data\" missing from server response"))?;
 
-        let data_temp_2 = base64::decode_config(
-            str::from_utf8(data_temp.as_bytes())
-                .map_err(|e| anyhow!("SCRAM bytes to str: {:?}", e))?,
-            BASE64_CONFIG,
-        )
-        .map_err(|e| {
-            anyhow!(
-                "SCRAM decode: {:?}, payload: {:02X?}",
-                e,
-                data_temp.as_bytes()
+        let data_temp_2 = URL_SAFE_NO_PAD
+            .decode(
+                str::from_utf8(data_temp.as_bytes())
+                    .map_err(|e| anyhow!("SCRAM bytes to str: {:?}", e))?,
             )
-        })?;
+            .map_err(|e| {
+                anyhow!(
+                    "SCRAM decode: {:?}, payload: {:02X?}",
+                    e,
+                    data_temp.as_bytes()
+                )
+            })?;
 
         let data_temp_1 =
             str::from_utf8(&data_temp_2).map_err(|e| anyhow!("SCRAM bytes to str: {:?}", e))?;

@@ -1,7 +1,6 @@
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take, take_while, take_while1};
 use nom::character::complete::{char as nom_char, digit1, space1};
-use nom::character::{is_alphanumeric, is_digit};
 use nom::combinator::{iterator, map, opt, recognize, success, value, verify};
 use nom::error::{Error, ErrorKind};
 use nom::multi::separated_list1;
@@ -83,6 +82,7 @@ fn get_timezone(tz_name: &str, dt_cell: &mut ParseHint) -> Result<chrono_tz::Tz,
 
 pub mod parse {
     use super::*;
+    use nom::AsChar;
     use nom::combinator::map_res;
     use nom::sequence::delimited;
 
@@ -285,7 +285,7 @@ pub mod parse {
             recognize((
                 take_while1(|c: char| c.is_ascii_uppercase()),
                 take_while(|c: char| {
-                    is_alphanumeric(c as u8) || c == '/' || c == '-' || c == '_' || c == '+'
+                    AsChar::is_alphanum(c as u8) || c == '/' || c == '-' || c == '_' || c == '+'
                 }),
             ))
             .parse(input)
@@ -988,7 +988,7 @@ pub mod parse {
     }
 
     pub fn is_digits(chr: char) -> bool {
-        is_digit(chr as u8) && chr == '_'
+        AsChar::is_dec_digit(chr as u8) && chr == '_'
     }
 
     pub fn digits(input: &str) -> IResult<&str, (&str, &str)> {
@@ -1086,7 +1086,12 @@ pub mod parse {
             code: ErrorKind::Digit,
         })))?;
 
-        Ok((input, HDate::new(year, month, day)))
+        let date = HDate::new(year, month, day).or(Err(nom::Err::Error(Error {
+            input: input,
+            code: ErrorKind::Digit,
+        })))?;
+
+        Ok((input, date))
     }
 
     pub fn time(input: &str) -> IResult<&str, HTime> {
@@ -1124,7 +1129,12 @@ pub mod parse {
             code: ErrorKind::Digit,
         })))?;
 
-        Ok((input, HTime::new(hour, min, sec, nano)))
+        let time = HTime::new(hour, min, sec, nano).or(Err(nom::Err::Error(Error {
+            input: input,
+            code: ErrorKind::Digit,
+        })))?;
+
+        Ok((input, time))
     }
 
     #[cfg(test)]
@@ -1156,14 +1166,17 @@ pub mod parse {
 
         #[test]
         fn parse_date() {
-            assert_eq!(date("2010-11-28").unwrap(), ("", HDate::new(2010, 11, 28)));
+            assert_eq!(
+                date("2010-11-28").unwrap(),
+                ("", HDate::new(2010, 11, 28).unwrap())
+            );
         }
 
         #[test]
         fn parse_time() {
             assert_eq!(
                 time("07:23:02.773").unwrap(),
-                ("", HTime::new(07, 23, 02, 773))
+                ("", HTime::new(07, 23, 02, 773).unwrap())
             );
         }
     }

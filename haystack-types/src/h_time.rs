@@ -1,5 +1,5 @@
 use crate::{HType, HVal, NumTrait};
-use std::fmt;
+use std::fmt::{self, Display};
 
 use chrono::Timelike;
 use chrono::naive::NaiveTime;
@@ -13,11 +13,27 @@ pub type Time = HTime;
 
 const THIS_TYPE: HType = HType::Time;
 
-impl HTime {
-    pub fn new(hour: u32, minute: u32, second: u32, nano: u32) -> Self {
-        Self {
-            inner: NaiveTime::from_hms_nano(hour, minute, second, nano),
+#[derive(Debug)]
+pub enum HTimeErr {
+    InvalidDate,
+    ShouldNeverHappen,
+}
+
+impl Display for HTimeErr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            HTimeErr::InvalidDate => write!(f, "Invalid time"),
+            HTimeErr::ShouldNeverHappen => write!(f, "This should never happen"),
         }
+    }
+}
+
+impl HTime {
+    pub fn new(hour: u32, minute: u32, second: u32, nano: u32) -> Result<Self, HTimeErr> {
+        Ok(Self {
+            inner: NaiveTime::from_hms_nano_opt(hour, minute, second, nano)
+                .ok_or(HTimeErr::InvalidDate)?,
+        })
     }
     pub fn to_zinc(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -56,16 +72,16 @@ mod tests {
 
     #[test]
     fn test_new() {
-        let time = HTime::new(12, 34, 56, 789_000_000);
+        let time = HTime::new(12, 34, 56, 789_000_000).unwrap();
         assert_eq!(
             time.inner,
-            NaiveTime::from_hms_nano(12, 34, 56, 789_000_000)
+            NaiveTime::from_hms_nano_opt(12, 34, 56, 789_000_000).unwrap()
         );
     }
 
     #[test]
     fn test_haystack_type() {
-        let time = HTime::new(12, 34, 56, 789_000_000);
+        let time = HTime::new(12, 34, 56, 789_000_000).unwrap();
         let time_hval = HVal::<f64>::as_hval(&time);
         assert_eq!(time_hval.haystack_type(), HType::Time);
     }

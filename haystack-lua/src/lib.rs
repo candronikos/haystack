@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::ops::Deref;
 use std::rc::Rc;
 
@@ -70,6 +71,31 @@ impl<'a, T> Deref for H<T> {
 
     fn deref(&self) -> &Self::Target {
         self.inner.as_ref()
+    }
+}
+
+#[derive(Debug)]
+pub struct HError<E> {
+    err: E,
+}
+
+impl<'a, T> Deref for HError<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.err
+    }
+}
+
+impl<E: ToString> From<HError<E>> for LuaError {
+    fn from(err: HError<E>) -> Self {
+        LuaError::RuntimeError(err.to_string())
+    }
+}
+
+impl<E: ToString> Display for HError<E> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "HError: {:?}", self.err.to_string())
     }
 }
 

@@ -1,6 +1,6 @@
 use std::fmt::Write;
 
-use crate::{H, LuaFloat};
+use crate::{H, HError, LuaFloat};
 use haystack_types::h_datetime::HDateTime;
 use haystack_types::io::write::ZincWriter;
 use mlua::prelude::*;
@@ -31,9 +31,17 @@ impl<'a: 'static> UserData for H<HDateTime> {
             time.call::<LuaFloat>(args)
         });
 
-        methods.add_method("date", |_, this, ()| Ok(H::new(this.get_ref().date())));
+        methods.add_method("date", |_, this, ()| {
+            Ok(H::new(
+                this.get_ref().date().or_else(|err| Err(HError { err }))?,
+            ))
+        });
 
-        methods.add_method("time", |_, this, ()| Ok(H::new(this.get_ref().time())));
+        methods.add_method("time", |_, this, ()| {
+            Ok(H::new(
+                this.get_ref().time().or_else(|err| Err(HError { err }))?,
+            ))
+        });
 
         methods.add_method("timezone", |_, this, ()| {
             Ok(this.get_ref().tz().to_string())

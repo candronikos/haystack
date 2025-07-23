@@ -142,7 +142,7 @@ mod tests {
 
     #[test]
     fn test_date() {
-        let date = HDate::new(2023, 10, 5);
+        let date = HDate::new(2023, 10, 5).unwrap();
         let mut buf = String::new();
         write!(buf, "{}", ZincWriter::new(&date)).unwrap();
         assert_eq!(buf, "2023-10-05");
@@ -176,7 +176,7 @@ mod tests {
 
     #[test]
     fn test_time() {
-        let time = HTime::new(12, 34, 56, 789_000_000);
+        let time = HTime::new(12, 34, 56, 789_000_000).unwrap();
         let mut buf = String::new();
         write!(buf, "{}", ZincWriter::new(&time)).unwrap();
         assert_eq!(buf, "12:34:56.789000000");

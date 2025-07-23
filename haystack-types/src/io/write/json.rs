@@ -93,14 +93,14 @@ mod tests {
 
     #[test]
     fn test_date() {
-        let date = HDate::new(2023, 10, 5);
+        let date = HDate::new(2023, 10, 5).unwrap();
         let mut buf = String::new();
         write!(buf, "{}", JsonWriter::new(&date)).unwrap();
         assert_eq!(buf, "d:2023-10-05");
         buf.clear();
 
         let mut buf = String::new();
-        let date = HDate::new(2023, 12, 25);
+        let date = HDate::new(2023, 12, 25).unwrap();
         write!(buf, "{}", JsonWriter::new(&date)).unwrap();
         assert_eq!(buf, "d:2023-12-25");
     }
@@ -234,10 +234,15 @@ mod tests {
     #[test]
     fn test_time() {
         let mut buf = String::new();
-        write!(buf, "{}", JsonWriter::new(&HTime::new(14, 30, 0, 0))).unwrap();
+        write!(
+            buf,
+            "{}",
+            JsonWriter::new(&HTime::new(14, 30, 0, 0).unwrap())
+        )
+        .unwrap();
         assert_eq!(buf, "h:14:30:00");
 
-        let time = HTime::new(12, 34, 56, 789_000_000);
+        let time = HTime::new(12, 34, 56, 789_000_000).unwrap();
         let mut buf = String::new();
         write!(buf, "{}", JsonWriter::new(&time)).unwrap();
         assert_eq!(buf, "h:12:34:56.789000000");

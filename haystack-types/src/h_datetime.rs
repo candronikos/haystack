@@ -1,4 +1,4 @@
-use crate::h_time::HTime;
+use crate::h_time::{HTime, HTimeErr};
 use crate::{HType, HVal, NumTrait};
 use std::fmt::{self, Display};
 
@@ -61,6 +61,20 @@ pub enum TZError {
     TimeConstruction,
 }
 
+pub enum HDateTimeErr {
+    InvalidDate,
+    ShouldNeverHappen,
+}
+
+impl Display for HDateTimeErr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            HDateTimeErr::InvalidDate => write!(f, "Invalid date"),
+            HDateTimeErr::ShouldNeverHappen => write!(f, "This should never happen"),
+        }
+    }
+}
+
 impl HDateTime {
     pub fn new(
         year: i32,
@@ -81,17 +95,18 @@ impl HDateTime {
     pub fn val(&self) -> NaiveDateTime {
         self.inner
     }
-    pub fn date(&self) -> HDate {
+    pub fn date(&self) -> Result<HDate, HDateTimeErr> {
         HDate::new(self.inner.year(), self.inner.month(), self.inner.day())
+            .map_err(|_e| HDateTimeErr::ShouldNeverHappen)
     }
 
-    pub fn time(&self) -> HTime {
-        HTime::new(
+    pub fn time(&self) -> Result<HTime, HTimeErr> {
+        Ok(HTime::new(
             self.inner.hour(),
             self.inner.minute(),
             self.inner.second(),
             self.inner.nanosecond(),
-        )
+        )?)
     }
 
     pub fn year(&self) -> i32 {

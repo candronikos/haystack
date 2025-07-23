@@ -1,5 +1,5 @@
 use nom::{
-    IResult, InputLength,
+    IResult, Input, Parser,
     branch::alt,
     bytes::complete::tag,
     character::complete::{alphanumeric1, anychar, space0, space1},
@@ -285,7 +285,8 @@ impl<'a> HSession {
             .to_str()
             .map_err(|e| anyhow!("http::header::value::ToStrError: {:?}", e))?;
 
-        let (input, _): (&str, &str) = terminated(alt((tag("SCRAM"), tag("scram"))), space1)(input)
+        let (input, _): (&str, &str) = terminated(alt((tag("SCRAM"), tag("scram"))), space1)
+            .parse(input)
             .map_err(|e: nom::Err<(&str, nom::error::ErrorKind)>| anyhow!("{:?}", e))?;
 
         let (_input, www_auth_list) = separated_list1(
@@ -295,7 +296,8 @@ impl<'a> HSession {
                 tag("="),
                 recognize(many_till(anychar, peek(alt((tag(","), eof))))),
             ),
-        )(input)
+        )
+        .parse(input)
         .map_err(|e: nom::Err<(&str, nom::error::ErrorKind)>| anyhow!("{:?}", e))?;
 
         let www_auth_map: HashMap<_, _> = www_auth_list.into_iter().collect();
@@ -360,7 +362,8 @@ impl<'a> HSession {
 
         let input = www_auth_header.to_str().unwrap();
 
-        let (input, _): (&str, &str) = terminated(alt((tag("SCRAM"), tag("scram"))), space1)(input)
+        let (input, _): (&str, &str) = terminated(alt((tag("SCRAM"), tag("scram"))), space1)
+            .parse(input)
             .map_err(|e: nom::Err<(&str, nom::error::ErrorKind)>| anyhow!("{:?}", e))?;
 
         let (_input, www_auth_list) = separated_list1(
@@ -370,7 +373,8 @@ impl<'a> HSession {
                 tag("="),
                 recognize(many_till(anychar, peek(alt((tag(","), eof))))),
             ),
-        )(input)
+        )
+        .parse(input)
         .map_err(|e: nom::Err<(&str, nom::error::ErrorKind)>| anyhow!("{:?}", e))?;
 
         let www_auth_map: HashMap<_, &str> = www_auth_list.into_iter().collect();
@@ -460,7 +464,8 @@ impl<'a> HSession {
                 ),
                 |(a, b): (&str, &str)| (a.to_owned(), b.to_owned()),
             ),
-        )(input)
+        )
+        .parse(input)
         .map_err(|e: nom::Err<(&str, nom::error::ErrorKind)>| anyhow!("HTTP: {:?}", e))?;
 
         let authentication_info_map: HashMap<String, String> =
@@ -511,7 +516,7 @@ impl<'a> HSession {
     }
 }
 
-pub fn eof<I: InputLength + Copy, E: ParseError<I>>(input: I) -> IResult<I, I, E> {
+pub fn eof<I: Input + Copy, E: ParseError<I>>(input: I) -> IResult<I, I, E> {
     if input.input_len() == 0 {
         Ok((input, input))
     } else {

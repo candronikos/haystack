@@ -37,9 +37,9 @@ impl HStr {
     }
 
     pub fn to_zinc(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_char('\"');
+        f.write_char('\"')?;
         self.0.chars().try_for_each(|c| zinc_escape_str(c, f))?;
-        f.write_char('\"');
+        f.write_char('\"')?;
         Ok(())
     }
     pub fn to_trio(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

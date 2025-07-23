@@ -1,10 +1,9 @@
 use crate::h_dict::HDict;
 use crate::h_str::HStr;
 use crate::h_val::HBox;
-use crate::io::write;
 use crate::io::write::zinc::ZincWriter;
 use crate::{HType, HVal, NumTrait};
-use std::fmt::{self, Write};
+use std::fmt;
 
 use rpds::Vector;
 use std::collections::HashMap;
@@ -15,7 +14,7 @@ pub use h_col::{Col, HCol};
 pub mod h_row;
 pub use h_row::{HRow, Row};
 
-use std::cell::{Ref, RefCell};
+use std::cell::RefCell;
 use std::rc::Rc;
 
 #[derive(Clone)]
@@ -313,7 +312,7 @@ impl<'a, T: NumTrait + 'a> HGrid<'a, T> {
                     HRow::new(
                         Rc::downgrade(col_index),
                         cols.clone(),
-                        (Rc::<Vector<Option<Rc<(dyn HVal<'a, T>)>>>>::downgrade(row)),
+                        Rc::<Vector<Option<Rc<(dyn HVal<'a, T>)>>>>::downgrade(row),
                     )
                 })
                 .collect::<Vec<HRow<'a, T>>>()
@@ -445,7 +444,7 @@ impl<'a, T: NumTrait + 'a> HGrid<'a, T> {
                     let col_meta = c.meta();
                     write!(f, "{{\"name\":\"{}\"", c.name)?;
                     let mut col_meta_iter = col_meta.iter().enumerate();
-                    col_meta_iter.try_for_each(|(j, (k, v))| {
+                    col_meta_iter.try_for_each(|(_j, (k, v))| {
                         write!(f, ", \"{}\":\"", k)?;
                         v.to_json(f)?;
                         write!(f, "\"")?;
@@ -574,10 +573,9 @@ impl<'a, T: 'a + NumTrait> HVal<'a, T> for HGrid<'a, T> {
 
 #[cfg(test)]
 mod tests {
-    use std::rc::Rc;
-
     use super::super::{MARKER, REMOVE};
     use super::*;
+    use std::fmt::Write;
 
     const EMPTY_GRID: &str = "ver:\"3.0\"\nempty\n";
     const ERROR_GRID: &str = "ver:\"3.0\" err dis:\"Display message\"\nempty\n";

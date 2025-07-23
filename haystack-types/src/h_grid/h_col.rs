@@ -1,11 +1,9 @@
 use crate::h_dict::HDict;
-use crate::h_str::HStr;
 use crate::h_val::HBox;
-use crate::{HCast, HType, NumTrait};
-use std::fmt::{self, Write};
+use crate::{HType, NumTrait};
+use std::fmt;
 
 use std::collections::HashMap;
-use std::rc::Rc;
 
 #[derive(Clone)]
 pub struct HCol<'a, T: NumTrait> {
@@ -43,10 +41,6 @@ impl<'a, T: NumTrait> HCol<'a, T> {
 }
 
 impl<'a, T: NumTrait> HCol<'a, T> {
-    // pub fn name<'a>(&'a self) -> &'a str {
-    //     &self.name
-    // }
-
     pub fn get(&self, key: String) -> Option<&HBox<'a, T>> {
         self.meta.get(&key)
     }

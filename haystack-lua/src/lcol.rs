@@ -1,11 +1,7 @@
-use std::rc::Rc;
-
 use crate::{H, LuaFloat, create_lua_data};
 use haystack_types::HCol;
-use haystack_types::h_list::HList;
-use haystack_types::h_val::HBox;
 use mlua::prelude::*;
-use mlua::{Error as LuaError, Lua, MetaMethod, Result as LuaResult, Table as LuaTable, UserData};
+use mlua::{Error as LuaError, MetaMethod, UserData};
 use std::fmt::Write;
 
 impl<'a: 'static> UserData for H<HCol<'a, LuaFloat>> {

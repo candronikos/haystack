@@ -1,12 +1,10 @@
 use crate::h_time::HTime;
 use crate::{HType, HVal, NumTrait};
-use std::fmt::{self, Display, Write};
+use std::fmt::{self, Display};
 
 use crate::h_date::HDate;
 use chrono::offset::LocalResult;
-use chrono::{
-    Datelike, Duration, FixedOffset, NaiveDate, NaiveDateTime, Offset, TimeZone, Timelike,
-};
+use chrono::{Datelike, Duration, FixedOffset, NaiveDate, NaiveDateTime, TimeZone, Timelike};
 use chrono_tz::{OffsetComponents, Tz};
 
 #[derive(Clone, Debug, PartialEq)]

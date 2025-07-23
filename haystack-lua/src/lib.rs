@@ -22,11 +22,9 @@ extern crate mlua_uvector4 as mlua;
 
 use haystack_types::h_number::HNumber;
 use haystack_types::h_val::HBox;
-use haystack_types::{HGrid, HRow, HType, HVal, NumTrait, Parser, io};
-use mlua::prelude::*;
+use haystack_types::{HGrid, HType, Parser, io};
 use mlua::{
-    Error as LuaError, Function as LuaFunction, Lua, MetaMethod, Result as LuaResult,
-    Table as LuaTable, UserData, Value,
+    Error as LuaError, Function as LuaFunction, Lua, Result as LuaResult, Table as LuaTable, Value,
 };
 
 mod lbool;
@@ -149,7 +147,7 @@ pub fn setup_tonumber_override(lua: &Lua) -> LuaResult<()> {
 
     let original_tonumber: LuaFunction = globals.get("tonumber")?;
 
-    let enhanced_tonumber = lua.create_function(move |lua, value: Value| match value {
+    let enhanced_tonumber = lua.create_function(move |_lua, value: Value| match value {
         Value::UserData(ud) => {
             if let Ok(hnumber) = ud.borrow::<H<HNumber<LuaFloat>>>() {
                 Ok(Value::Number(hnumber.val()))

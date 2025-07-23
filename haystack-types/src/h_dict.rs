@@ -1,7 +1,7 @@
-use crate::io::write::{self, JsonWriter, ZincWriter};
+use crate::io::write::{JsonWriter, ZincWriter};
 use crate::{HType, HVal, NumTrait, h_val::HBox};
 use std::collections::HashMap;
-use std::fmt::{self, Write};
+use std::fmt;
 
 #[derive(Clone)]
 pub struct HDict<'a, T: NumTrait> {
@@ -64,7 +64,7 @@ impl<'a, T: NumTrait> HDict<'a, T> {
         let inner = &self.inner;
         let mut kv_pairs = inner
             .into_iter()
-            .filter(|(k, v)| v.get_null().is_none())
+            .filter(|(_, v)| v.get_null().is_none())
             .peekable();
         while let Some((k, v)) = kv_pairs.next() {
             match v.haystack_type() {
@@ -107,7 +107,7 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HDict<'a, T> {
         THIS_TYPE
     }
 
-    fn _eq(&self, other: &dyn HVal<'a, T>) -> bool {
+    fn _eq(&self, _other: &dyn HVal<'a, T>) -> bool {
         false
     }
 }
@@ -115,7 +115,7 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HDict<'a, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{HCast, h_number::HNumber};
+    use crate::h_number::HNumber;
     use std::rc::Rc;
 
     #[test]

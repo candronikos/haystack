@@ -1,5 +1,5 @@
 use crate::{HType, HVal, NumTrait};
-use std::fmt::{self, Write};
+use std::fmt;
 
 use chrono::Timelike;
 use chrono::naive::NaiveTime;

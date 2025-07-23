@@ -1,6 +1,6 @@
 use crate::h_val::HBox;
 use crate::{HType, HVal, NumTrait};
-use std::fmt::{self, Write};
+use std::fmt;
 use std::ops::Index;
 
 #[derive(Clone)]
@@ -80,7 +80,7 @@ impl<'a, T: NumTrait> HVal<'a, T> for HList<'a, T> {
         THIS_TYPE
     }
 
-    fn _eq(&self, other: &dyn HVal<'a, T>) -> bool {
+    fn _eq(&self, _other: &dyn HVal<'a, T>) -> bool {
         false
     }
 }
@@ -95,7 +95,7 @@ impl<'a, T> Index<usize> for HList<'a, T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{HCast, h_number::HNumber};
+    use crate::h_number::HNumber;
 
     use super::*;
 

@@ -1,11 +1,8 @@
 use crate::{H, LuaFloat, create_lua_data};
+use haystack_types::h_list::HList;
 use haystack_types::io::write::ZincWriter;
-use haystack_types::{HType, HVal, NumTrait, h_list::HList, io};
 use mlua::prelude::*;
-use mlua::{
-    AnyUserData, Error as LuaError, Lua, MetaMethod, Result as LuaResult, Table as LuaTable,
-    UserData, Value,
-};
+use mlua::{AnyUserData, MetaMethod, UserData};
 use std::fmt::Write;
 
 impl<'a: 'static> UserData for H<HList<'a, LuaFloat>> {

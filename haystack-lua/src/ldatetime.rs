@@ -1,9 +1,8 @@
 use std::fmt::Write;
-use std::os;
 
 use crate::{H, LuaFloat};
+use haystack_types::h_datetime::HDateTime;
 use haystack_types::io::write::ZincWriter;
-use haystack_types::{HVal, NumTrait, h_datetime::HDateTime, io};
 use mlua::prelude::*;
 use mlua::{Function, MetaMethod, Table, UserData};
 

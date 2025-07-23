@@ -1,28 +1,22 @@
 use std::{
     io::{self, Read},
     path::PathBuf,
-    pin::Pin,
 };
 
 use anyhow::{Error, Result as AnyResult};
-use clap::{Arg, ArgAction, ArgGroup, ArgMatches, Command, Parser, Subcommand};
-use futures::stream::{AbortHandle, Aborted, Any};
+use clap::{Arg, ArgAction, ArgGroup, ArgMatches, Command};
+use futures::stream::AbortHandle;
 use haystack_types::NumTrait;
 use haystackclientlib::ops::{FStr, HaystackOpTxRx, HaystackResponse};
-use reedline_repl_rs::{AsyncCallback, Repl};
-use saphyr::AnnotatedMapping;
+use reedline_repl_rs::Repl;
 use tokio::sync::{mpsc::Sender, oneshot::Receiver};
 use url::{Host, Url};
 
 use is_terminal::IsTerminal;
 
-/*
-ops().toRecList.map(r => "OP { def:\""+r->def+"\",doc:\""+r["doc"]+"\",is:\""+r->is+"\",lib:\""+r->lib+"\",no_side_effects:\""+r.has("no_side_effects")+"\",nodoc:\""+r.has("nodoc")+"\",type_name:\""+r["type_name"]+"\" }") // def,doc,is,lib,no_side_effects,nodoc,type_name
-*/
-
-type REPL_FUNC_TYPE<T> =
+type ReplFuncType<T> =
     fn(ArgMatches, &mut T) -> AnyResult<(HaystackOpTxRx, Receiver<HaystackResponse>)>;
-type MATCH_FUNC_TYPE = fn(&ArgMatches) -> AnyResult<(HaystackOpTxRx, Receiver<HaystackResponse>)>;
+type MatchFuncType = fn(&ArgMatches) -> AnyResult<(HaystackOpTxRx, Receiver<HaystackResponse>)>;
 
 pub struct IsTTY {
     pub stdin: bool,
@@ -72,8 +66,6 @@ fn cmd_nav(op: &OP) -> Command {
             .value_name("navId")
             .index(1)
             .required(false)
-            //.value_parser(value_parser!(String))
-            //.num_args(0..1)
             .help("The node in the navigation tree to query"),
     );
     cmd
@@ -827,12 +819,12 @@ pub fn cli(is_tty: IsTTY) -> Command {
 }
 
 async fn repl_generic<'a, T: NumTrait>(
-    m_func: MATCH_FUNC_TYPE,
+    m_func: MatchFuncType,
     matches: ArgMatches,
     context: &mut Context<'a>,
 ) -> AnyResult<Option<String>> {
     let Context {
-        abort_handle,
+        abort_handle: _,
         sender: client,
     } = context;
 
@@ -847,8 +839,8 @@ async fn repl_generic<'a, T: NumTrait>(
 }
 
 async fn repl_not_implemented<'a>(
-    matches: ArgMatches,
-    context: &mut Context<'a>,
+    _matches: ArgMatches,
+    _context: &mut Context<'a>,
 ) -> AnyResult<Option<String>> {
     todo!("Not implemented yet");
 }
@@ -1066,7 +1058,7 @@ pub struct Context<'a> {
 }
 
 pub async fn eval_subcommand<'a, T: NumTrait>(
-    get_op: MATCH_FUNC_TYPE,
+    get_op: MatchFuncType,
     matches: ArgMatches,
     context: &mut Context<'a>,
 ) -> AnyResult<Option<String>> {

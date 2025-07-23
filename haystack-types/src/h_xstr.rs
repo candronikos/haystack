@@ -1,7 +1,7 @@
 use crate::common::escape_str_no_escape_unicode;
 use crate::h_str::HStr;
 use crate::{HType, HVal, NumTrait};
-use std::fmt::{self, Write};
+use std::fmt;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct HXStr {
@@ -52,6 +52,4 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HXStr {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-}
+mod tests {}

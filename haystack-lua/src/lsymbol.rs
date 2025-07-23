@@ -1,11 +1,8 @@
-use crate::{H, LuaFloat};
+use crate::H;
+use haystack_types::h_symbol::HSymbol;
 use haystack_types::io::write::ZincWriter;
-use haystack_types::{HVal, NumTrait, h_symbol::HSymbol, io};
 use mlua::prelude::*;
-use mlua::{
-    AnyUserData, Error as LuaError, Lua, MetaMethod, Result as LuaResult, Table as LuaTable,
-    UserData,
-};
+use mlua::{MetaMethod, UserData};
 use std::fmt::Write;
 
 impl<'a: 'static> UserData for H<HSymbol> {

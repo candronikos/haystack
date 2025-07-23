@@ -1,7 +1,7 @@
 use crate::{HType, HVal, NumTrait};
 use chrono::Datelike;
 use chrono::naive::NaiveDate;
-use std::fmt::{self, Write};
+use std::fmt;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct HDate {

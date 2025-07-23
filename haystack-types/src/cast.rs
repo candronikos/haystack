@@ -1,8 +1,8 @@
 use crate::{
-    HVal, NumTrait, h_bool::HBool, h_coord::HCoord, h_date::HDate, h_datetime::HDateTime,
-    h_dict::HDict, h_grid::HGrid, h_list::HList, h_marker::HMarker, h_na::HNA, h_null::HNull,
-    h_number::HNumber, h_ref::HRef, h_remove::HRemove, h_str::HStr, h_symbol::HSymbol,
-    h_time::HTime, h_uri::HUri, h_xstr::HXStr,
+    NumTrait, h_bool::HBool, h_coord::HCoord, h_date::HDate, h_datetime::HDateTime, h_dict::HDict,
+    h_grid::HGrid, h_list::HList, h_marker::HMarker, h_na::HNA, h_null::HNull, h_number::HNumber,
+    h_ref::HRef, h_remove::HRemove, h_str::HStr, h_symbol::HSymbol, h_time::HTime, h_uri::HUri,
+    h_xstr::HXStr,
 };
 
 macro_rules! set_trait_get_method {

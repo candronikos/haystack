@@ -1,31 +1,20 @@
 #[macro_use]
 extern crate clap;
-use base64::write;
-//use clap::App;
-use clap::Parser;
 
-use futures::future::{AbortHandle, Abortable};
-use haystack_types::NumTrait;
-use haystackclientlib::ops::FStr;
-use reedline_repl_rs::yansi::Paint;
-use tokio::sync::mpsc;
 use url::Url;
 
-use std::env;
-use std::process::exit;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use haystackclientlib::{HSession, ops::HaystackOpTxRx};
 
 use anyhow::{Context, Error, Result as AnyResult, anyhow};
-use dialoguer::{Confirm, Password, Result as DialoguerResult};
+use dialoguer::Confirm;
 use dirs::config_dir;
-use std::fs::create_dir;
-use std::io::{self, Read, Write};
+use std::io::Read;
 use std::path::Path;
 
-use saphyr::{LoadableYamlNode, Yaml, YamlEmitter, YamlLoader};
+use saphyr::{LoadableYamlNode, Yaml, YamlEmitter};
 
 const CONFIG_DIR_NAME: &str = "haystack";
 const CONFIG_FILE_NAME: &str = "config.yaml";
@@ -43,39 +32,6 @@ struct ConnInfo {
     url: Url,
     accept_invalid_certs: bool,
     bearer: Option<String>,
-}
-
-struct SessionConf {
-    try_reuse: bool,
-    update_cache: bool,
-}
-
-struct Settings {
-    conn: Option<ConnInfo>,
-    session: SessionConf,
-}
-
-impl Settings {
-    fn new(conn: Option<ConnInfo>, session: SessionConf) -> Self {
-        Self { conn, session }
-    }
-
-    fn default() -> Self {
-        let conn: Option<ConnInfo> = None;
-        let session: SessionConf = SessionConf {
-            try_reuse: true,
-            update_cache: true,
-        };
-        Self { conn, session }
-    }
-
-    fn update_from_yaml(&self, yaml: Vec<Yaml>) -> Result<(), Error> {
-        let conf = yaml[0]
-            .as_mapping()
-            .ok_or_else(|| anyhow::anyhow!("Failed to get hash from config.yaml"))?;
-        conf;
-        Ok(())
-    }
 }
 
 fn get_credentials(
@@ -132,7 +88,7 @@ fn get_credentials(
                         username,
                         password,
                         accept_invalid_certs,
-                        auth_info,
+                        ..
                     } => {
                         let url = url.clone();
                         let username = arg_user
@@ -169,10 +125,6 @@ fn get_credentials(
                     ))?,
                     bearer: None,
                 }),
-                Destination::Host {
-                    username: host_user,
-                    host,
-                } => Err(anyhow::anyhow!("Config file does not exist!")),
                 _ => Err(anyhow::anyhow!("Config file does not exist!")),
             }),
     };
@@ -194,7 +146,6 @@ async fn main() -> AnyResult<()> {
     let hs_config_dir = Path::join(&user_config_dir, CONFIG_DIR_NAME);
     let hs_config_file = Path::join(&hs_config_dir, CONFIG_FILE_NAME);
     let history_file = Path::join(&hs_config_dir, HISTORY_FILE_NAME);
-    let mut haystack_settings = Settings::default();
 
     if !hs_config_dir.exists() {
         let create_config_dir = Confirm::new()
@@ -284,7 +235,7 @@ async fn main() -> AnyResult<()> {
                 .run_async()
                 .await;
 
-            let (close_op, close_resp) = HaystackOpTxRx::close();
+            let (_close_op, _close_resp) = HaystackOpTxRx::close();
         }
         ("auth", _) => {
             let mut conf_yaml = saphyr::Mapping::new();

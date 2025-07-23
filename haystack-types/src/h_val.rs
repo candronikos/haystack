@@ -4,8 +4,8 @@ use crate::io::write::json::JsonWritable;
 use crate::io::write::trio::TrioWritable;
 use crate::io::write::zinc::ZincWritable;
 use crate::{HCast, NumTrait, io};
-use std::fmt::{self, Debug, Display, Formatter};
-use std::rc::{Rc, Weak};
+use std::fmt::{self, Debug, Display};
+use std::rc::Rc;
 
 use nom::IResult;
 

@@ -1,5 +1,5 @@
 use crate::{HType, HVal, NumTrait};
-use std::fmt::{self, Write};
+use std::fmt;
 
 #[derive(Clone, PartialEq)]
 pub struct HSymbol {

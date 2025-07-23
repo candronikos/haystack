@@ -1,6 +1,6 @@
 use crate::common::Txt;
 use crate::{HType, HVal, NumTrait};
-use std::fmt::{self, Write};
+use std::fmt;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct HBool(pub bool);

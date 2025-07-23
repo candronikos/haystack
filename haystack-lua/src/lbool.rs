@@ -1,5 +1,5 @@
 use mlua::prelude::*;
-use mlua::{Error as LuaError, Lua, MetaMethod, Result as LuaResult, UserData, Value};
+use mlua::{MetaMethod, Value};
 
 use crate::H;
 use haystack_types::h_bool::HBool;
@@ -12,8 +12,8 @@ impl LuaUserData for H<HBool> {
 
         methods.add_meta_method(LuaMetaMethod::Eq, |_, this, other: Value| match other {
             LuaValue::UserData(ud) => {
-                if let Ok(_) = ud.borrow::<HBool>() {
-                    Ok(true)
+                if let Ok(b) = ud.borrow::<HBool>() {
+                    Ok(b.0 == this.0)
                 } else {
                     Ok(false)
                 }

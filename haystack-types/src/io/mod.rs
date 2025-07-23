@@ -6,12 +6,10 @@ use nom::combinator::{iterator, map, opt, recognize, success, value, verify};
 use nom::error::{Error, ErrorKind};
 use nom::multi::separated_list1;
 use nom::number::complete::double;
-use nom::sequence::{preceded, separated_pair, terminated};
+use nom::sequence::{preceded, terminated};
 use nom::{IResult, Parser};
 
-use core::fmt::Display;
 use core::str::FromStr;
-use num::Float;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::OnceLock;
@@ -19,11 +17,10 @@ use std::sync::OnceLock;
 pub mod write;
 
 use crate::{
-    HVal,
     h_bool::HBool,
     h_coord::HCoord,
     h_date::HDate,
-    h_datetime::{HDateTime, HTimezone},
+    h_datetime::HDateTime,
     h_dict::HDict,
     h_grid::HGrid,
     h_list::HList,
@@ -98,9 +95,7 @@ pub mod parse {
     pub mod zinc {
         use chrono::FixedOffset;
         use chrono_tz::Tz;
-        use nom::{
-            AsChar, Err, character::complete::newline, combinator::all_consuming, error::ParseError,
-        };
+        use nom::{AsChar, combinator::all_consuming};
 
         use super::*;
 
@@ -1034,10 +1029,10 @@ pub mod parse {
         use std::slice;
 
         let start = input;
-        let (input, is_positive) = map(opt(tag("-")), |d| d.is_none()).parse(start)?;
-        let (input, integer) = digits(input)?;
-        let (input, decimals) = opt(preceded(tag("."), digits)).parse(input)?;
-        let (input, exponent) = opt(exp).parse(input)?;
+        let (input, _is_positive) = map(opt(tag("-")), |d| d.is_none()).parse(start)?;
+        let (input, _integer) = digits(input)?;
+        let (input, _decimals) = opt(preceded(tag("."), digits)).parse(input)?;
+        let (input, _exponent) = opt(exp).parse(input)?;
         let number_slice = unsafe {
             slice::from_raw_parts(
                 start.as_ptr(),

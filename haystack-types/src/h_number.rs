@@ -1,7 +1,7 @@
 use crate::{HType, HVal};
 use num::Float;
 use std::fmt::Debug;
-use std::fmt::{self, Display, Formatter, Write};
+use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 #[derive(Clone, PartialEq, Debug)]

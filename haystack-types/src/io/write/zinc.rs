@@ -88,7 +88,7 @@ mod tests {
     use std::collections::HashMap;
     use std::fmt::Write;
 
-    use crate::{HVal, h_datetime::HTimezone, io::write};
+    use crate::{HVal, h_datetime::HTimezone};
 
     use super::*;
 

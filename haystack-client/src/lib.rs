@@ -1,5 +1,5 @@
 use nom::{
-    Err, IResult, InputLength,
+    IResult, InputLength,
     branch::alt,
     bytes::complete::tag,
     character::complete::{alphanumeric1, anychar, space0, space1},
@@ -9,10 +9,7 @@ use nom::{
     sequence::{pair, separated_pair, terminated},
 };
 
-use futures::{
-    TryFutureExt,
-    future::{AbortHandle, Abortable},
-};
+use futures::future::{AbortHandle, Abortable};
 
 use base64;
 use scram;
@@ -291,7 +288,7 @@ impl<'a> HSession {
         let (input, _): (&str, &str) = terminated(alt((tag("SCRAM"), tag("scram"))), space1)(input)
             .map_err(|e: nom::Err<(&str, nom::error::ErrorKind)>| anyhow!("{:?}", e))?;
 
-        let (input, www_auth_list) = separated_list1(
+        let (_input, www_auth_list) = separated_list1(
             pair(tag(","), space0),
             separated_pair(
                 alphanumeric1,
@@ -366,7 +363,7 @@ impl<'a> HSession {
         let (input, _): (&str, &str) = terminated(alt((tag("SCRAM"), tag("scram"))), space1)(input)
             .map_err(|e: nom::Err<(&str, nom::error::ErrorKind)>| anyhow!("{:?}", e))?;
 
-        let (input, www_auth_list) = separated_list1(
+        let (_input, www_auth_list) = separated_list1(
             pair(tag(","), space0),
             separated_pair(
                 alphanumeric1,
@@ -453,7 +450,7 @@ impl<'a> HSession {
 
         let input = authentication_info.to_str().unwrap();
 
-        let (input, authentication_info_list) = separated_list1(
+        let (_, authentication_info_list) = separated_list1(
             pair(tag(","), space0),
             map(
                 separated_pair(
@@ -525,10 +522,9 @@ pub fn eof<I: InputLength + Copy, E: ParseError<I>>(input: I) -> IResult<I, I, E
 #[cfg(test)]
 mod tests {
     use super::*;
-    use futures::future;
     use rstest::*;
     use std::env;
-    use std::ops::{Deref, DerefMut};
+    use std::ops::DerefMut;
 
     // TODO: Write test with close op that closes original session
     #[fixture]
@@ -565,7 +561,7 @@ mod tests {
             .await
             .or_else(|e| Err(anyhow!("Failed to reserve permit: {}", e)))
             .unwrap();
-        let res = permit.send(op);
+        () = permit.send(op);
 
         if let Err(e) = resp.await {
             panic!("Failed to receive response: {}", e);
@@ -587,7 +583,7 @@ mod tests {
             .await
             .or_else(|e| Err(anyhow!("Failed to reserve permit: {}", e)))
             .unwrap();
-        let res = permit.send(op);
+        let () = permit.send(op);
 
         if let Err(e) = resp.await {
             panic!("Failed to receive response: {}", e);
@@ -609,7 +605,7 @@ mod tests {
             .await
             .or_else(|e| Err(anyhow!("Failed to reserve permit: {}", e)))
             .unwrap();
-        let res = permit.send(op);
+        let () = permit.send(op);
 
         if let Err(e) = resp.await {
             panic!("Failed to receive response: {}", e);
@@ -631,7 +627,7 @@ mod tests {
             .await
             .or_else(|e| Err(anyhow!("Failed to reserve permit: {}", e)))
             .unwrap();
-        let res = permit.send(op);
+        let () = permit.send(op);
 
         if let Err(e) = resp.await {
             panic!("Failed to receive response: {}", e);
@@ -653,7 +649,7 @@ mod tests {
             .await
             .or_else(|e| Err(anyhow!("Failed to reserve permit: {}", e)))
             .unwrap();
-        let res = permit.send(op);
+        let () = permit.send(op);
 
         if let Err(e) = resp.await {
             panic!("Failed to receive response: {}", e);
@@ -675,7 +671,7 @@ mod tests {
             .await
             .or_else(|e| Err(anyhow!("Failed to reserve permit: {}", e)))
             .unwrap();
-        let res = permit.send(op);
+        let () = permit.send(op);
 
         if let Err(e) = resp.await {
             panic!("Failed to receive response: {}", e);
@@ -718,9 +714,9 @@ mod tests {
             .await
             .or_else(|e| Err(anyhow!("Failed to reserve permit: {}", e)))
             .unwrap();
-        let res = permit.send(op);
+        let () = permit.send(op);
 
-        let response = resp
+        let _response = resp
             .await
             .or_else(|e| Err(anyhow!("Failed to reserve permit: {}", e)))
             .unwrap();
@@ -745,9 +741,9 @@ mod tests {
         let (formats_op, formats_resp) = HaystackOpTxRx::filetypes(None, None).unwrap();
         let (about_op, about_resp) = HaystackOpTxRx::about();
 
-        let mut nav_addr = addr.clone();
-        let mut formats_addr = addr.clone();
-        let mut about_addr = addr.clone();
+        let nav_addr = addr.clone();
+        let formats_addr = addr.clone();
+        let about_addr = addr.clone();
 
         let (nav_res, formats_res, about_res) = join!(
             nav_addr.send(nav_op),

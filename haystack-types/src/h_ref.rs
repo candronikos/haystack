@@ -20,7 +20,7 @@ impl HRef {
         write!(f, "@{}", self.id)?;
         match &self.dis {
             Some(dis) => {
-                f.write_char(' ');
+                f.write_char(' ')?;
                 dis.chars().try_for_each(|c| zinc_escape_str(c, f))?;
                 Ok(())
             }
@@ -34,7 +34,7 @@ impl HRef {
         write!(f, "r:{}", self.id)?;
         match &self.dis {
             Some(dis) => {
-                f.write_char(' ');
+                f.write_char(' ')?;
                 dis.chars().try_for_each(|c| escape_str(c, f))?;
                 Ok(())
             }

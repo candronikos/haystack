@@ -1,11 +1,11 @@
 use std::fmt::Write;
 
+use crate::HGrid;
 use crate::ldict::to_dict;
 use crate::{H, LuaFloat};
-use crate::{HGrid, HVal};
 use haystack_types::io::write::ZincWriter;
 use mlua::prelude::*;
-use mlua::{Error as LuaError, Lua, MetaMethod, Result as LuaResult, Table as LuaTable, UserData};
+use mlua::{MetaMethod, UserData};
 
 impl<'a: 'static> UserData for H<HGrid<'a, LuaFloat>> {
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {

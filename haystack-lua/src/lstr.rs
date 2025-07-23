@@ -1,10 +1,7 @@
-use crate::{H, LuaFloat};
-use haystack_types::{HVal, NumTrait, h_str::HStr, io};
+use crate::H;
+use haystack_types::h_str::HStr;
 use mlua::prelude::*;
-use mlua::{
-    AnyUserData, Error as LuaError, Lua, MetaMethod, Result as LuaResult, Table as LuaTable,
-    UserData, Value,
-};
+use mlua::{Error as LuaError, Lua, MetaMethod, Result as LuaResult, UserData, Value};
 
 impl<'a: 'static> UserData for H<HStr> {
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {

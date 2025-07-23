@@ -3,7 +3,6 @@ use mlua::prelude::*;
 use std::fmt::Write;
 
 use crate::{H, LuaFloat};
-use haystack_types::HVal;
 use haystack_types::h_number::HNumber;
 
 impl LuaUserData for H<HNumber<LuaFloat>> {

@@ -1,9 +1,8 @@
 use crate::HCol;
-use crate::h_grid::HGrid;
 use crate::{HType, NumTrait, h_val::HBox};
 use rpds::Vector;
 use std::collections::HashMap;
-use std::fmt::{self, Debug, Display, Write};
+use std::fmt::{self, Debug, Display};
 use std::rc::Weak;
 
 #[derive(Clone)]

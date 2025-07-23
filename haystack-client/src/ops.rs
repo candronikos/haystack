@@ -1,14 +1,13 @@
 use std::{
-    fmt::{self, Debug, Display, Write},
-    str::{FromStr, SplitWhitespace},
+    fmt::{self, Debug, Write},
+    str::SplitWhitespace,
 };
 
-use anyhow::{Context, Error, Result, anyhow};
+use anyhow::{Error, Result, anyhow};
 
-use nom::Err;
 use tokio::sync::oneshot;
 
-use haystack_types::{self as hs_types, Float, NumTrait};
+use haystack_types::{self as hs_types, NumTrait};
 
 #[derive(Debug)]
 pub enum FStr<'a> {
@@ -35,7 +34,7 @@ impl FStr<'_> {
 impl<'a> std::clone::Clone for FStr<'a> {
     fn clone(&self) -> Self {
         match self {
-            Self::Str(arg0) => Self::Str(arg0.clone()),
+            Self::Str(arg0) => Self::Str(arg0),
             Self::String(arg0) => Self::String(arg0.clone()),
         }
     }
@@ -178,15 +177,15 @@ impl<'a> HaystackOpTxRx {
         )
     }
 
-    pub fn priv_op(&'a self) -> FStr {
+    pub fn priv_op(&'a self) -> FStr<'a> {
         self.op.clone()
     }
 
-    pub fn priv_method(&'a self) -> FStr {
+    pub fn priv_method(&'a self) -> FStr<'a> {
         self.method.clone()
     }
 
-    pub fn priv_body(&'a self) -> Option<FStr> {
+    pub fn priv_body(&'a self) -> Option<FStr<'a>> {
         match &self.body {
             Some(x) => Some(x.to_owned()),
             None => return None,
@@ -649,8 +648,8 @@ impl HaystackResponse {
         match self {
             HaystackResponse::Raw(ref body) => {
                 match hs_types::io::parse::zinc::grid_err::<T>(body.as_str()) {
-                    Ok((input, grid_err)) => Err(anyhow!("{}", body)),
-                    Err(e) => Ok(HaystackResponse::Raw(body.to_owned())),
+                    Ok((_input, _grid_err)) => Err(anyhow!("{}", body)),
+                    Err(_e) => Ok(HaystackResponse::Raw(body.to_owned())),
                 }
             }
         }

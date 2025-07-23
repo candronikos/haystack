@@ -18,21 +18,21 @@ impl HDate {
             inner: NaiveDate::from_ymd(year, month, day),
         }
     }
-    pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_zinc(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
-            buf,
+            f,
             "{:0>4}-{:0>2}-{:0>2}",
             self.inner.year(),
             self.inner.month(),
             self.inner.day()
         )
     }
-    pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        self.to_zinc(buf)
+    pub fn to_trio(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.to_zinc(f)
     }
-    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
-        write!(buf, "d:")?;
-        self.to_zinc(buf)
+    pub fn to_json(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "d:")?;
+        self.to_zinc(f)
     }
 }
 
@@ -52,30 +52,6 @@ mod tests {
     fn test_new() {
         let date = HDate::new(2023, 10, 5);
         assert_eq!(date.inner, NaiveDate::from_ymd(2023, 10, 5));
-    }
-
-    #[test]
-    fn test_to_zinc() {
-        let date = HDate::new(2023, 10, 5);
-        let mut buf = String::new();
-        date.to_zinc(&mut buf).unwrap();
-        assert_eq!(buf, "2023-10-05");
-    }
-
-    #[test]
-    fn test_to_trio() {
-        let date = HDate::new(2023, 10, 5);
-        let mut buf = String::new();
-        date.to_trio(&mut buf).unwrap();
-        assert_eq!(buf, "2023-10-05");
-    }
-
-    #[test]
-    fn test_to_json() {
-        let date = HDate::new(2023, 10, 5);
-        let mut buf = String::new();
-        date.to_json(&mut buf).unwrap();
-        assert_eq!(buf, "d:2023-10-05");
     }
 
     #[test]

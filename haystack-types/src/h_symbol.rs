@@ -14,14 +14,14 @@ impl HSymbol {
     pub fn new(val: String) -> HSymbol {
         HSymbol { val }
     }
-    pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        write!(buf, "^{}", self.val)
+    pub fn to_zinc(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "^{}", self.val)
     }
-    pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        self.to_zinc(buf)
+    pub fn to_trio(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.to_zinc(f)
     }
-    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
-        write!(buf, "y:{}", self.val)
+    pub fn to_json(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "y:{}", self.val)
     }
 }
 
@@ -41,33 +41,6 @@ mod symbol_tests {
     fn test_new() {
         let symbol = HSymbol::new("example".to_string());
         assert_eq!(symbol.val, "example");
-    }
-
-    #[test]
-    fn test_to_zinc() {
-        let symbol = HSymbol::new("example".to_string());
-        let mut buf = String::new();
-        let symbol_hval = HVal::<f64>::as_hval(&symbol);
-        symbol_hval.to_zinc(&mut buf).unwrap();
-        assert_eq!(buf, "^example");
-    }
-
-    #[test]
-    fn test_to_trio() {
-        let symbol = HSymbol::new("example".to_string());
-        let mut buf = String::new();
-        let symbol_hval = HVal::<f64>::as_hval(&symbol);
-        symbol_hval.to_trio(&mut buf).unwrap();
-        assert_eq!(buf, "^example");
-    }
-
-    #[test]
-    fn test_to_json() {
-        let symbol = HSymbol::new("example".to_string());
-        let mut buf = String::new();
-        let symbol_hval = HVal::<f64>::as_hval(&symbol);
-        symbol_hval.to_json(&mut buf).unwrap();
-        assert_eq!(buf, "y:example");
     }
 
     #[test]

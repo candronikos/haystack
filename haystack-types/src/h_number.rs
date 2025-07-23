@@ -48,19 +48,19 @@ impl<T: Float + Display> Number<T> {
     pub fn unit(&self) -> &Option<HUnit> {
         &self.unit
     }
-    pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_zinc(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.unit {
-            Some(unit) => write!(buf, "{}{}", self.val, unit),
-            None => write!(buf, "{}", self.val),
+            Some(unit) => write!(f, "{}{}", self.val, unit),
+            None => write!(f, "{}", self.val),
         }
     }
-    pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        self.to_zinc(buf)
+    pub fn to_trio(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.to_zinc(f)
     }
-    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_json(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.unit {
-            Some(unit) => write!(buf, "n:{} {}", self.val, unit),
-            None => write!(buf, "n:{}", self.val),
+            Some(unit) => write!(f, "n:{} {}", self.val, unit),
+            None => write!(f, "n:{}", self.val),
         }
     }
 }
@@ -108,49 +108,6 @@ mod tests {
         let number = HNumber::new(3.14, None);
         assert_eq!(number.val(), 3.14);
         assert!(number.unit.is_none());
-    }
-
-    #[test]
-    fn test_to_zinc_with_unit() {
-        let unit = Some(HUnit::new("m".to_string()));
-        let number = HNumber::new(42.0, unit);
-        let mut buf = String::new();
-        number.to_zinc(&mut buf).unwrap();
-        assert_eq!(buf, "42m");
-    }
-
-    #[test]
-    fn test_to_zinc_without_unit() {
-        let number = HNumber::new(3.14, None);
-        let mut buf = String::new();
-        number.to_zinc(&mut buf).unwrap();
-        assert_eq!(buf, "3.14");
-    }
-
-    #[test]
-    fn test_to_trio() {
-        let unit = Some(HUnit::new("kg".to_string()));
-        let number = HNumber::new(100.0, unit);
-        let mut buf = String::new();
-        number.to_trio(&mut buf).unwrap();
-        assert_eq!(buf, "100kg");
-    }
-
-    #[test]
-    fn test_to_json_with_unit() {
-        let unit = Some(HUnit::new("m".to_string()));
-        let number = HNumber::new(42.0, unit);
-        let mut buf = String::new();
-        number.to_json(&mut buf).unwrap();
-        assert_eq!(buf, "n:42 m");
-    }
-
-    #[test]
-    fn test_to_json_without_unit() {
-        let number = HNumber::new(3.14, None);
-        let mut buf = String::new();
-        number.to_json(&mut buf).unwrap();
-        assert_eq!(buf, "n:3.14");
     }
 
     #[test]

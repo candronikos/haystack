@@ -616,8 +616,9 @@ pub mod parse {
         #[cfg(test)]
         mod tests {
             use super::*;
-            use crate::HCast;
             use crate::h_datetime::IntoTimezone;
+            use crate::io::write::ZincWriter;
+            use std::fmt::Write;
 
             #[test]
             fn parse_unicode_char() {
@@ -634,7 +635,7 @@ pub mod parse {
                     let mut buf = String::new();
 
                     let v = e.get("dis").unwrap();
-                    v.to_zinc(&mut buf).unwrap();
+                    write!(buf, "{}", ZincWriter::new(v.as_ref())).unwrap();
                     let rhs = Rc::new(HStr("Fri 31-Jul-2020".to_owned())) as HBox<f64>;
                     assert_eq!(v, &rhs)
                 } else {

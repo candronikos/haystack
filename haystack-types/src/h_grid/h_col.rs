@@ -82,23 +82,23 @@ impl<'a, T: NumTrait> HCol<'a, T> {
         &self.name
     }
 
-    pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        write!(buf, "{}", self.name)?;
+    pub fn to_zinc(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name)?;
 
         if !self.meta.is_empty() {
-            write!(buf, " ")?;
+            write!(f, " ")?;
             let mut iter = self.meta.iter().peekable();
             while let Some((k, v)) = iter.next() {
-                write!(buf, "{}", k)?;
+                write!(f, "{}", k)?;
                 match v.haystack_type() {
                     HType::Marker => (),
                     _ => {
-                        write!(buf, ":")?;
-                        v.to_zinc(buf)?;
+                        write!(f, ":")?;
+                        v.to_zinc(f)?;
                     }
                 };
                 if let Some(_) = iter.peek() {
-                    write!(buf, " ")?;
+                    write!(f, " ")?;
                 }
             }
         }

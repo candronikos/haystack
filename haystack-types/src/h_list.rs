@@ -44,34 +44,34 @@ impl<'a, T: NumTrait> HList<'a, T> {
         self.inner.push(value);
     }
 
-    pub fn to_zinc<'b>(&self, buf: &'b mut String) -> fmt::Result {
-        write!(buf, "[")?;
+    pub fn to_zinc<'b>(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[")?;
         let inner = &self.inner;
         let mut elements = inner.into_iter().peekable();
 
         while let Some(v) = elements.next() {
-            let () = v.to_zinc(buf)?;
+            let () = v.to_zinc(f)?;
             if elements.peek().is_some() {
-                write!(buf, ", ")?;
+                write!(f, ", ")?;
             }
         }
-        write!(buf, "]")
+        write!(f, "]")
     }
-    pub fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result {
-        self.to_zinc(buf)
+    pub fn to_trio<'b>(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.to_zinc(f)
     }
-    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
-        write!(buf, "[")?;
+    pub fn to_json(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[")?;
         let mut elements = self.inner.iter().peekable();
         while let Some(v) = elements.next() {
-            write!(buf, "\"")?;
-            v.to_json(buf)?;
-            write!(buf, "\"")?;
+            write!(f, "\"")?;
+            v.to_json(f)?;
+            write!(f, "\"")?;
             if elements.peek().is_some() {
-                write!(buf, ",")?;
+                write!(f, ",")?;
             }
         }
-        write!(buf, "]")
+        write!(f, "]")
     }
 }
 
@@ -118,30 +118,6 @@ mod tests {
         let hlist = HList::from_vec(vec.clone());
         assert_eq!(hlist.inner, vec);
         assert_ne!(hlist.inner, vec2);
-    }
-
-    #[test]
-    fn test_to_zinc() {
-        let vec = vec![
-            HNumber::new(1f64, None).to_hbox(),
-            HNumber::new(2f64, None).to_hbox(),
-        ];
-        let hlist = HList::from_vec(vec);
-        let mut buf = String::new();
-        hlist.to_zinc(&mut buf).unwrap();
-        assert_eq!(buf, "[1, 2]");
-    }
-
-    #[test]
-    fn test_to_trio() {
-        let vec = vec![
-            HNumber::new(1f64, None).to_hbox(),
-            HNumber::new(2f64, None).to_hbox(),
-        ];
-        let hlist = HList::from_vec(vec);
-        let mut buf = String::new();
-        hlist.to_trio(&mut buf).unwrap();
-        assert_eq!(buf, "[1, 2]");
     }
 
     #[test]

@@ -1,3 +1,4 @@
+use std::fmt::Write;
 use std::os;
 
 use crate::{H, LuaFloat};
@@ -10,7 +11,7 @@ impl<'a: 'static> UserData for H<HDateTime> {
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {
         methods.add_meta_method(MetaMethod::ToString, |_, this, ()| {
             let mut buf = String::new();
-            ZincWriter::<LuaFloat>::to_zinc(this.get_ref(), &mut buf).unwrap();
+            write!(buf, "{}", ZincWriter::new(this.get_ref())).unwrap();
             Ok(buf)
         });
 

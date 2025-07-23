@@ -1,10 +1,9 @@
-use std::rc::Rc;
+use std::fmt::Write;
 
 use crate::ldict::to_dict;
 use crate::{H, LuaFloat};
 use crate::{HGrid, HVal};
-use haystack_types::h_list::HList;
-use haystack_types::h_val::HBox;
+use haystack_types::io::write::ZincWriter;
 use mlua::prelude::*;
 use mlua::{Error as LuaError, Lua, MetaMethod, Result as LuaResult, Table as LuaTable, UserData};
 
@@ -12,8 +11,7 @@ impl<'a: 'static> UserData for H<HGrid<'a, LuaFloat>> {
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {
         methods.add_meta_method(MetaMethod::ToString, |_, this, ()| {
             let mut out = String::new();
-            this.to_zinc(&mut out)
-                .map_err(|e| LuaError::RuntimeError(e.to_string()))?;
+            write!(out, "{}", ZincWriter::new(this.get_ref())).unwrap();
             Ok(out)
         });
 

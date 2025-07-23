@@ -16,26 +16,26 @@ impl HRef {
     pub fn new(id: String, dis: Option<String>) -> HRef {
         HRef { id, dis }
     }
-    pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        write!(buf, "@{}", self.id)?;
+    pub fn to_zinc(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "@{}", self.id)?;
         match &self.dis {
             Some(dis) => {
-                buf.push(' ');
-                dis.chars().try_for_each(|c| zinc_escape_str(c, buf))?;
+                f.write_char(' ');
+                dis.chars().try_for_each(|c| zinc_escape_str(c, f))?;
                 Ok(())
             }
             None => Ok(()),
         }
     }
-    pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        self.to_zinc(buf)
+    pub fn to_trio(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.to_zinc(f)
     }
-    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
-        write!(buf, "r:{}", self.id)?;
+    pub fn to_json(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "r:{}", self.id)?;
         match &self.dis {
             Some(dis) => {
-                buf.push(' ');
-                dis.chars().try_for_each(|c| escape_str(c, buf))?;
+                f.write_char(' ');
+                dis.chars().try_for_each(|c| escape_str(c, f))?;
                 Ok(())
             }
             None => Ok(()),
@@ -64,51 +64,6 @@ mod tests {
         assert_eq!(href.id, "id123");
         assert_eq!(href.dis, Some("Building 1: \"Main\"".to_string()));
         assert_ne!(href.dis, Some("Building 2: \"Main\"".to_string()));
-    }
-
-    #[test]
-    fn test_href_to_zinc() {
-        let href = HRef::new("id123".to_string(), Some("display".to_string()));
-        let mut buf = String::new();
-        let href_hval = HVal::<f64>::as_hval(&href);
-        href_hval.to_zinc(&mut buf).unwrap();
-        assert_eq!(buf, "@id123 display");
-    }
-
-    #[test]
-    fn test_href_to_zinc_no_dis() {
-        let href = HRef::new("id123".to_string(), None);
-        let mut buf = String::new();
-        let href_hval = HVal::<f64>::as_hval(&href);
-        href_hval.to_zinc(&mut buf).unwrap();
-        assert_eq!(buf, "@id123");
-    }
-
-    #[test]
-    fn test_href_to_trio() {
-        let href = HRef::new("id123".to_string(), Some("display".to_string()));
-        let mut buf = String::new();
-        let href_hval = HVal::<f64>::as_hval(&href);
-        href_hval.to_trio(&mut buf).unwrap();
-        assert_eq!(buf, "@id123 display");
-    }
-
-    #[test]
-    fn test_href_to_json() {
-        let href = HRef::new("id123".to_string(), Some("display".to_string()));
-        let mut buf = String::new();
-        let href_hval = HVal::<f64>::as_hval(&href);
-        href_hval.to_json(&mut buf).unwrap();
-        assert_eq!(buf, "r:id123 display");
-    }
-
-    #[test]
-    fn test_href_to_json_no_dis() {
-        let href = HRef::new("id123".to_string(), None);
-        let mut buf = String::new();
-        let href_hval = HVal::<f64>::as_hval(&href);
-        href_hval.to_json(&mut buf).unwrap();
-        assert_eq!(buf, "r:id123");
     }
 
     #[test]

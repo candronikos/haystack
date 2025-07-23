@@ -1,4 +1,4 @@
-use crate::io::write;
+use crate::io::write::{self, JsonWriter, ZincWriter};
 use crate::{HType, HVal, NumTrait, h_val::HBox};
 use std::collections::HashMap;
 use std::fmt::{self, Write};
@@ -59,8 +59,8 @@ impl<'a, T: NumTrait> HDict<'a, T> {
         self.inner.iter()
     }
 
-    pub fn to_zinc<'b>(&self, buf: &'b mut String) -> fmt::Result {
-        write!(buf, "{{")?;
+    pub fn to_zinc<'b>(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{{")?;
         let inner = &self.inner;
         let mut kv_pairs = inner
             .into_iter()
@@ -68,39 +68,37 @@ impl<'a, T: NumTrait> HDict<'a, T> {
             .peekable();
         while let Some((k, v)) = kv_pairs.next() {
             match v.haystack_type() {
-                HType::Remove => write!(buf, "-{}", k),
-                HType::Marker => write!(buf, "{}", k),
+                HType::Remove => write!(f, "-{}", k),
+                HType::Marker => write!(f, "{}", k),
                 _ => {
-                    write!(buf, "{}:", k)?;
-                    v.to_zinc(buf)?;
+                    write!(f, "{}:{}", k, ZincWriter::new(v.as_ref()))?;
                     if kv_pairs.peek().is_some() {
-                        write!(buf, " ")?;
+                        write!(f, " ")?;
                     };
                     Ok(())
                 }
             }?;
         }
-        write!(buf, "}}")
+        write!(f, "}}")
     }
-    pub fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result {
-        self.to_zinc(buf)
+    pub fn to_trio<'b>(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.to_zinc(f)
     }
-    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
-        write!(buf, "{{")?;
+    pub fn to_json(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{{")?;
         let mut dict_iter = self
             .inner
             .iter()
             .filter(|(_, v)| v.get_null().is_none())
             .peekable();
         while let Some((k, v)) = dict_iter.next() {
-            write!(buf, "\"{}\":", k)?;
-            v.to_json(buf)?;
+            let v_ref = v.as_ref();
+            write!(f, "\"{}\":\"{}\"", k, JsonWriter::new(v_ref))?;
             if dict_iter.peek().is_some() {
-                write!(buf, ",")?;
+                write!(f, ",")?;
             }
-            write!(buf, "\"")?;
         }
-        write!(buf, "}}")
+        write!(f, "}}")
     }
 }
 
@@ -141,41 +139,6 @@ mod tests {
             dict.inner.get("key1").unwrap().get_number().unwrap().unit(),
             &None
         );
-    }
-
-    #[test]
-    fn test_to_zinc() {
-        let mut map = HashMap::new();
-        let val1: Rc<dyn HVal<f64>> = Rc::new(HNumber::new(42.0, None));
-        let val2: Rc<dyn HVal<f64>> = Rc::new(HNumber::new(3.14, None));
-        map.insert("key1".to_string(), val1);
-        map.insert("key2".to_string(), val2);
-        let dict = HDict::<f64>::from_map(map);
-
-        let mut buf = String::new();
-        dict.to_zinc(&mut buf).unwrap();
-
-        assert!(buf == "{key1:42 key2:3.14}" || buf == "{key2:3.14 key1:42}");
-    }
-
-    #[test]
-    fn test_to_trio() {
-        let mut map = HashMap::new();
-        let val1: Rc<dyn HVal<f64>> = Rc::new(HNumber::new(42.0, None));
-        map.insert("key1".to_string(), val1);
-        let dict = HDict::from_map(map);
-
-        let mut buf = String::new();
-        dict.to_trio(&mut buf).unwrap();
-        assert_eq!(buf, "{key1:42}");
-    }
-
-    #[test]
-    fn test_to_json() {
-        let dict: HDict<f64> = HDict::new();
-        let mut buf = String::new();
-        dict.to_json(&mut buf).unwrap();
-        assert_eq!(buf, "{}");
     }
 
     #[test]

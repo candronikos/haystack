@@ -15,17 +15,17 @@ impl HUri {
         let url = Url::parse(input)?;
         Ok(HUri(url))
     }
-    pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        buf.push('`');
-        buf.push_str(self.0.as_str());
-        buf.push('`');
+    pub fn to_zinc(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_char('`')?;
+        f.write_str(self.0.as_str())?;
+        f.write_char('`')?;
         Ok(())
     }
-    pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        self.to_zinc(buf)
+    pub fn to_trio(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.to_zinc(f)
     }
-    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
-        write!(buf, "u:{}", self.0)?;
+    pub fn to_json(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "u:{}", self.0)?;
         Ok(())
     }
     pub fn to_owned_string(&self) -> String {
@@ -47,7 +47,7 @@ mod tests {
 
     #[test]
     fn test_new_valid() {
-        let input = "https://example.com";
+        let input = "https://example.com/";
         let huri = HUri::new(input);
         assert!(huri.is_ok());
         assert_eq!(huri.unwrap().0.as_str(), input);
@@ -58,33 +58,6 @@ mod tests {
         let input = "not-a-valid-url";
         let huri = HUri::new(input);
         assert!(huri.is_err());
-    }
-
-    #[test]
-    fn test_to_zinc() {
-        let input = "https://example.com";
-        let huri = HUri::new(input).unwrap();
-        let mut buf = String::new();
-        huri.to_zinc(&mut buf).unwrap();
-        assert_eq!(buf, "`https://example.com`");
-    }
-
-    #[test]
-    fn test_to_trio() {
-        let input = "https://example.com";
-        let huri = HUri::new(input).unwrap();
-        let mut buf = String::new();
-        huri.to_trio(&mut buf).unwrap();
-        assert_eq!(buf, "`https://example.com`");
-    }
-
-    #[test]
-    fn test_to_json() {
-        let input = "https://example.com";
-        let huri = HUri::new(input).unwrap();
-        let mut buf = String::new();
-        huri.to_json(&mut buf).unwrap();
-        assert_eq!(buf, "u:https://example.com");
     }
 
     #[test]

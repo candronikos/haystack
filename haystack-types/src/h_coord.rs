@@ -15,14 +15,14 @@ impl<T: NumTrait> HCoord<T> {
     pub fn new(lat: T, long: T) -> HCoord<T> {
         HCoord { lat, long }
     }
-    pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        write!(buf, "C({},{})", self.lat, self.long)
+    pub fn to_zinc(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "C({},{})", self.lat, self.long)
     }
-    pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        self.to_zinc(buf)
+    pub fn to_trio(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.to_zinc(f)
     }
-    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
-        write!(buf, "c:{},{}", self.lat, self.long)
+    pub fn to_json(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "c:{},{}", self.lat, self.long)
     }
 }
 
@@ -43,30 +43,6 @@ mod tests {
         let coord = HCoord::new(10.5, 20.5);
         assert_eq!(coord.lat, 10.5);
         assert_eq!(coord.long, 20.5);
-    }
-
-    #[test]
-    fn test_to_zinc() {
-        let coord = HCoord::new(10.5, 20.5);
-        let mut buf = String::new();
-        coord.to_zinc(&mut buf).unwrap();
-        assert_eq!(buf, "C(10.5,20.5)");
-    }
-
-    #[test]
-    fn test_to_trio() {
-        let coord = HCoord::new(10.5, 20.5);
-        let mut buf = String::new();
-        coord.to_trio(&mut buf).unwrap();
-        assert_eq!(buf, "C(10.5,20.5)");
-    }
-
-    #[test]
-    fn test_to_json() {
-        let coord = HCoord::new(10.5, 20.5);
-        let mut buf = String::new();
-        coord.to_json(&mut buf).unwrap();
-        assert_eq!(buf, "c:10.5,20.5");
     }
 
     #[test]

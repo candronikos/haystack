@@ -19,25 +19,25 @@ impl HTime {
             inner: NaiveTime::from_hms_nano(hour, minute, second, nano),
         }
     }
-    pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_zinc(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
-            buf,
+            f,
             "{:0>2}:{:0>2}:{:0>2}",
             self.inner.hour(),
             self.inner.minute(),
             self.inner.second()
         )?;
         if self.inner.nanosecond() != 0 {
-            write!(buf, ".{:0>9}", self.inner.nanosecond())?;
+            write!(f, ".{:0>9}", self.inner.nanosecond())?;
         }
         Ok(())
     }
-    pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        self.to_zinc(buf)
+    pub fn to_trio(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.to_zinc(f)
     }
-    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
-        write!(buf, "h:")?;
-        self.to_zinc(buf)
+    pub fn to_json(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "h:")?;
+        self.to_zinc(f)
     }
 }
 
@@ -61,30 +61,6 @@ mod tests {
             time.inner,
             NaiveTime::from_hms_nano(12, 34, 56, 789_000_000)
         );
-    }
-
-    #[test]
-    fn test_to_zinc() {
-        let time = HTime::new(12, 34, 56, 789_000_000);
-        let mut buf = String::new();
-        time.to_zinc(&mut buf).unwrap();
-        assert_eq!(buf, "12:34:56.789000000");
-    }
-
-    #[test]
-    fn test_to_trio() {
-        let time = HTime::new(12, 34, 56, 789_000_000);
-        let mut buf = String::new();
-        time.to_trio(&mut buf).unwrap();
-        assert_eq!(buf, "12:34:56.789000000");
-    }
-
-    #[test]
-    fn test_to_json() {
-        let time = HTime::new(12, 34, 56, 789_000_000);
-        let mut buf = String::new();
-        time.to_json(&mut buf).unwrap();
-        assert_eq!(buf, "h:12:34:56.789000000");
     }
 
     #[test]

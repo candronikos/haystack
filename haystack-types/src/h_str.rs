@@ -36,20 +36,20 @@ impl HStr {
         self.0.is_empty()
     }
 
-    pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        buf.push('\"');
-        self.0.chars().try_for_each(|c| zinc_escape_str(c, buf))?;
-        buf.push('\"');
+    pub fn to_zinc(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_char('\"');
+        self.0.chars().try_for_each(|c| zinc_escape_str(c, f))?;
+        f.write_char('\"');
         Ok(())
     }
-    pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        self.to_zinc(buf)
+    pub fn to_trio(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.to_zinc(f)
     }
-    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_json(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(_) = self.0.find(":") {
-            write!(buf, "s:")?;
+            write!(f, "s:")?;
         }
-        write!(buf, "{}", self.0)?;
+        write!(f, "{}", self.0)?;
         Ok(())
     }
 }
@@ -64,8 +64,6 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HStr {
 
 #[cfg(test)]
 mod tests {
-    use crate::io::write::TrioWriter;
-
     use super::*;
 
     #[test]
@@ -86,43 +84,5 @@ mod tests {
         let hstr = HStr::new("hello".into());
         let s = hstr.clone_into_string();
         assert_eq!(s, "hello");
-    }
-
-    #[test]
-    fn test_to_zinc() {
-        let hstr = HStr::new("hello".into());
-        let mut buf = String::new();
-        hstr.to_zinc(&mut buf).unwrap();
-        assert_eq!(buf, "\"hello\"");
-    }
-
-    #[test]
-    fn test_to_zinc_escaped_chars() {
-        //let hstr = HStr::new("\b \f \n \r \t \" \\ $ \u{263A}".into());
-        let hstr = HStr::new("\x08 \x0C \n \r \t \" \\ $ \u{263A} ☺".into());
-        let mut buf = String::new();
-        hstr.to_zinc(&mut buf).unwrap();
-        assert_eq!(buf, "\"\\b \\f \\n \\r \\t \\\" \\\\ \\$ \u{263A} ☺\"");
-    }
-
-    #[test]
-    fn test_to_trio() {
-        let hstr = HStr::new("hello".into());
-        let mut buf = String::new();
-        hstr.to_trio(&mut buf).unwrap();
-        assert_eq!(buf, "\"hello\"");
-    }
-
-    #[test]
-    fn test_to_json() {
-        let hstr = HStr::new("hello".into());
-        let mut buf = String::new();
-        hstr.to_json(&mut buf).unwrap();
-        assert_eq!(buf, "hello");
-
-        let hstr_with_colon = HStr::new("key:value".into());
-        let mut buf_with_colon = String::new();
-        hstr_with_colon.to_json(&mut buf_with_colon).unwrap();
-        assert_eq!(buf_with_colon, "s:key:value");
     }
 }

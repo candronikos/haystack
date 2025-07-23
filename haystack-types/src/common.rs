@@ -47,63 +47,63 @@ impl<'a> Display for Txt<'a> {
     }
 }
 
-pub fn zinc_escape_str(c: char, buf: &mut String) -> fmt::Result {
+pub fn zinc_escape_str(c: char, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     if c < ' ' || c == '"' || c == '\\' || c == '$' {
-        buf.push('\\');
+        f.write_char('\\')?;
         match c {
-            '\x08' => buf.push('b'),
-            '\x0C' => buf.push('f'),
-            '\n' => buf.push('n'),
-            '\r' => buf.push('r'),
-            '\t' => buf.push('t'),
-            '\\' | '\"' | '$' => buf.push(c),
+            '\x08' => f.write_char('b')?,
+            '\x0C' => f.write_char('f')?,
+            '\n' => f.write_char('n')?,
+            '\r' => f.write_char('r')?,
+            '\t' => f.write_char('t')?,
+            '\\' | '\"' | '$' => f.write_char(c)?,
             _ => {
-                write!(buf, "u{:04x}", c as usize)?;
+                write!(f, "u{:04x}", c as usize)?;
             }
         };
     } else {
-        buf.push(c);
+        f.write_char(c)?;
     }
     Ok(())
 }
 
-pub fn escape_str_no_escape_unicode(c: char, buf: &mut String) -> fmt::Result {
+pub fn escape_str_no_escape_unicode(c: char, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     if c < ' ' || c == '"' || c == '\\' {
-        buf.push('\\');
+        f.write_char('\\')?;
         match c {
-            '\n' => buf.push('n'),
-            '\r' => buf.push('r'),
-            '\t' => buf.push('t'),
-            '"' => buf.push('"'),
-            '\\' => buf.push('\\'),
+            '\n' => f.write_char('n')?,
+            '\r' => f.write_char('r')?,
+            '\t' => f.write_char('t')?,
+            '"' => f.write_char('"')?,
+            '\\' => f.write_char('\\')?,
             _ => {
-                write!(buf, "u{:04x}", c as usize)?;
+                write!(f, "u{:04x}", c as usize)?;
             }
         };
     } else {
-        buf.push(c);
+        f.write_char(c)?;
     }
     Ok(())
 }
 
-pub fn escape_str_escape_unicode(c: char, buf: &mut String) -> fmt::Result {
+pub fn escape_str_escape_unicode(c: char, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     if c < ' ' || c == '"' || c == '\\' {
-        buf.push('\\');
+        f.write_char('\\')?;
         match c {
-            '\n' => buf.push('n'),
-            '\r' => buf.push('r'),
-            '\t' => buf.push('t'),
-            '"' => buf.push('"'),
-            '\\' => buf.push('\\'),
+            '\n' => f.write_char('n')?,
+            '\r' => f.write_char('r')?,
+            '\t' => f.write_char('t')?,
+            '"' => f.write_char('"')?,
+            '\\' => f.write_char('\\')?,
             _ => {
-                write!(buf, "u{:04x}", c as usize)?;
+                write!(f, "u{:04x}", c as usize)?;
             }
         };
     } else {
         if c > '\x7F' {
-            write!(buf, "\\u{:04x}", c as usize)?;
+            write!(f, "\\u{:04x}", c as usize)?;
         } else {
-            buf.push(c);
+            f.write_char(c)?;
         }
     }
     Ok(())

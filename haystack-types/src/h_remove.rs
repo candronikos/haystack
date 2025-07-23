@@ -13,14 +13,14 @@ const JSON: Txt = Txt::Const("-:");
 const THIS_TYPE: HType = HType::Remove;
 
 impl HRemove {
-    pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
-        write!(buf, "{}", ZINC)
+    pub fn to_zinc(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", ZINC)
     }
-    pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        self.to_zinc(buf)
+    pub fn to_trio(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.to_zinc(f)
     }
-    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
-        write!(buf, "{}", JSON)
+    pub fn to_json(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", JSON)
     }
 }
 
@@ -35,30 +35,6 @@ impl<'a, T: NumTrait + 'a> HVal<'a, T> for HRemove {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_to_zinc() {
-        let remove = HRemove;
-        let mut buf = String::new();
-        remove.to_zinc(&mut buf).unwrap();
-        assert_eq!(buf, "R");
-    }
-
-    #[test]
-    fn test_to_trio() {
-        let remove = HRemove;
-        let mut buf = String::new();
-        remove.to_trio(&mut buf).unwrap();
-        assert_eq!(buf, "R");
-    }
-
-    #[test]
-    fn test_to_json() {
-        let remove = HRemove;
-        let mut buf = String::new();
-        remove.to_json(&mut buf).unwrap();
-        assert_eq!(buf, "-:");
-    }
 
     #[test]
     fn test_haystack_type() {

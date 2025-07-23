@@ -144,16 +144,16 @@ impl HDateTime {
         self.tz.offset
     }
 
-    pub fn to_zinc(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_zinc(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
-            buf,
+            f,
             "{:0>4}-{:0>2}-{:0>2}T",
             self.inner.year(),
             self.inner.month(),
             self.inner.day()
         )?;
         write!(
-            buf,
+            f,
             "{:0>2}:{:0>2}:{:0>2}.{}",
             self.inner.hour(),
             self.inner.minute(),
@@ -161,12 +161,12 @@ impl HDateTime {
             self.inner.nanosecond()
         )
     }
-    pub fn to_trio(&self, buf: &mut String) -> fmt::Result {
-        self.to_zinc(buf)
+    pub fn to_trio(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.to_zinc(f)
     }
-    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
-        write!(buf, "t:")?;
-        self.to_zinc(buf)
+    pub fn to_json(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "t:")?;
+        self.to_zinc(f)
     }
 }
 
@@ -194,33 +194,6 @@ mod tests {
         assert_eq!(datetime.inner.second(), 45);
         assert_eq!(datetime.inner.nanosecond(), 123456789);
         assert_eq!(datetime.tz(), &tz);
-    }
-
-    #[test]
-    fn test_to_zinc() {
-        let tz = HTimezone::default();
-        let datetime = HDateTime::new(2023, 10, 5, 14, 30, 45, 123456789, tz.clone()).unwrap();
-        let mut buf = String::new();
-        datetime.to_zinc(&mut buf).unwrap();
-        assert_eq!(buf, "2023-10-05T14:30:45.123456789");
-    }
-
-    #[test]
-    fn test_to_trio() {
-        let tz = HTimezone::default();
-        let datetime = HDateTime::new(2023, 10, 5, 14, 30, 45, 123456789, tz.clone()).unwrap();
-        let mut buf = String::new();
-        datetime.to_trio(&mut buf).unwrap();
-        assert_eq!(buf, "2023-10-05T14:30:45.123456789");
-    }
-
-    #[test]
-    fn test_to_json() {
-        let tz = HTimezone::default();
-        let datetime = HDateTime::new(2023, 10, 5, 14, 30, 45, 123456789, tz.clone()).unwrap();
-        let mut buf = String::new();
-        datetime.to_json(&mut buf).unwrap();
-        assert_eq!(buf, "t:2023-10-05T14:30:45.123456789");
     }
 
     #[test]

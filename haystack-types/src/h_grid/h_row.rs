@@ -57,19 +57,19 @@ impl<'a, T: NumTrait + 'a> HRow<'a, T> {
         }
     }
 
-    pub fn to_zinc<'b>(&self, buf: &'b mut String) -> fmt::Result {
+    pub fn to_zinc<'b>(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if !self.cols.is_empty() {
             let mut iter = self.cols.iter().enumerate().peekable();
             while let Some((idx, _c)) = iter.next() {
                 match self.inner.upgrade().unwrap().get(idx) {
                     Some(v) => match v {
-                        Some(v) => v.to_zinc(buf),
+                        Some(v) => v.to_zinc(f),
                         _ => Ok(()),
                     },
                     None => Ok(()),
                 }?;
                 if let Some(_) = iter.peek() {
-                    write!(buf, ",")?;
+                    write!(f, ",")?;
                 }
             }
         }
@@ -77,7 +77,7 @@ impl<'a, T: NumTrait + 'a> HRow<'a, T> {
         Ok(())
     }
 
-    pub fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result {
+    pub fn to_trio<'b>(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let col_index = self.col_index.upgrade().unwrap();
 
         if !col_index.is_empty() {
@@ -85,7 +85,7 @@ impl<'a, T: NumTrait + 'a> HRow<'a, T> {
             while let Some((idx, _c)) = iter.next() {
                 match self.inner.upgrade().unwrap().get(idx) {
                     Some(v) => match v {
-                        Some(v) => v.to_trio(buf),
+                        Some(v) => v.to_trio(f),
                         _ => Ok(()),
                     },
                     None => Ok(()),
@@ -96,22 +96,22 @@ impl<'a, T: NumTrait + 'a> HRow<'a, T> {
         Ok(())
     }
 
-    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
-        write!(buf, "{{")?;
+    pub fn to_json(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{{")?;
         let mut iter = self.cols.iter().enumerate().peekable();
 
         while let Some((idx, c)) = iter.next() {
             if let Some(v) = self.inner.upgrade().unwrap().get(idx) {
                 if let Some(v) = v {
-                    write!(buf, "\"{}\":", c.name)?;
-                    v.to_json(buf)?;
+                    write!(f, "\"{}\":", c.name)?;
+                    v.to_json(f)?;
                     if iter.peek().is_some() {
-                        write!(buf, ",")?;
+                        write!(f, ",")?;
                     }
                 }
             }
         }
-        write!(buf, "}}")
+        write!(f, "}}")
     }
 }
 

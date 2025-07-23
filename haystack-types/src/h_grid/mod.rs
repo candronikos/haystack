@@ -331,87 +331,93 @@ impl<'a, T: NumTrait + 'a> HGrid<'a, T> {
     pub fn as_ref(&self) -> &Self {
         self
     }
-    pub fn to_zinc<'b>(&self, buf: &'b mut String) -> fmt::Result {
+    pub fn to_zinc<'b>(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             HGrid::Grid { meta, rows, .. } => {
-                write!(buf, "ver:\"3.0\" ")?;
+                write!(f, "ver:\"3.0\" ")?;
                 if !meta.borrow().is_empty() {
                     let meta_borrow = meta.borrow();
                     let mut iter = meta_borrow.iter().peekable();
                     while let Some((k, v)) = iter.next() {
-                        write!(buf, " {}", k.as_str())?;
+                        write!(f, " {}", k.as_str())?;
                         match v.haystack_type() {
                             HType::Marker => (),
                             _ => {
-                                write!(buf, ":")?;
-                                v.to_zinc(buf)?;
+                                write!(f, ":")?;
+                                v.to_zinc(f)?;
                             }
                         };
                     }
                 }
-                write!(buf, "\n")?;
+                write!(f, "\n")?;
 
                 let mut iter = self.iter_cols().peekable();
                 while let Some(c) = iter.next() {
-                    let () = c.to_zinc(buf)?;
+                    let () = c.to_zinc(f)?;
                     if let Some(_) = iter.peek() {
-                        write!(buf, ", ")?;
+                        write!(f, ", ")?;
                     }
                 }
 
-                write!(buf, "\n")?;
+                write!(f, "\n")?;
 
                 let mut iter = self.iter();
                 while let Some(r) = iter.next() {
-                    r.to_zinc(buf)?;
-                    write!(buf, "\n")?;
+                    r.to_zinc(f)?;
+                    write!(f, "\n")?;
                 }
                 Ok(())
             }
             HGrid::Error { dis, errTrace } => {
                 //write!(buf,"ver:\"3.0\" err dis:{} errTrace:{}\nempty",dis,HStr(errTrace.toString))?;
-                write!(buf, "ver:\"3.0\" err dis:")?;
-                ZincWriter::<f64>::to_zinc(&HStr(dis.to_string()), buf)?;
+                write!(
+                    f,
+                    "ver:\"3.0\" err dis:{}",
+                    ZincWriter::new(&HStr(dis.to_string()))
+                )?;
 
                 if let Some(errTrace) = errTrace {
-                    write!(buf, " errTrace:")?;
-                    ZincWriter::<f64>::to_zinc(&HStr(errTrace.to_string()), buf)?;
+                    write!(
+                        f,
+                        " errTrace:{}",
+                        ZincWriter::new(&HStr(errTrace.to_owned()))
+                    )?;
                 }
-                write!(buf, "\nempty\n")
+                write!(f, "\nempty\n")
             }
             HGrid::Empty { meta } => {
-                write!(buf, "ver:\"3.0\"")?;
+                write!(f, "ver:\"3.0\"")?;
 
                 if let Some(meta) = meta {
                     if !meta.is_empty() {
                         let mut iter = meta.iter().peekable();
                         while let Some((k, v)) = iter.next() {
-                            write!(buf, " {}", k.as_str())?;
+                            write!(f, " {}", k.as_str())?;
                             match v.haystack_type() {
                                 HType::Marker => (),
                                 _ => {
-                                    write!(buf, ":")?;
-                                    v.to_zinc(buf)?;
+                                    write!(f, ":")?;
+                                    v.to_zinc(f)?;
                                 }
                             };
                         }
                     }
                 }
 
-                write!(buf, "\nempty\n")
+                write!(f, "\nempty\n")
             }
         }
     }
 
-    pub fn to_trio<'b>(&self, buf: &'b mut String) -> fmt::Result {
+    pub fn to_trio<'b>(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             HGrid::Grid { .. } => {
                 let mut row_iter = self.iter().peekable();
 
                 while let Some(row) = row_iter.next() {
-                    row.to_trio(buf)?;
+                    row.to_trio(f)?;
                     if row_iter.peek().is_some() {
-                        write!(buf, "---\n")?;
+                        write!(f, "---\n")?;
                     }
                 }
             }
@@ -420,52 +426,52 @@ impl<'a, T: NumTrait + 'a> HGrid<'a, T> {
         Ok(())
     }
 
-    pub fn to_json(&self, buf: &mut String) -> fmt::Result {
+    pub fn to_json(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             HGrid::Grid { meta, cols, .. } => {
-                write!(buf, "{{\n")?;
-                write!(buf, "  \"meta\": {{\"ver\":\"3.0\"")?;
+                write!(f, "{{\n")?;
+                write!(f, "  \"meta\": {{\"ver\":\"3.0\"")?;
                 self.meta().iter().try_for_each(|(k, v)| {
-                    write!(buf, ", \"{}\":\"", k)?;
-                    v.to_json(buf)?;
-                    write!(buf, "\"")
+                    write!(f, ", \"{}\":\"", k)?;
+                    v.to_json(f)?;
+                    write!(f, "\"")
                 })?;
-                write!(buf, "}},\n")?;
+                write!(f, "}},\n")?;
 
-                write!(buf, "  \"cols\": [\n")?;
+                write!(f, "  \"cols\": [\n")?;
                 let mut cols_iter = self.iter_cols().enumerate();
                 let num_cols = cols.len();
                 cols_iter.try_for_each(|(i, c)| {
                     let col_meta = c.meta();
-                    write!(buf, "{{\"name\":\"{}\"", c.name)?;
+                    write!(f, "{{\"name\":\"{}\"", c.name)?;
                     let mut col_meta_iter = col_meta.iter().enumerate();
                     col_meta_iter.try_for_each(|(j, (k, v))| {
-                        write!(buf, ", \"{}\":\"", k)?;
-                        v.to_json(buf)?;
-                        write!(buf, "\"")?;
+                        write!(f, ", \"{}\":\"", k)?;
+                        v.to_json(f)?;
+                        write!(f, "\"")?;
                         Ok(())
                     })?;
-                    write!(buf, "}}")?;
+                    write!(f, "}}")?;
                     if i + 1 < num_cols {
-                        write!(buf, ",")?;
+                        write!(f, ",")?;
                     }
                     Ok(())
                 })?;
-                write!(buf, "],\n")?;
+                write!(f, "],\n")?;
 
-                write!(buf, "  \"rows\": [\n")?;
+                write!(f, "  \"rows\": [\n")?;
                 let mut row_iter = self.iter().enumerate();
                 let num_rows = self.len();
                 row_iter.try_for_each(|(i, r)| {
-                    r.to_json(buf)?;
+                    r.to_json(f)?;
                     if i + 1 < num_rows {
-                        write!(buf, ",")?;
+                        write!(f, ",")?;
                     }
                     Ok(())
                 })?;
-                write!(buf, "],\n")?;
+                write!(f, "],\n")?;
 
-                write!(buf, "}},\n")?;
+                write!(f, "}},\n")?;
             }
             _ => {}
         }
@@ -603,7 +609,7 @@ mod tests {
 
         let mut buf = String::new();
         {
-            grid.to_zinc(&mut buf).unwrap();
+            write!(buf, "{}", ZincWriter::new(&grid)).unwrap();
         }
         println!("GRID\n{}", buf);
     }

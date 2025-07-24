@@ -1,5 +1,5 @@
 package = "haystack"
-version = "dev-2"
+version = "dev-3"
 source = {
    url = "git+https://github.com/candronikos/haystack",
    branch = "master",
@@ -34,7 +34,7 @@ build = {
    build_command = [[
       cd haystack-lua && 
       LUA_FEATURE="lua$(LUA_VERSION | sed 's/\.//')" &&
-      cargo build --release --features $LUA_FEATURE &&
+      cargo build --release --features $LUA_FEATURE --no-default-features &&
       cp target/release/libhaystack_lua.so haystack.so
    ]],
    install_command = [[

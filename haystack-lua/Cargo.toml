@@ -10,6 +10,8 @@ crate-type = ["cdylib", "rlib"]
 name = "haystack_lua"
 
 [features]
+default = ["lua54"]
+
 lua54        = ["mlua_54", "lua"]
 lua53        = ["mlua_53", "lua"]
 lua52        = ["mlua_52", "lua"]

@@ -89,8 +89,8 @@ jobs:
           args: "--locked --release --package haystack-lua --no-default-features --features ${{ matrix.lua_version.feature }}"
           strip: true
 
-      # Run tests
-      - name: Run tests
+      # Set lua version
+      - name: Set lua version
         uses: leafo/gh-actions-lua@v11
         with:
           luaVersion: ${{ matrix.lua_version.version }}
@@ -100,7 +100,18 @@ jobs:
       - name: Install test dependencies
         run: |
           luarocks install luaunit
-          luarocks make
+      
+      - name: Move lua library to test directory
+        run: |
+          cp target/${{ matrix.platform.target }}/release/haystack-lua${{ matrix.platform.ext || '' }} haystack-lua/test/lua/haystack.so
+        shell: bash
+
+      # Run tests
+      - name: Run tests
+        run: |
+          cd haystack-lua/test/lua
+          lua test.lua
+        shell: bash
 
       # Upload release binary
       - name: Upload release binary

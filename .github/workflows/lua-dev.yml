@@ -17,19 +17,21 @@ jobs:
           - os-name: x86_64-unknown-linux-gnu
             runs-on: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+            test: true
             ext: .so
             
           - os-name: aarch64-apple-darwin
             runs-on: macos-latest
             target: aarch64-apple-darwin
+            test: true
             ext: .dylib
             target-ext: .so
 
-          # - os-name: x86_64-apple-darwin
-          #   runs-on: macos-latest
-          #   target: x86_64-apple-darwin
-          #   ext: .dylib
-          #   target-ext: .so
+          - os-name: x86_64-apple-darwin
+            runs-on: macos-latest
+            target: x86_64-apple-darwin
+            ext: .dylib
+            target-ext: .so
 
           - os-name: aarch64-unknown-linux-gnu
             runs-on: ubuntu-latest
@@ -45,6 +47,7 @@ jobs:
           - os-name: x86_64-pc-windows-msvc
             runs-on: windows-latest
             target: x86_64-pc-windows-msvc
+            test: true
             ext: .dll
 
           - os-name: i686-pc-windows-msvc
@@ -100,12 +103,15 @@ jobs:
         # Set lua version
       - name: Set lua version
         uses: leafo/gh-actions-lua@v11
+        if: matrix.platform.test == true
         with:
           luaVersion: ${{ matrix.lua_version.version }}
 
       - uses: leafo/gh-actions-luarocks@v4
+        if: matrix.platform.test == true
       
       - name: Install test dependencies
+        if: matrix.platform.test == true
         run: |
           luarocks install luaunit
       
@@ -115,6 +121,7 @@ jobs:
         shell: bash
       
       - name: Move lua library to test directory
+        if: matrix.platform.test == true
         run: |
           cp target/${{ matrix.platform.target }}/release/libhaystack_lua${{ matrix.platform.ext || '' }} haystack-lua/tests/lua/haystack${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
         shell: bash
@@ -126,6 +133,7 @@ jobs:
 
       # Run tests
       - name: Run tests
+        if: matrix.platform.test == true
         run: |
           cd haystack-lua/tests/lua
           lua test.lua

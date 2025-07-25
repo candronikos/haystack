@@ -98,7 +98,7 @@ jobs:
           strip: true
 
       - uses: ilammy/msvc-dev-cmd@v1
-        if: matrix.platform.test && (matrix.platform.os-name == 'x86_64-pc-windows-msvc' || matrix.platform.os-name == 'i686-pc-windows-msvc')
+        if: matrix.platform.test == true
       
         # Set lua version
       - name: Set lua version

@@ -109,7 +109,7 @@ jobs:
       # Run tests
       - name: Run tests
         run: |
-          cd haystack-lua/test/lua
+          cd haystack-lua/tests/lua
           lua test.lua
         shell: bash
 

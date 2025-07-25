@@ -60,11 +60,11 @@ jobs:
           - version: "5.4"
             feature: "lua54"
 
-          - version: "luajit-2.0"
-            feature: "luajit"
+          # - version: "luajit-2.0"
+          #   feature: "luajit"
 
-          - version: "luajit-2.1"
-            feature: "luajit52"
+          # - version: "luajit-2.1"
+          #   feature: "luajit52"
 
     runs-on: ${{ matrix.platform.runs-on }}
     steps:

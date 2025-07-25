@@ -19,13 +19,15 @@ jobs:
             target: x86_64-unknown-linux-gnu
             ext: .so
             
-          # - os-name: aarch64-apple-darwin
-          #   runs-on: macos-latest
-          #   target: aarch64-apple-darwin
+          - os-name: aarch64-apple-darwin
+            runs-on: macos-latest
+            target: aarch64-apple-darwin
+            ext: .dylib
 
-          # - os-name: x86_64-apple-darwin
-          #   runs-on: macos-latest
-          #   target: x86_64-apple-darwin
+          - os-name: x86_64-apple-darwin
+            runs-on: macos-latest
+            target: x86_64-apple-darwin
+            ext: .dylib
 
           # - os-name: aarch64-unknown-linux-gnu
           #   runs-on: ubuntu-latest
@@ -117,6 +119,6 @@ jobs:
       - name: Upload release binary
         uses: actions/upload-artifact@v4
         with:
-          name: haystack-lua-${{ matrix.lua_version.feature }}-v${{ env.VERSION }}-${{ matrix.platform.target }}${{ matrix.platform.ext || '' }}
+          name: haystack-${{ matrix.lua_version.version }}-v${{ env.VERSION }}-${{ matrix.platform.target }}${{ matrix.platform.ext || '' }}
           path: haystack-lua/tests/lua/haystack${{ matrix.platform.ext || '' }}
           if-no-files-found: error

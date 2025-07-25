@@ -121,7 +121,6 @@ jobs:
         shell: bash
       
       - name: Move lua library to test directory
-        if: matrix.platform.test == true
         run: |
           cp target/${{ matrix.platform.target }}/release/libhaystack_lua${{ matrix.platform.ext || '' }} haystack-lua/tests/lua/haystack${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
         shell: bash

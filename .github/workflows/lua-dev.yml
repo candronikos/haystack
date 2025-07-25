@@ -93,7 +93,10 @@ jobs:
           args: "--locked --release --package haystack-lua --no-default-features --features ${{ matrix.lua_version.feature }}"
           strip: true
 
-      # Set lua version
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: matrix.platform.os-name == 'x86_64-pc-windows-msvc' || matrix.platform.os-name == 'i686-pc-windows-msvc'
+      
+        # Set lua version
       - name: Set lua version
         uses: leafo/gh-actions-lua@v11
         with:

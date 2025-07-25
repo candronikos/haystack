@@ -8,7 +8,9 @@
   To run the tests ensure `luaunit` is installed and use the command:
   lua haystack-types/tests/lua/test.lua
 --]]
-  
+
+package.cpath = "./?.so;./?.dylib;" .. package.cpath
+
 local lu = require('luaunit')
 hs = require("haystack")
 

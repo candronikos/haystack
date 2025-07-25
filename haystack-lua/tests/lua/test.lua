@@ -131,6 +131,7 @@ TestNumber = {}
     lu.assertEquals(self.obj[3].unit, "kWh")
     lu.assertEquals(self.obj[4].value, 2.5)
     lu.assertEquals(self.obj[4].unit, "kW")
+    lu.assertEquals(1, 0)
   end
 
 os.exit( lu.LuaUnit.run() )

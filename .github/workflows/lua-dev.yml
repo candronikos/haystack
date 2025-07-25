@@ -118,6 +118,11 @@ jobs:
         run: |
           cp target/${{ matrix.platform.target }}/release/libhaystack_lua${{ matrix.platform.ext || '' }} haystack-lua/tests/lua/haystack${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
         shell: bash
+      
+      - name: List files in test directory
+        run: |
+          ls haystack-lua/tests/lua/
+        shell: bash
 
       # Run tests
       - name: Run tests

@@ -1,12 +1,12 @@
-name: Release for all platforms
+name: Release Lua module for all platforms
 
 on:
   push:
     branches:
-      - master
+      - actions
   pull_request:
     branches:
-      - master
+      - actions
 
 jobs:
   release:
@@ -17,6 +17,7 @@ jobs:
           - os-name: x86_64-unknown-linux-gnu
             runs-on: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+            ext: .so
             
           - os-name: aarch64-apple-darwin
             runs-on: macos-latest
@@ -29,20 +30,41 @@ jobs:
           - os-name: aarch64-unknown-linux-gnu
             runs-on: ubuntu-latest
             target: aarch64-unknown-linux-gnu
+            ext: .so
 
           - os-name: i686-unknown-linux-gnu
             runs-on: ubuntu-latest
             target: i686-unknown-linux-gnu
+            ext: .so
 
           - os-name: x86_64-pc-windows-msvc
             runs-on: windows-latest
             target: x86_64-pc-windows-msvc
-            ext: .exe
+            ext: .dll
 
           - os-name: i686-pc-windows-msvc
             runs-on: windows-latest
             target: i686-pc-windows-msvc
-            ext: .exe
+            ext: .dll
+        
+        lua_version:
+          - version: "5.1"
+            feature: "lua51"
+
+          - version: "5.2"
+            feature: "lua52"
+
+          - version: "5.3"
+            feature: "lua53"
+
+          - version: "5.4"
+            feature: "lua54"
+
+          - version: "luajit-2.0"
+            feature: "luajit"
+
+          - version: "luajit-2.1"
+            feature: "luajit52"
 
     runs-on: ${{ matrix.platform.runs-on }}
     steps:
@@ -51,10 +73,10 @@ jobs:
         uses: actions/checkout@v4
 
       # Extract version from Cargo.toml
-      - name: Get haystack-client version
+      - name: Get haystack-lua version
         id: get-version
         run: |
-          VERSION=$(cargo metadata -q --format-version 1 --no-deps | jq -r '.packages[] | select(.name == "haystack-client") | .version')
+          VERSION=$(cargo metadata -q --format-version 1 --no-deps | jq -r '.packages[] | select(.name == "haystack-lua") | .version')
           echo "VERSION=$VERSION" >> $GITHUB_ENV
         shell: bash
 
@@ -64,13 +86,26 @@ jobs:
         with:
           command: build
           target: ${{ matrix.platform.target }}
-          args: "--locked --release --package haystack-client"
+          args: "--locked --release --package haystack-lua --no-default-features --features ${{ matrix.lua_version.feature }}"
           strip: true
+
+      # Run tests
+      - name: Run tests
+        uses: leafo/gh-actions-lua@v11
+        with:
+          luaVersion: ${{ matrix.lua_version.version }}
+
+      - uses: leafo/gh-actions-luarocks@v4
+      
+      - name: Install test dependencies
+        run: |
+          luarocks install luaunit
+          luarocks make
 
       # Upload release binary
       - name: Upload release binary
         uses: actions/upload-artifact@v4
         with:
-          name: haystack-client-v${{ env.VERSION }}-${{ matrix.platform.target }}${{ matrix.platform.ext || '' }}
-          path: target/${{ matrix.platform.target }}/release/haystack-client${{ matrix.platform.ext || '' }}
+          name: haystack-lua-v${{ env.VERSION }}-${{ matrix.platform.target }}${{ matrix.platform.ext || '' }}
+          path: target/${{ matrix.platform.target }}/release/haystack-lua${{ matrix.platform.ext || '' }}
           if-no-files-found: error

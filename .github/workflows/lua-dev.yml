@@ -103,7 +103,7 @@ jobs:
       
       - name: Move lua library to test directory
         run: |
-          cp target/${{ matrix.platform.target }}/release/haystack-lua${{ matrix.platform.ext || '' }} haystack-lua/test/lua/haystack.so
+          cp target/${{ matrix.platform.target }}/release/libhaystack_lua${{ matrix.platform.ext || '' }} haystack-lua/test/lua/haystack.so
         shell: bash
 
       # Run tests
@@ -118,5 +118,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: haystack-lua-v${{ env.VERSION }}-${{ matrix.platform.target }}${{ matrix.platform.ext || '' }}
-          path: target/${{ matrix.platform.target }}/release/haystack-lua${{ matrix.platform.ext || '' }}
+          path: target/${{ matrix.platform.target }}/release/libhaystack_lua${{ matrix.platform.ext || '' }}
           if-no-files-found: error

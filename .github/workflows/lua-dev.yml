@@ -103,7 +103,7 @@ jobs:
       
       - name: Move lua library to test directory
         run: |
-          cp target/${{ matrix.platform.target }}/release/libhaystack_lua${{ matrix.platform.ext || '' }} haystack-lua/test/lua/haystack.so
+          cp target/${{ matrix.platform.target }}/release/libhaystack_lua${{ matrix.platform.ext || '' }} haystack-lua/tests/lua/haystack.so
         shell: bash
 
       # Run tests

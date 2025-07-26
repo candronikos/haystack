@@ -10,7 +10,7 @@ on:
 
 jobs:
   release:
-    name: Release - ${{ matrix.platform.os-name }}
+    name: Release - ${{ matrix.lua_version.version }} - ${{ matrix.platform.os-name }}
     strategy:
       matrix:
         platform:

@@ -91,18 +91,18 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
         shell: bash
 
+      - uses: ilammy/msvc-dev-cmd@v1
+        # if: matrix.platform.test == true
+
       # Build project
       - name: Build binary
         uses: houseabsolute/actions-rust-cross@v1
         with:
           command: build
-          rust-cache-parameters: "{\"key\": \"${{ matrix.platform.target }}\"}"
+          #rust-cache-parameters: "{\"key\": \"${{ matrix.platform.target }}\"}"
           target: ${{ matrix.platform.target }}
           args: "--locked --release --package haystack-lua --no-default-features --features ${{ matrix.lua_version.feature }}"
           strip: true
-
-      - uses: ilammy/msvc-dev-cmd@v1
-        if: matrix.platform.test == true
       
         # Set lua version
       - name: Set lua version

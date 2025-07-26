@@ -59,8 +59,8 @@ jobs:
             ext: .dll
         
         lua_version:
-          - version: "5.1"
-            feature: "lua51"
+          #- version: "5.1"
+          #  feature: "lua51"
 
           # - version: "5.2"
           #   feature: "lua52"
@@ -109,9 +109,6 @@ jobs:
         if: matrix.platform.test == true
         with:
           luaVersion: ${{ matrix.lua_version.version }}
-
-      - uses: ilammy/msvc-dev-cmd@v1
-        if: matrix.platform.test == true
 
       - uses: leafo/gh-actions-luarocks@v4
         if: matrix.platform.test == true

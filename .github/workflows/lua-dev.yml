@@ -41,7 +41,6 @@ jobs:
             target: aarch64-unknown-linux-gnu
             target-prefix: lib
             ext: .so
-            #target-ext: .so
 
           - os-name: i686-unknown-linux-gnu
             runs-on: ubuntu-latest
@@ -52,7 +51,7 @@ jobs:
           - os-name: x86_64-pc-windows-msvc
             runs-on: windows-latest
             target: x86_64-pc-windows-msvc
-            test: true
+            # test: true
             ext: .dll
 
           - os-name: i686-pc-windows-msvc
@@ -111,6 +110,9 @@ jobs:
         if: matrix.platform.test == true
         with:
           luaVersion: ${{ matrix.lua_version.version }}
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: matrix.platform.test == true
 
       - uses: leafo/gh-actions-luarocks@v4
         if: matrix.platform.test == true

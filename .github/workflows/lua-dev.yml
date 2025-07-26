@@ -21,13 +21,13 @@ jobs:
             test: true
             ext: .so
             
-          # - os-name: aarch64-apple-darwin
-          #   runs-on: macos-latest
-          #   target: aarch64-apple-darwin
-          #   target-prefix: lib
-          #   test: true
-          #   ext: .dylib
-          #   target-ext: .so
+          - os-name: aarch64-apple-darwin
+            runs-on: macos-latest
+            target: aarch64-apple-darwin
+            target-prefix: lib
+            test: true
+            ext: .dylib
+            target-ext: .so
 
           # - os-name: x86_64-apple-darwin
           #   runs-on: macos-latest

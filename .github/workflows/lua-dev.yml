@@ -96,6 +96,7 @@ jobs:
         uses: houseabsolute/actions-rust-cross@v1
         with:
           command: build
+          rust-cache-parameters: "{\"key\": ${{ matrix.platform.target }}}"
           target: ${{ matrix.platform.target }}
           args: "--locked --release --package haystack-lua --no-default-features --features ${{ matrix.lua_version.feature }}"
           strip: true

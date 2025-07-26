@@ -53,10 +53,10 @@ jobs:
             target: x86_64-pc-windows-msvc
             ext: .dll
 
-          - os-name: i686-pc-windows-msvc
-            runs-on: windows-latest
-            target: i686-pc-windows-msvc
-            ext: .dll
+          # - os-name: i686-pc-windows-msvc
+          #   runs-on: windows-latest
+          #   target: i686-pc-windows-msvc
+          #   ext: .dll
         
         lua_version:
           - version: "5.1"

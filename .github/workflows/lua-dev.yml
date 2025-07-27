@@ -87,7 +87,7 @@ jobs:
           args: "--locked --package haystack-types"
         
   build-lua:
-    name: Haystack Lua - ${{ matrix.lua_version.version }} - ${{ matrix.platform.os-name }}
+    name: Haystack Lua - ${{ matrix.lua.version }} - ${{ matrix.platform.os-name }}
     #needs: build-types
     strategy:
       matrix:
@@ -136,7 +136,7 @@ jobs:
             target: i686-pc-windows-msvc
             ext: .dll
 
-        lua_version:
+        lua:
           # - version: "5.1"
           #   feature: "lua51"
 
@@ -179,9 +179,10 @@ jobs:
           command: build
           use-rust-cache: false
           force-use-cross: ${{ matrix.platform.runs-on == 'ubuntu-latest'}}
-          #rust-cache-parameters: "{\"key\": \"${{ matrix.platform.feature }}-${{ matrix.platform.target }}\"}"
+          # rust-cache-parameters: "{\"key\": \"${{ matrix.platform.feature }}-${{ matrix.platform.target }}\"}"
           target: ${{ matrix.platform.target }}
-          args: "--locked --release --package haystack-lua --no-default-features --target-dir target/${{ matrix.lua_version.version }} --features ${{ matrix.lua_version.feature }}"
+          #args: "--locked --release --package haystack-lua --no-default-features --target-dir target/${{ matrix.lua.version }} --features ${{ matrix.lua.feature }}"
+          args: "--locked --release --package haystack-lua --no-default-features --features ${{ matrix.lua.feature }}"
           strip: true
       
         # Set lua version
@@ -189,7 +190,7 @@ jobs:
         uses: leafo/gh-actions-lua@v11
         if: matrix.platform.test == true
         with:
-          luaVersion: ${{ matrix.lua_version.version }}
+          luaVersion: ${{ matrix.lua.version }}
 
       - uses: leafo/gh-actions-luarocks@v4
         if: matrix.platform.test == true
@@ -201,12 +202,12 @@ jobs:
       
       - name: List binaries in target directory
         run: |
-          ls target/${{ matrix.lua_version.version }}/${{ matrix.platform.target }}/release/
+          ls target/${{ matrix.lua.version }}/${{ matrix.platform.target }}/release/
         shell: bash
       
       - name: Move lua library to test directory
         run: |
-          cp target/${{ matrix.lua_version.version }}/${{ matrix.platform.target }}/release/${{ matrix.platform.target-prefix || '' }}haystack_lua${{ matrix.platform.ext || '' }} haystack-lua/tests/lua/haystack${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
+          cp target/${{ matrix.lua.version }}/${{ matrix.platform.target }}/release/${{ matrix.platform.target-prefix || '' }}haystack_lua${{ matrix.platform.ext || '' }} haystack-lua/tests/lua/haystack${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
         shell: bash
       
       - name: List files in test directory
@@ -226,6 +227,6 @@ jobs:
       - name: Upload release binary
         uses: actions/upload-artifact@v4
         with:
-          name: haystack-lua-${{ matrix.lua_version.version }}-v${{ env.VERSION }}-${{ matrix.platform.target }}${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
+          name: haystack-lua-${{ matrix.lua.version }}-v${{ env.VERSION }}-${{ matrix.platform.target }}${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
           path: haystack-lua/tests/lua/haystack${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
           if-no-files-found: error

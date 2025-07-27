@@ -12,7 +12,7 @@
 -- package.cpath = "./target/?/?/?.so;./?.so;./?.dylib;" .. package.cpath
 
 local lu = require('luaunit')
-hs = require("haystack")
+hs = require("haystack_lua")
 
 zinc_str = [[ver:"3.0" a s b
 a,b

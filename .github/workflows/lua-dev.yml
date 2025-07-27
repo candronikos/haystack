@@ -64,14 +64,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Extract version from Cargo.toml
-      - name: Get haystack-types version
-        id: get-version
-        run: |
-          VERSION=$(cargo metadata -q --format-version 1 --no-deps | jq -r '.packages[] | select(.name == "haystack-types") | .version')
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-        shell: bash
-
       - uses: ilammy/msvc-dev-cmd@v1
         # if: matrix.platform.test == true
 
@@ -95,7 +87,6 @@ jobs:
           #rust-cache-parameters: "{\"key\": \"${{ matrix.platform.target }}\"}"
           target: ${{ matrix.platform.target }}
           args: "--locked --release --package haystack-types"
-          strip: true
         
   build-lua:
     name: Haystack Lua - ${{ matrix.lua_version.version }} - ${{ matrix.platform.os-name }}

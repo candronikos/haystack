@@ -59,14 +59,14 @@ jobs:
             ext: .dll
         
         lua_version:
-          - version: "5.1"
-            feature: "lua51"
+          # - version: "5.1"
+          #   feature: "lua51"
 
-          - version: "5.2"
-            feature: "lua52"
+          # - version: "5.2"
+          #   feature: "lua52"
 
-          - version: "5.3"
-            feature: "lua53"
+          # - version: "5.3"
+          #   feature: "lua53"
 
           - version: "5.4"
             feature: "lua54"
@@ -99,7 +99,7 @@ jobs:
         uses: houseabsolute/actions-rust-cross@v1
         with:
           command: build
-          #force-use-cross: true
+          force-use-cross: true
           #rust-cache-parameters: "{\"key\": \"${{ matrix.platform.target }}\"}"
           target: ${{ matrix.platform.target }}
           args: "--locked --release --package haystack-lua --no-default-features --features ${{ matrix.lua_version.feature }}"

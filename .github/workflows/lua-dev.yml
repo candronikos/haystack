@@ -181,7 +181,7 @@ jobs:
           force-use-cross: ${{ matrix.platform.runs-on == 'ubuntu-latest'}}
           #rust-cache-parameters: "{\"key\": \"${{ matrix.platform.feature }}-${{ matrix.platform.target }}\"}"
           target: ${{ matrix.platform.target }}
-          args: "--locked --release --package haystack-lua --no-default-features --features ${{ matrix.lua_version.feature }}"
+          args: "--locked --release --package haystack-lua --no-default-features --target-dir target/${{ matrix.lua_version.version }} --features ${{ matrix.lua_version.feature }}"
           strip: true
       
         # Set lua version
@@ -201,12 +201,12 @@ jobs:
       
       - name: List binaries in target directory
         run: |
-          ls target/${{ matrix.platform.target }}/release/
+          ls target/${{ matrix.lua_version.version }}/${{ matrix.platform.target }}/release/
         shell: bash
       
       - name: Move lua library to test directory
         run: |
-          cp target/${{ matrix.platform.target }}/release/${{ matrix.platform.target-prefix || '' }}haystack_lua${{ matrix.platform.ext || '' }} haystack-lua/tests/lua/haystack${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
+          cp target/${{ matrix.lua_version.version }}/${{ matrix.platform.target }}/release/${{ matrix.platform.target-prefix || '' }}haystack_lua${{ matrix.platform.ext || '' }} haystack-lua/tests/lua/haystack${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
         shell: bash
       
       - name: List files in test directory

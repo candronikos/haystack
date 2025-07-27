@@ -3,10 +3,10 @@ name: Release client for all platforms
 on:
   push:
     branches:
-      - actions
+      - master
   pull_request:
     branches:
-      - actions
+      - master
 
 jobs:
   release:

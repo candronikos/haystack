@@ -7,5 +7,5 @@ pre-build = [
 [target.i686-unknown-linux-gnu]
 pre-build = [
   "dpkg --add-architecture $CROSS_DEB_ARCH",
-  "apt-get update && apt-get install --assume-yes gcc-$CROSS_DEB_ARCH-linux-gnu libssl-dev:$CROSS_DEB_ARCH"
+  "apt-get update && apt-get install --assume-yes libssl-dev:$CROSS_DEB_ARCH"
 ]

@@ -76,7 +76,6 @@ jobs:
           #rust-cache-parameters: "{\"key\": \"${{ matrix.platform.target }}\"}"
           target: ${{ matrix.platform.target }}
           args: "--locked --release --package haystack-types"
-          strip: true
 
       # Build project
       - name: Test haystack-types
@@ -86,7 +85,7 @@ jobs:
           force-use-cross: ${{ matrix.platform.runs-on == 'ubuntu-latest'}}
           #rust-cache-parameters: "{\"key\": \"${{ matrix.platform.target }}\"}"
           target: ${{ matrix.platform.target }}
-          args: "--locked --release --package haystack-types"
+          args: "--locked --package haystack-types"
         
   build-lua:
     name: Haystack Lua - ${{ matrix.lua_version.version }} - ${{ matrix.platform.os-name }}

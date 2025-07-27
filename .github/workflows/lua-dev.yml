@@ -219,8 +219,7 @@ jobs:
       - name: Run tests
         if: matrix.platform.test == true
         run: |
-          cd haystack-lua/tests/lua
-          lua test.lua
+          lua haystack-lua/tests/lua/test.lua
         shell: bash
 
       # Upload release binary
@@ -228,5 +227,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: haystack-lua-${{ matrix.lua.version }}-v${{ env.VERSION }}-${{ matrix.platform.target }}${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
-          path: haystack-lua/tests/lua/haystack${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
+          path: target/lua${{ matrix.lua.version }}/${{ matrix.platform.target }}/release/${{ matrix.platform.target-prefix || '' }}haystack_lua${{ matrix.platform.ext || '' }} haystack-lua/tests/lua/haystack${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
           if-no-files-found: error

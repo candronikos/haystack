@@ -9,7 +9,7 @@
   lua haystack-types/tests/lua/test.lua
 --]]
 
-package.cpath = "../../../target/?/?/?.so;./?.so;./?.dylib;" .. package.cpath
+package.cpath = "./target/?/?/?.so;./?.so;./?.dylib;" .. package.cpath
 
 local lu = require('luaunit')
 hs = require("haystack")

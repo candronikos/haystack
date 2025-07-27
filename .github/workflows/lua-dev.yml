@@ -219,7 +219,11 @@ jobs:
       - name: Run tests
         if: matrix.platform.test == true
         run: |
+          export LUA_CPATH="/target/lua${{ matrix.lua.version }}/${{ matrix.platform.target }}/release/${{ matrix.platform.target-prefix || '' }}haystack_lua${{ matrix.platform.ext || '' }} haystack-lua/tests/lua/haystack${{ matrix.platform.target-ext || matrix.platform.ext || '' }};$LUA_CPATH"
           lua haystack-lua/tests/lua/test.lua
+        env:
+          CUSTOM_VAR: "value"
+          ANOTHER_VAR: ${{ matrix.platform.target }}
         shell: bash
 
       # Upload release binary

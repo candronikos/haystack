@@ -59,7 +59,6 @@ jobs:
             ext: .dll
 
     runs-on: ${{ matrix.platform.runs-on }}
-
     steps:
       # Checkout the repository
       - name: Checkout code
@@ -102,8 +101,8 @@ jobs:
       - name: Upload release binary
         uses: actions/upload-artifact@v4
         with:
-          name: haystack-lua-${{ matrix.lua_version.version }}-v${{ env.VERSION }}-${{ matrix.platform.target }}${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
-          path: haystack-lua/tests/lua/haystack${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
+          name: haystack-types-v${{ env.VERSION }}-${{ matrix.platform.target }}${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
+          path: haystack-types/target/${{ matrix.platform.target }}/haystack${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
           if-no-files-found: error
         
   build-lua:

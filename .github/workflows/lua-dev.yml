@@ -202,12 +202,12 @@ jobs:
       
       - name: List binaries in target directory
         run: |
-          ls target/${{ matrix.lua.version }}/${{ matrix.platform.target }}/release/
+          ls target/${{ matrix.platform.target }}/release/
         shell: bash
       
       - name: Move lua library to test directory
         run: |
-          cp target/${{ matrix.lua.version }}/${{ matrix.platform.target }}/release/${{ matrix.platform.target-prefix || '' }}haystack_lua${{ matrix.platform.ext || '' }} haystack-lua/tests/lua/haystack${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
+          cp target/${{ matrix.platform.target }}/release/${{ matrix.platform.target-prefix || '' }}haystack_lua${{ matrix.platform.ext || '' }} haystack-lua/tests/lua/haystack${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
         shell: bash
       
       - name: List files in test directory

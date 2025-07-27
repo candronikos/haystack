@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-types:
-    name: Haystack Types - ${{ matrix.lua_version.version }} - ${{ matrix.platform.os-name }}
+    name: Haystack Types - ${{ matrix.platform.os-name }}
     strategy:
       matrix: 
         platform:
@@ -106,8 +106,9 @@ jobs:
           path: haystack-lua/tests/lua/haystack${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
           if-no-files-found: error
         
-  release:
-    name: Release - ${{ matrix.lua_version.version }} - ${{ matrix.platform.os-name }}
+  build-lua:
+    name: Haystack Lua - ${{ matrix.lua_version.version }} - ${{ matrix.platform.os-name }}
+    needs: build-types
     strategy:
       matrix:
         platform:
@@ -154,7 +155,7 @@ jobs:
             runs-on: windows-latest
             target: i686-pc-windows-msvc
             ext: .dll
-            
+
         lua_version:
           # - version: "5.1"
           #   feature: "lua51"

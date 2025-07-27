@@ -97,12 +97,18 @@ jobs:
           args: "--locked --release --package haystack-types"
           strip: true
 
+      # list files in target directory
+      - name: List files in target directory
+        run: |
+          ls target/${{ matrix.platform.target }}/release/
+        shell: bash
+
       # Upload release binary
       - name: Upload release binary
         uses: actions/upload-artifact@v4
         with:
           name: haystack-types-v${{ env.VERSION }}-${{ matrix.platform.target }}${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
-          path: haystack-types/target/${{ matrix.platform.target }}/haystack${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
+          path: target/${{ matrix.platform.target }}/haystack_types${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
           if-no-files-found: error
         
   build-lua:

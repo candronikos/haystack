@@ -8,74 +8,129 @@ on:
     branches:
       - actions
 
+x-matrix-config: &matrix-config
+  platform:
+    - os-name: x86_64-unknown-linux-gnu
+      runs-on: ubuntu-latest
+      target: x86_64-unknown-linux-gnu
+      target-prefix: lib
+      test: true
+      ext: .so
+
+    - os-name: i686-unknown-linux-gnu
+      runs-on: ubuntu-latest
+      target: i686-unknown-linux-gnu
+      target-prefix: lib
+      ext: .so
+
+    - os-name: aarch64-unknown-linux-gnu
+      runs-on: ubuntu-latest
+      target: aarch64-unknown-linux-gnu
+      target-prefix: lib
+      ext: .so
+      
+    - os-name: aarch64-apple-darwin
+      runs-on: macos-latest
+      target: aarch64-apple-darwin
+      target-prefix: lib
+      test: true
+      ext: .dylib
+      target-ext: .so
+
+    - os-name: x86_64-apple-darwin
+      runs-on: macos-latest
+      target: x86_64-apple-darwin
+      target-prefix: lib
+      ext: .dylib
+      target-ext: .so
+
+    - os-name: x86_64-pc-windows-msvc
+      runs-on: windows-latest
+      target: x86_64-pc-windows-msvc
+      ext: .dll
+
+    - os-name: i686-pc-windows-msvc
+      runs-on: windows-latest
+      target: i686-pc-windows-msvc
+      ext: .dll
+  
+  lua_version:
+    # - version: "5.1"
+    #   feature: "lua51"
+
+    # - version: "5.2"
+    #   feature: "lua52"
+
+    - version: "5.3"
+      feature: "lua53"
+
+    - version: "5.4"
+      feature: "lua54"
+
+    # - version: "luajit-2.0"
+    #   feature: "luajit"
+
+    # - version: "luajit-2.1"
+    #   feature: "luajit52"
+
 jobs:
+  build-types:
+    name: Haystack Types - ${{ matrix.lua_version.version }} - ${{ matrix.platform.os-name }}
+    strategy:
+      matrix: *matrix-config
+
+    runs-on: ${{ matrix.platform.runs-on }}
+
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Extract version from Cargo.toml
+      - name: Get haystack-types version
+        id: get-version
+        run: |
+          VERSION=$(cargo metadata -q --format-version 1 --no-deps | jq -r '.packages[] | select(.name == "haystack-types") | .version')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+        shell: bash
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        # if: matrix.platform.test == true
+
+      # Build project
+      - name: Build haystack-types
+        uses: houseabsolute/actions-rust-cross@v1
+        with:
+          command: build
+          force-use-cross: ${{ matrix.platform.runs-on == 'ubuntu-latest'}}
+          rust-cache-parameters: "{\"key\": \"${{ matrix.platform.target }}\"}"
+          target: ${{ matrix.platform.target }}
+          args: "--locked --release --package haystack-types"
+          strip: true
+
+      # Build project
+      - name: Test haystack-types
+        uses: houseabsolute/actions-rust-cross@v1
+        with:
+          command: test
+          #force-use-cross: ${{ matrix.platform.runs-on == 'ubuntu-latest'}}
+          rust-cache-parameters: "{\"key\": \"${{ matrix.platform.target }}\"}"
+          target: ${{ matrix.platform.target }}
+          args: "--locked --release --package haystack-types"
+          strip: true
+
+      # Upload release binary
+      - name: Upload release binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: haystack-lua-${{ matrix.lua_version.version }}-v${{ env.VERSION }}-${{ matrix.platform.target }}${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
+          path: haystack-lua/tests/lua/haystack${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
+          if-no-files-found: error
+        
   release:
     name: Release - ${{ matrix.lua_version.version }} - ${{ matrix.platform.os-name }}
     strategy:
-      matrix:
-        platform:
-          - os-name: x86_64-unknown-linux-gnu
-            runs-on: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            target-prefix: lib
-            test: true
-            ext: .so
-
-          - os-name: i686-unknown-linux-gnu
-            runs-on: ubuntu-latest
-            target: i686-unknown-linux-gnu
-            target-prefix: lib
-            ext: .so
-
-          - os-name: aarch64-unknown-linux-gnu
-            runs-on: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            target-prefix: lib
-            ext: .so
-            
-          - os-name: aarch64-apple-darwin
-            runs-on: macos-latest
-            target: aarch64-apple-darwin
-            target-prefix: lib
-            test: true
-            ext: .dylib
-            target-ext: .so
-
-          - os-name: x86_64-apple-darwin
-            runs-on: macos-latest
-            target: x86_64-apple-darwin
-            target-prefix: lib
-            ext: .dylib
-            target-ext: .so
-
-          - os-name: x86_64-pc-windows-msvc
-            runs-on: windows-latest
-            target: x86_64-pc-windows-msvc
-            ext: .dll
-
-          - os-name: i686-pc-windows-msvc
-            runs-on: windows-latest
-            target: i686-pc-windows-msvc
-            ext: .dll
-        
-        lua_version:
-          # - version: "5.1"
-          #   feature: "lua51"
-
-          # - version: "5.2"
-          #   feature: "lua52"
-
-          - version: "5.3"
-            feature: "lua53"
-
-          - version: "5.4"
-            feature: "lua54"
-
-          # - version: "luajit-2.0"
-          #   feature: "luajit"
-
-          # - version: "luajit-2.1"
-          #   feature: "luajit52"
+      matrix: *matrix-config
 
     runs-on: ${{ matrix.platform.runs-on }}
     steps:

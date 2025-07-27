@@ -65,8 +65,8 @@ jobs:
           # - version: "5.2"
           #   feature: "lua52"
 
-          # - version: "5.3"
-          #   feature: "lua53"
+          - version: "5.3"
+            feature: "lua53"
 
           - version: "5.4"
             feature: "lua54"

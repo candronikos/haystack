@@ -81,7 +81,7 @@ jobs:
         with:
           command: build
           force-use-cross: ${{ matrix.platform.runs-on == 'ubuntu-latest'}}
-          rust-cache-parameters: "{\"key\": \"${{ matrix.platform.target }}\"}"
+          #rust-cache-parameters: "{\"key\": \"${{ matrix.platform.target }}\"}"
           target: ${{ matrix.platform.target }}
           args: "--locked --release --package haystack-types"
           strip: true
@@ -91,8 +91,8 @@ jobs:
         uses: houseabsolute/actions-rust-cross@v1
         with:
           command: test
-          #force-use-cross: ${{ matrix.platform.runs-on == 'ubuntu-latest'}}
-          rust-cache-parameters: "{\"key\": \"${{ matrix.platform.target }}\"}"
+          force-use-cross: ${{ matrix.platform.runs-on == 'ubuntu-latest'}}
+          #rust-cache-parameters: "{\"key\": \"${{ matrix.platform.target }}\"}"
           target: ${{ matrix.platform.target }}
           args: "--locked --release --package haystack-types"
           strip: true

@@ -179,7 +179,7 @@ jobs:
           # use-rust-cache: false
           force-use-cross: true
           # force-use-cross: ${{ matrix.platform.runs-on == 'ubuntu-latest'}}
-          # rust-cache-parameters: "{\"key\": \"${{ matrix.platform.feature }}-${{ matrix.platform.target }}\"}"
+          rust-cache-parameters: "{\"key\": \"${{ matrix.platform.feature }}-${{ matrix.platform.target }}\"}"
           target: ${{ matrix.platform.target }}
           args: "--locked --release --package haystack-lua --no-default-features --target-dir target/lua${{ matrix.lua.version }} --features ${{ matrix.lua.feature }}"
           #args: "--locked --release --package haystack-lua --no-default-features --features ${{ matrix.lua.feature }}"

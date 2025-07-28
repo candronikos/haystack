@@ -176,7 +176,7 @@ jobs:
         uses: houseabsolute/actions-rust-cross@v1
         with:
           command: build
-          use-rust-cache: false
+          # use-rust-cache: false
           force-use-cross: true
           # force-use-cross: ${{ matrix.platform.runs-on == 'ubuntu-latest'}}
           # rust-cache-parameters: "{\"key\": \"${{ matrix.platform.feature }}-${{ matrix.platform.target }}\"}"

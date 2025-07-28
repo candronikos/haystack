@@ -9,132 +9,131 @@ on:
       - actions
 
 jobs:
-  # build-types:
-  #   name: Haystack Types - ${{ matrix.platform.os-name }}
-  #   strategy:
-  #     matrix: 
-  #       platform:
-  #         - os-name: x86_64-unknown-linux-gnu
-  #           runs-on: ubuntu-latest
-  #           target: x86_64-unknown-linux-gnu
-  #           target-prefix: lib
-  #           test: true
-  #           ext: .so
+  build-types:
+    name: Haystack Types - ${{ matrix.platform.os-name }}
+    strategy:
+      matrix: 
+        platform:
+          - os-name: x86_64-unknown-linux-gnu
+            runs-on: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            target-prefix: lib
+            test: true
+            ext: .so
 
-  #         - os-name: i686-unknown-linux-gnu
-  #           runs-on: ubuntu-latest
-  #           target: i686-unknown-linux-gnu
-  #           target-prefix: lib
-  #           ext: .so
+          - os-name: i686-unknown-linux-gnu
+            runs-on: ubuntu-latest
+            target: i686-unknown-linux-gnu
+            target-prefix: lib
+            ext: .so
 
-  #         - os-name: aarch64-unknown-linux-gnu
-  #           runs-on: ubuntu-latest
-  #           target: aarch64-unknown-linux-gnu
-  #           target-prefix: lib
-  #           ext: .so
+          - os-name: aarch64-unknown-linux-gnu
+            runs-on: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            target-prefix: lib
+            ext: .so
             
-  #         - os-name: aarch64-apple-darwin
-  #           runs-on: macos-latest
-  #           target: aarch64-apple-darwin
-  #           target-prefix: lib
-  #           test: true
-  #           ext: .dylib
-  #           target-ext: .so
+          - os-name: aarch64-apple-darwin
+            runs-on: macos-latest
+            target: aarch64-apple-darwin
+            target-prefix: lib
+            test: true
+            ext: .dylib
+            target-ext: .so
 
-  #         - os-name: x86_64-apple-darwin
-  #           runs-on: macos-latest
-  #           target: x86_64-apple-darwin
-  #           target-prefix: lib
-  #           ext: .dylib
-  #           target-ext: .so
+          - os-name: x86_64-apple-darwin
+            runs-on: macos-latest
+            target: x86_64-apple-darwin
+            target-prefix: lib
+            ext: .dylib
+            target-ext: .so
 
-  #         - os-name: x86_64-pc-windows-msvc
-  #           runs-on: windows-latest
-  #           target: x86_64-pc-windows-msvc
-  #           ext: .dll
+          - os-name: x86_64-pc-windows-msvc
+            runs-on: windows-latest
+            target: x86_64-pc-windows-msvc
+            ext: .dll
 
-  #         - os-name: i686-pc-windows-msvc
-  #           runs-on: windows-latest
-  #           target: i686-pc-windows-msvc
-  #           ext: .dll
+          - os-name: i686-pc-windows-msvc
+            runs-on: windows-latest
+            target: i686-pc-windows-msvc
+            ext: .dll
 
-  #   runs-on: ${{ matrix.platform.runs-on }}
-  #   steps:
-  #     # Checkout the repository
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
+    runs-on: ${{ matrix.platform.runs-on }}
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  #     - uses: ilammy/msvc-dev-cmd@v1
+      - uses: ilammy/msvc-dev-cmd@v1
 
-  #     # Build project
-  #     - name: Build haystack-types
-  #       uses: houseabsolute/actions-rust-cross@v1
-  #       with:
-  #         command: build
-  #         force-use-cross: ${{ matrix.platform.runs-on == 'ubuntu-latest' }}
-  #         rust-cache-parameters: "{\"key\": \"types-${{ matrix.platform.target }}\"}"
-  #         target: ${{ matrix.platform.target }}
-  #         args: "--locked --release --package haystack-types"
+      # Build project
+      - name: Build haystack-types
+        uses: houseabsolute/actions-rust-cross@v1
+        with:
+          command: build
+          # force-use-cross: ${{ matrix.platform.runs-on == 'ubuntu-latest' }}
+          rust-cache-parameters: "{\"key\": \"types-${{ matrix.platform.target }}\"}"
+          target: ${{ matrix.platform.target }}
+          args: "--locked --release --package haystack-types"
 
-  #     # Build project
-  #     - name: Test haystack-types
-  #       uses: houseabsolute/actions-rust-cross@v1
-  #       with:
-  #         command: test
-  #         force-use-cross: ${{ matrix.platform.runs-on == 'ubuntu-latest'}}
-  #         rust-cache-parameters: "{\"key\": \"types-${{ matrix.platform.target }}\"}"
-  #         target: ${{ matrix.platform.target }}
-  #         args: "--locked --package haystack-types"
+      # Build project
+      - name: Test haystack-types
+        uses: houseabsolute/actions-rust-cross@v1
+        with:
+          command: test
+          # force-use-cross: ${{ matrix.platform.runs-on == 'ubuntu-latest'}}
+          rust-cache-parameters: "{\"key\": \"types-${{ matrix.platform.target }}\"}"
+          target: ${{ matrix.platform.target }}
+          args: "--locked --package haystack-types"
         
   build-lua:
     name: Haystack Lua - ${{ matrix.lua.version }} - ${{ matrix.platform.os-name }}
-    #needs: build-types
     strategy:
       matrix:
         platform:
-          - os-name: "x86_64-unknown-linux-gnu"
-            runs-on: "ubuntu-latest"
-            target: "x86_64-unknown-linux-gnu"
-            target-prefix: "lib"
+          - os-name: x86_64-unknown-linux-gnu
+            runs-on: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            target-prefix: lib
             test: true
-            ext: ".so"
+            ext: .so
 
-          # - os-name: i686-unknown-linux-gnu
-          #   runs-on: ubuntu-latest
-          #   target: i686-unknown-linux-gnu
-          #   target-prefix: lib
-          #   ext: .so
+          - os-name: i686-unknown-linux-gnu
+            runs-on: ubuntu-latest
+            target: i686-unknown-linux-gnu
+            target-prefix: lib
+            ext: .so
 
-          # - os-name: aarch64-unknown-linux-gnu
-          #   runs-on: ubuntu-latest
-          #   target: aarch64-unknown-linux-gnu
-          #   target-prefix: lib
-          #   ext: .so
+          - os-name: aarch64-unknown-linux-gnu
+            runs-on: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            target-prefix: lib
+            ext: .so
             
-          # - os-name: aarch64-apple-darwin
-          #   runs-on: macos-latest
-          #   target: aarch64-apple-darwin
-          #   target-prefix: lib
-          #   test: true
-          #   ext: .dylib
-          #   target-ext: .so
+          - os-name: aarch64-apple-darwin
+            runs-on: macos-latest
+            target: aarch64-apple-darwin
+            target-prefix: lib
+            test: true
+            ext: .dylib
+            target-ext: .so
 
-          # - os-name: x86_64-apple-darwin
-          #   runs-on: macos-latest
-          #   target: x86_64-apple-darwin
-          #   target-prefix: lib
-          #   ext: .dylib
-          #   target-ext: .so
+          - os-name: x86_64-apple-darwin
+            runs-on: macos-latest
+            target: x86_64-apple-darwin
+            target-prefix: lib
+            ext: .dylib
+            target-ext: .so
 
-          # - os-name: x86_64-pc-windows-msvc
-          #   runs-on: windows-latest
-          #   target: x86_64-pc-windows-msvc
-          #   ext: .dll
+          - os-name: x86_64-pc-windows-msvc
+            runs-on: windows-latest
+            target: x86_64-pc-windows-msvc
+            ext: .dll
 
-          # - os-name: i686-pc-windows-msvc
-          #   runs-on: windows-latest
-          #   target: i686-pc-windows-msvc
-          #   ext: .dll
+          - os-name: i686-pc-windows-msvc
+            runs-on: windows-latest
+            target: i686-pc-windows-msvc
+            ext: .dll
 
         lua:
           # - version: "5.1"

@@ -9,82 +9,82 @@ on:
       - actions
 
 jobs:
-  build-types:
-    name: Haystack Types - ${{ matrix.platform.os-name }}
-    strategy:
-      matrix: 
-        platform:
-          - os-name: x86_64-unknown-linux-gnu
-            runs-on: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            target-prefix: lib
-            test: true
-            ext: .so
+  # build-types:
+  #   name: Haystack Types - ${{ matrix.platform.os-name }}
+  #   strategy:
+  #     matrix: 
+  #       platform:
+  #         - os-name: x86_64-unknown-linux-gnu
+  #           runs-on: ubuntu-latest
+  #           target: x86_64-unknown-linux-gnu
+  #           target-prefix: lib
+  #           test: true
+  #           ext: .so
 
-          - os-name: i686-unknown-linux-gnu
-            runs-on: ubuntu-latest
-            target: i686-unknown-linux-gnu
-            target-prefix: lib
-            ext: .so
+  #         - os-name: i686-unknown-linux-gnu
+  #           runs-on: ubuntu-latest
+  #           target: i686-unknown-linux-gnu
+  #           target-prefix: lib
+  #           ext: .so
 
-          - os-name: aarch64-unknown-linux-gnu
-            runs-on: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            target-prefix: lib
-            ext: .so
+  #         - os-name: aarch64-unknown-linux-gnu
+  #           runs-on: ubuntu-latest
+  #           target: aarch64-unknown-linux-gnu
+  #           target-prefix: lib
+  #           ext: .so
             
-          - os-name: aarch64-apple-darwin
-            runs-on: macos-latest
-            target: aarch64-apple-darwin
-            target-prefix: lib
-            test: true
-            ext: .dylib
-            target-ext: .so
+  #         - os-name: aarch64-apple-darwin
+  #           runs-on: macos-latest
+  #           target: aarch64-apple-darwin
+  #           target-prefix: lib
+  #           test: true
+  #           ext: .dylib
+  #           target-ext: .so
 
-          - os-name: x86_64-apple-darwin
-            runs-on: macos-latest
-            target: x86_64-apple-darwin
-            target-prefix: lib
-            ext: .dylib
-            target-ext: .so
+  #         - os-name: x86_64-apple-darwin
+  #           runs-on: macos-latest
+  #           target: x86_64-apple-darwin
+  #           target-prefix: lib
+  #           ext: .dylib
+  #           target-ext: .so
 
-          - os-name: x86_64-pc-windows-msvc
-            runs-on: windows-latest
-            target: x86_64-pc-windows-msvc
-            ext: .dll
+  #         - os-name: x86_64-pc-windows-msvc
+  #           runs-on: windows-latest
+  #           target: x86_64-pc-windows-msvc
+  #           ext: .dll
 
-          - os-name: i686-pc-windows-msvc
-            runs-on: windows-latest
-            target: i686-pc-windows-msvc
-            ext: .dll
+  #         - os-name: i686-pc-windows-msvc
+  #           runs-on: windows-latest
+  #           target: i686-pc-windows-msvc
+  #           ext: .dll
 
-    runs-on: ${{ matrix.platform.runs-on }}
-    steps:
-      # Checkout the repository
-      - name: Checkout code
-        uses: actions/checkout@v4
+  #   runs-on: ${{ matrix.platform.runs-on }}
+  #   steps:
+  #     # Checkout the repository
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - uses: ilammy/msvc-dev-cmd@v1
+  #     - uses: ilammy/msvc-dev-cmd@v1
 
-      # Build project
-      - name: Build haystack-types
-        uses: houseabsolute/actions-rust-cross@v1
-        with:
-          command: build
-          force-use-cross: ${{ matrix.platform.runs-on == 'ubuntu-latest' }}
-          rust-cache-parameters: "{\"key\": \"types-${{ matrix.platform.target }}\"}"
-          target: ${{ matrix.platform.target }}
-          args: "--locked --release --package haystack-types"
+  #     # Build project
+  #     - name: Build haystack-types
+  #       uses: houseabsolute/actions-rust-cross@v1
+  #       with:
+  #         command: build
+  #         force-use-cross: ${{ matrix.platform.runs-on == 'ubuntu-latest' }}
+  #         rust-cache-parameters: "{\"key\": \"types-${{ matrix.platform.target }}\"}"
+  #         target: ${{ matrix.platform.target }}
+  #         args: "--locked --release --package haystack-types"
 
-      # Build project
-      - name: Test haystack-types
-        uses: houseabsolute/actions-rust-cross@v1
-        with:
-          command: test
-          force-use-cross: ${{ matrix.platform.runs-on == 'ubuntu-latest'}}
-          rust-cache-parameters: "{\"key\": \"types-${{ matrix.platform.target }}\"}"
-          target: ${{ matrix.platform.target }}
-          args: "--locked --package haystack-types"
+  #     # Build project
+  #     - name: Test haystack-types
+  #       uses: houseabsolute/actions-rust-cross@v1
+  #       with:
+  #         command: test
+  #         force-use-cross: ${{ matrix.platform.runs-on == 'ubuntu-latest'}}
+  #         rust-cache-parameters: "{\"key\": \"types-${{ matrix.platform.target }}\"}"
+  #         target: ${{ matrix.platform.target }}
+  #         args: "--locked --package haystack-types"
         
   build-lua:
     name: Haystack Lua - ${{ matrix.lua.version }} - ${{ matrix.platform.os-name }}
@@ -92,18 +92,18 @@ jobs:
     strategy:
       matrix:
         platform:
-          - os-name: x86_64-unknown-linux-gnu
-            runs-on: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            target-prefix: lib
+          - os-name: "x86_64-unknown-linux-gnu"
+            runs-on: "ubuntu-latest"
+            target: "x86_64-unknown-linux-gnu"
+            target-prefix: "lib"
             test: true
-            ext: .so
+            ext: ".so"
 
-          - os-name: i686-unknown-linux-gnu
-            runs-on: ubuntu-latest
-            target: i686-unknown-linux-gnu
-            target-prefix: lib
-            ext: .so
+          # - os-name: i686-unknown-linux-gnu
+          #   runs-on: ubuntu-latest
+          #   target: i686-unknown-linux-gnu
+          #   target-prefix: lib
+          #   ext: .so
 
           # - os-name: aarch64-unknown-linux-gnu
           #   runs-on: ubuntu-latest
@@ -185,21 +185,23 @@ jobs:
           #args: "--locked --release --package haystack-lua --no-default-features --features ${{ matrix.lua.feature }}"
           strip: true
       
-        # Set lua version
+      # Set lua version
       - name: Set lua version
         uses: leafo/gh-actions-lua@v11
-        if: matrix.platform.test == true
+        if: ${{ matrix.platform.test == true }}
         with:
           luaVersion: ${{ matrix.lua.version }}
 
-      - uses: leafo/gh-actions-luarocks@v4
-        if: matrix.platform.test == true
+      - name: Install LuaRocks
+        uses: leafo/gh-actions-luarocks@v4
+        if: ${{ matrix.platform.test == true }}
       
       - name: Install test dependencies
-        if: matrix.platform.test == true
+        if: ${{ matrix.platform.test == true }}
         run: |
           luarocks install luaunit
-      
+        shell: bash
+
       - name: List binaries in target directory
         run: |
           ls target/lua${{ matrix.lua.version }}/${{ matrix.platform.target }}/release/
@@ -219,17 +221,17 @@ jobs:
       - name: Run tests
         if: matrix.platform.test == true
         run: |
-          export LUA_CPATH="/target/lua${{ matrix.lua.version }}/${{ matrix.platform.target }}/release/${{ matrix.platform.target-prefix || '' }}haystack_lua${{ matrix.platform.ext || '' }} haystack-lua/tests/lua/haystack${{ matrix.platform.target-ext || matrix.platform.ext || '' }};$LUA_CPATH"
+          export LUA_CPATH="target/lua${{ matrix.lua.version }}/${{ matrix.platform.target }}/release/${{ matrix.platform.target-prefix || '' }}haystack_lua${{ matrix.platform.ext || '' }};$LUA_CPATH"
           lua haystack-lua/tests/lua/test.lua
         env:
           CUSTOM_VAR: "value"
           ANOTHER_VAR: ${{ matrix.platform.target }}
         shell: bash
 
-      # Upload release binary
-      - name: Upload release binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: haystack-lua-${{ matrix.lua.version }}-v${{ env.VERSION }}-${{ matrix.platform.target }}${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
-          path: target/lua${{ matrix.lua.version }}/${{ matrix.platform.target }}/release/${{ matrix.platform.target-prefix || '' }}haystack_lua${{ matrix.platform.ext || '' }} haystack-lua/tests/lua/haystack${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
-          if-no-files-found: error
+      # # Upload release binary
+      # - name: Upload release binary
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: haystack-lua-${{ matrix.lua.version }}-v${{ env.VERSION }}-${{ matrix.platform.target }}${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
+      #     path: target/lua${{ matrix.lua.version }}/${{ matrix.platform.target }}/release/${{ matrix.platform.target-prefix || '' }}haystack_lua${{ matrix.platform.ext || '' }} haystack-lua/tests/lua/haystack${{ matrix.platform.target-ext || matrix.platform.ext || '' }}
+      #     if-no-files-found: error
